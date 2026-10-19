@@ -20,7 +20,7 @@
 html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
 html{-webkit-text-size-adjust:100%}
 /* real device: the iPhone status bar replaces the mockup's drawn one (.sb, 54px) */
-body{max-width:520px;min-height:100vh;min-height:100dvh;margin:0 auto;padding:var(--sat,env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+body{height:100vh;height:100dvh;overflow:hidden;margin:0;
 background:radial-gradient(120% 520px at 50% -60px,rgba(34,211,238,.20),transparent 70%),var(--bg);background-repeat:no-repeat}
 button{font:inherit;color:inherit;background:none;border:0}
 /* header */
@@ -132,14 +132,37 @@ svg.ch text{font-family:inherit}
 .err{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fde68a}.err u{cursor:pointer;font-weight:600}.haserr .err{display:block}
 .warn{background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.35);color:#fecdd3}.stale .warn{display:block}
 .empty{display:none;text-align:center;padding:34px 22px}.isempty .empty{display:block}.isempty .live{display:none}
+.page .card:last-child{margin-bottom:0}
 .et{font-size:18px;font-weight:600;margin-bottom:6px}.es{font-size:14px;color:var(--mut);line-height:1.45}
-@media (min-width:900px){body{max-width:1080px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}}
+/* ---- swipe pages ---- */
+#app{height:100%;display:flex;flex-direction:column}
+.head{flex:none;width:100%;max-width:520px;margin:0 auto;padding:var(--sat,env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left))}
+.head .top{margin-bottom:12px}
+.pager{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;touch-action:pan-x pan-y}
+.pager::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;width:100%;height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-align:start;scroll-snap-stop:always;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding:2px calc(16px + env(safe-area-inset-right)) 18px calc(16px + env(safe-area-inset-left))}
+.page>.in{max-width:520px;margin:0 auto}
+.tabs{flex:none;padding:8px 16px calc(10px + var(--sab,env(safe-area-inset-bottom)));background:linear-gradient(180deg,rgba(7,9,15,0),rgba(7,9,15,.92) 30%);}
+.tabbar{position:relative;max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);padding:4px;border-radius:99px;background:rgba(255,255,255,.045);border:1px solid var(--line);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.tabbar button{position:relative;z-index:1;height:40px;border-radius:99px;font-size:13.5px;font-weight:600;letter-spacing:.01em;color:var(--mut);cursor:pointer;transition:color .25s}
+.tabbar button.sel{color:#a5f3fc}
+.tabbar .ind{position:absolute;z-index:0;top:4px;left:4px;width:calc((100% - 8px)/4);height:40px;border-radius:99px;background:rgba(34,211,238,.13);border:1px solid rgba(34,211,238,.28);will-change:transform}
+.tabbar .ind:after{content:"";position:absolute;left:50%;bottom:4px;width:16px;height:2px;margin-left:-8px;border-radius:2px;background:var(--cool);box-shadow:0 0 8px rgba(34,211,238,.7)}
+#ch{cursor:pointer}
+@media (min-width:900px){
+ body{height:auto;overflow:auto}#app{height:auto;display:block}
+ .head{max-width:1080px}
+ .pager{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;overflow:visible;max-width:1080px;margin:0 auto;padding:0 16px 30px}
+ .page{height:auto;overflow:visible;padding:0}.page>.in{max-width:none}
+ .tabs{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
 <div class="ptr" id="ptr"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 <div id="app" class="isempty">
+<header class="head">
 <div class="top"><div>
  <h1>Battery Fan</h1>
  <div class="pill off" id="pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg><span id="pillt">Loading</span></div>
@@ -149,11 +172,12 @@ svg.ch text{font-family:inherit}
 
 <div class="banner err">Couldn't reach the sheet. Showing the last data. <u id="retry">Try again</u></div>
 <div class="banner warn">No new Shelly reading for a while. It may be offline or out of Wi-Fi range.</div>
+</header>
+<main class="pager" id="pager">
+<section class="page" id="now" aria-label="Now"><div class="in">
 <div class="card empty"><div class="et" id="et">Loading readings…</div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
-
-<div class="live cols"><div>
 <!-- HERO -->
-<div class="card">
+<div class="card live">
  <div class="hero">
   <div><div class="lbl" id="bigl">Internal · cells</div><div class="big" id="big">--<sup>°C</sup></div></div>
   <div class="side">
@@ -165,9 +189,10 @@ svg.ch text{font-family:inherit}
  <div class="lad"><b id="brk"></b><em id="brke"></em><i class="a" id="ka"></i><i class="p" id="kp"></i><i class="c" id="kc"></i></div>
  <div class="scale" id="scale"></div>
 </div>
-
+</div></section>
+<section class="page" id="battery" aria-label="Battery"><div class="in">
 <!-- BATTERY -->
-<div class="card">
+<div class="card live">
  <div class="chd"><div class="lbl">Battery · Invicta BMS</div><div class="sub" id="bsub">80Ah LiFePO₄ · 4S</div></div>
  <div class="bat">
   <div class="ring">
@@ -193,10 +218,10 @@ svg.ch text{font-family:inherit}
   <div class="tile"><div class="lbl">BMS board</div><div class="tv" id="tb">--</div><div class="ts" id="tbs">sensor A / B</div></div>
  </div>
 </div>
-</div><div>
-
+</div></section>
+<section class="page" id="fan" aria-label="Fan"><div class="in">
 <!-- FAN -->
-<div class="card" id="fancard">
+<div class="card live" id="fancard">
  <div class="fan">
   <div class="fico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg></div>
   <div><div class="fstate" id="fstate">FAN —</div><div class="mode" id="mode">—</div></div>
@@ -209,18 +234,22 @@ svg.ch text{font-family:inherit}
   <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
  </div>
 </div>
-
+</div></section>
+<section class="page" id="history" aria-label="History"><div class="in">
 <!-- CHART -->
-<div class="card">
+<div class="card live">
  <div class="chd"><div class="lbl" id="chl" style="cursor:pointer">Last 6 hours</div><div class="sub">5-min readings</div></div>
  <div class="lg"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)" id="lgc">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span></div>
  <svg class="ch" id="ch" viewBox="0 0 340 196"></svg>
  <div class="note" id="note"></div>
 </div>
-</div></div>
-
 <div class="foot" id="foot"></div>
 <div class="ft" id="ft">Refreshes every minute</div>
+</div></section>
+</main>
+<nav class="tabs" aria-label="Pages"><div class="tabbar" id="tabbar" role="tablist"><span class="ind" id="ind"></span>
+<button role="tab" data-p="0">Now</button><button role="tab" data-p="1">Battery</button><button role="tab" data-p="2">Fan</button><button role="tab" data-p="3">History</button>
+</div></nav>
 </div>
 <script>
 (function(){
@@ -230,7 +259,7 @@ var MAIN_URL="https://docs.google.com/spreadsheets/d/"+SHEET+"/export?format=csv
 var BMS_URL="https://docs.google.com/spreadsheets/d/"+SHEET+"/gviz/tq?tqx=out:csv&sheet=BMS";
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
 var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Very hot: fan forced on until it drops below 45°C.",cold:"Cold: fan never runs below 5°C.","sensor-fault":"Temperature sensor fault. Check the sensors."};
-var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Fan on",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Parked 8 h+",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
+var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Parked 8 h+",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
 var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1};
 var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
 function $(i){return document.getElementById(i)}
@@ -371,7 +400,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  /* battery */
  battery(bl,p,bAge,r);
  /* fan */
- $("fancard").className="card"+(fan?" on":"");$("fstate").textContent=fan?"FAN ON":"FAN OFF";
+ $("fancard").className="card live"+(fan?" on":"");$("fstate").textContent=fan?"FAN ON":"FAN OFF";
  var ctx=m==="driving"?"engine running":/^(cap|cooldown|cooldown-done|run-on|early-stop)$/.test(m)?"engine off":"";
  $("mode").textContent=(SHORT[m]||(fan?"Running":"Off"))+(ctx?" · "+ctx:"");$("mode").title=MODES[m]||"";
  var fs=rows.length-1;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
@@ -401,8 +430,8 @@ function ladder(amb,cells,pk){var vs=[amb,cells,pk].filter(function(v){return v!
  var L=[];if(amb!==null)L.push({p:P(amb),t:"Ambient "+f1(amb)+"°",s:""});
  if(cells!==null)L.push({p:P(cells),t:"cells "+f1(cells)+"°",s:"color:var(--cool);font-weight:600"});
  if(pk!==null)L.push({p:P(pk),t:"case "+f1(pk)+"°",s:"color:#fda4af"+(cells===null?";font-weight:600":"")});
- L.sort(function(x,y){return x.p-y.p});var gap=21,i;for(i=0;i<L.length;i++){L[i].p=Math.max(L[i].p,10);if(i)L[i].p=Math.max(L[i].p,L[i-1].p+gap)}
- for(i=L.length-1;i>=0;i--)L[i].p=Math.min(L[i].p,i===L.length-1?90:L[i+1].p-gap);
+ L.sort(function(x,y){return x.p-y.p});var gap=24,i;for(i=0;i<L.length;i++){L[i].p=Math.max(L[i].p,11);if(i)L[i].p=Math.max(L[i].p,L[i-1].p+gap)}
+ for(i=L.length-1;i>=0;i--)L[i].p=Math.min(L[i].p,i===L.length-1?89:L[i+1].p-gap);
  $("scale").innerHTML=L.map(function(x){return'<span style="left:'+x.p.toFixed(1)+'%;'+x.s+'">'+x.t+"</span>"}).join("")}
 function battery(bl,p,bAge,r){
  var has=!!p,sub=$("bsub");
@@ -512,16 +541,35 @@ function footer(age,bAge){var ok='<svg viewBox="0 0 24 24" fill="none" stroke="c
   (S.fetchOk?c("",ok,"Sheet synced"):c("x",x,"Sheet offline"))}
 /* ---------- wiring ---------- */
 $("bsw").addEventListener("click",function(e){var b=e.target.dataset&&e.target.dataset.b;if(!b)return;selBoard=b;localStorage.setItem("bf2-board",b);render()});
-$("chl").addEventListener("click",function(){hours=hours===6?12:hours===12?24:6;localStorage.setItem("bf2-hours",hours);render()});
+function cycleHours(){hours=hours===6?12:hours===12?24:6;render()}
+$("chl").addEventListener("click",cycleHours);$("ch").addEventListener("click",cycleHours);
+/* ---------- swipe pages ---------- */
+var PAGES=["now","battery","fan","history"],pager=$("pager"),tabs=[].slice.call(document.querySelectorAll("#tabbar button")),ind=$("ind"),cur=-1;
+function pw(){return pager.clientWidth||1}
+function isGrid(){return window.matchMedia("(min-width:900px)").matches}
+function setActive(i,fromScroll){if(i===cur)return;cur=i;tabs.forEach(function(b,k){b.classList.toggle("sel",k===i);b.setAttribute("aria-selected",k===i)});
+ try{localStorage.setItem("bf2-page",PAGES[i])}catch(e){}
+ if(!isGrid()&&location.hash!=="#"+PAGES[i])history.replaceState(null,"","#"+PAGES[i])}
+function go(i,smooth){i=Math.max(0,Math.min(3,i));if(isGrid()){var el=$(PAGES[i]);if(smooth)el.scrollIntoView({behavior:"smooth"});setActive(i);return}
+ pager.scrollTo({left:i*pw(),behavior:smooth?"smooth":"auto"});if(!smooth){moveInd();setActive(i)}}
+var raf=0;function moveInd(){var x=pager.scrollLeft/pw();ind.style.transform="translateX("+(x*100)+"%)";var i=Math.round(x);if(Math.abs(x-i)<0.5)setActive(i,true)}
+pager.addEventListener("scroll",function(){if(!raf)raf=requestAnimationFrame(function(){raf=0;moveInd()})},{passive:true});
+tabs.forEach(function(b,k){b.addEventListener("click",function(){go(k,true)})});
+function pageFromHash(){var i=PAGES.indexOf(location.hash.replace("#","").toLowerCase());return i}
+window.addEventListener("hashchange",function(){var i=pageFromHash();if(i>=0&&i!==cur)go(i,true)});
+var lastW=0;window.addEventListener("resize",function(){var w=pw();if(w!==lastW&&cur>=0){lastW=w;go(cur,false)}});
+(function(){var i=pageFromHash();if(i<0)i=PAGES.indexOf(localStorage.getItem("bf2-page")||"");if(i<0)i=0;lastW=pw();go(i,false);
+ requestAnimationFrame(function(){go(i,false)})})();
+window.__bfpage=function(){return cur};
 $("rf").onclick=load;$("retry").onclick=load;
 document.addEventListener("visibilitychange",function(){if(!document.hidden)load()});
 window.addEventListener("pageshow",function(e){if(e.persisted)load()});
 setInterval(function(){if(!document.hidden)load()},REFRESH_MS);
 setInterval(function(){if(S.rows.length)render()},30000);
-(function(){var y0=null,dy=0,p=$("ptr");document.addEventListener("touchstart",function(e){y0=(window.scrollY<=0)?e.touches[0].clientY:null;dy=0},{passive:true});
- document.addEventListener("touchmove",function(e){if(y0===null)return;dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
+(function(){var y0=null,x0=0,dy=0,p=$("ptr");document.addEventListener("touchstart",function(e){var pg=e.target.closest&&e.target.closest(".page");y0=((pg?pg.scrollTop:window.scrollY)<=0)?e.touches[0].clientY:null;x0=e.touches[0].clientX;dy=0},{passive:true});
+ document.addEventListener("touchmove",function(e){if(y0===null)return;if(Math.abs(e.touches[0].clientX-x0)>Math.abs(e.touches[0].clientY-y0)){y0=null;p.style.opacity=0;return}dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
  document.addEventListener("touchend",function(){if(y0!==null&&dy>70)load();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
-window.__bf={S:S,keyOffInfo:keyOffInfo,packOf:packOf,render:render};
+window.__bf={S:S,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
 if(S.rows.length)render();
 load();
 })();
