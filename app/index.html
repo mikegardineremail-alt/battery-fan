@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Battery Fan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battery Fan">
+<meta name="theme-color" content="#07090f">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#07090f;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.08);--txt:#eef2ff;--mut:#8b93a7;--dim:#596075;--cool:#22d3ee;--ok:#34d399;--warm:#fbbf24;--hot:#fb7185;--pc:var(--cool);--cc:var(--cool)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+html,body{color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;min-height:100dvh;padding:calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 26px) calc(env(safe-area-inset-left) + 16px);
+ background:radial-gradient(120% 520px at 50% -60px,var(--glow,rgba(34,211,238,.20)),transparent 70%),var(--bg);background-repeat:no-repeat;transition:background 1s}
+button{font:inherit;color:inherit}
+.wrap{max-width:520px;margin:0 auto}
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-start;margin:4px 0 16px}
+h1{font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;padding:6px 12px 6px 9px;border-radius:99px;background:rgba(139,147,167,.12);color:#cfd5e6;border:1px solid rgba(139,147,167,.25);transition:all .6s}
+.pill svg{width:15px;height:15px;color:var(--mut);flex:none}
+.pill.on{background:rgba(34,211,238,.13);color:#a5f3fc;border-color:rgba(34,211,238,.28)}.pill.on svg{color:var(--cool);animation:spin 1.6s linear infinite}
+.pill.drv{background:rgba(251,191,36,.12);color:#fde68a;border-color:rgba(251,191,36,.3)}.pill.drv svg{color:var(--warm)}
+.pill.bad{background:rgba(251,113,133,.12);color:#fecdd3;border-color:rgba(251,113,133,.35)}.pill.bad svg{color:var(--hot)}
+.upd{font-size:12.5px;color:var(--mut);display:flex;align-items:center;gap:7px;margin-top:9px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite;flex:none}
+.stale .dot{background:var(--hot);animation:none}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.rf{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--mut);display:grid;place-items:center;flex:none;cursor:pointer;transition:transform .2s,color .2s}
+.rf:active{transform:scale(.92)}.rf svg,.ptr svg{width:20px;height:20px}
+.busy .rf{color:var(--cool)}.busy .rf svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 6px);width:38px;height:38px;margin-left:-19px;border-radius:50%;background:#151a26;border:1px solid var(--line);color:var(--cool);display:grid;place-items:center;opacity:0;transform:translateY(-50px);transition:opacity .2s;z-index:9;pointer-events:none}
+.banner{display:none;border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.4;margin-bottom:14px}
+.err{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fde68a}.err u{cursor:pointer;font-weight:600}
+.haserr .err{display:block}
+.warn{background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.35);color:#fecdd3}.stale .warn{display:block}
+.empty{display:none;text-align:center;padding:34px 22px}.isempty .empty{display:block}.isempty .live{display:none}
+.et{font-size:18px;font-weight:600;margin-bottom:6px}.es{font-size:14px;color:var(--mut);line-height:1.45}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:20px;margin-bottom:14px}
+.lbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.chd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+.chd .lbl{margin:0}.sub{font-size:11.5px;color:var(--dim);text-align:right}
+.live .card{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.col .card:nth-child(2){animation-delay:.06s}.col .card:nth-child(3){animation-delay:.12s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+/* hero */
+.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.big{font-size:84px;font-weight:200;line-height:.9;letter-spacing:-.04em;color:var(--cc);font-variant-numeric:tabular-nums;text-shadow:0 0 34px color-mix(in srgb,var(--cc) 30%,transparent);white-space:nowrap;transition:color 1s}
+.big sup{font-size:30px;font-weight:300;vertical-align:top;position:relative;top:10px;margin-left:2px}
+.side{text-align:right;display:flex;flex-direction:column;gap:12px;padding-bottom:2px}
+.sv{font-size:26px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;transition:color 1s}
+.sv sup{font-size:12px;vertical-align:top;position:relative;top:2px;margin-left:1px}
+.sl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:13px;font-weight:600;padding:5px 11px;border-radius:99px;background:color-mix(in srgb,var(--chip,var(--cool)) 15%,transparent);color:var(--chip,var(--cool))}
+.chip svg{width:13px;height:13px}
+.lad{position:relative;height:8px;border-radius:9px;margin:44px 0 8px;background:linear-gradient(90deg,#8b93a7 0%,var(--cool) 32%,var(--ok) 48%,var(--warm) 70%,var(--hot) 100%)}
+.lad i{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:4px solid #0d1119;transition:left 1s}
+.lad .a{background:#c3c8d6;box-shadow:0 0 0 2px #8b93a7}
+.lad .c{background:#fff;box-shadow:0 0 0 2px var(--cool),0 0 14px rgba(34,211,238,.6);width:20px;height:20px;margin:-10px 0 0 -10px}
+.lad .p{background:#ffe4e8;box-shadow:0 0 0 2px var(--hot)}
+.lad b{position:absolute;top:-17px;height:4px;border:1px solid rgba(255,255,255,.35);border-bottom:0;border-radius:3px 3px 0 0}
+.lad em{position:absolute;top:-33px;transform:translateX(-50%);font-style:normal;font-size:10.5px;font-weight:600;color:#cfd5e6;white-space:nowrap}
+.scale{position:relative;height:16px;font-size:11px;color:var(--mut)}.scale span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.mini .sl{margin-bottom:5px}.mini b{font-size:17px;font-weight:350;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mini b small{font-size:11.5px;color:var(--mut);font-weight:400;margin-left:1px}.mini .sl2,.tv .sl2{color:var(--dim);font-weight:200;margin:0 3px}
+.mini .w{font-size:13px;color:var(--dim)}
+/* battery */
+.bat{display:flex;gap:18px;align-items:center}
+.ring{position:relative;width:118px;height:118px;flex:none}
+.ring svg{width:118px;height:118px;transform:rotate(-90deg)}
+.ring .arc{transition:stroke-dasharray 1s;filter:drop-shadow(0 0 6px rgba(52,211,153,.45))}
+.ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct{font-size:36px;font-weight:250;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.ring .pct small{font-size:16px;color:var(--mut);margin-left:1px}
+.ring .rl{font-size:10px;letter-spacing:.14em;color:var(--mut);margin-top:5px}
+.stats{flex:1;display:flex;flex-direction:column;gap:11px;min-width:0}
+.st{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:9px;gap:6px}
+.st:last-child{border:0;padding:0}
+.st span{font-size:12.5px;color:var(--mut)}
+.st b{font-size:20px;font-weight:350;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.st b small{font-size:12px;color:var(--mut);font-weight:400;margin-left:2px}
+.chg{color:var(--ok)}.chg small{color:#6ee7b7!important}.dsg{color:#fde68a}
+.flow{text-align:right;font-size:11.5px;margin-top:8px;font-weight:600;color:var(--mut)}
+.flow.c{color:var(--ok)}.flow.d{color:#fde68a}
+.cells{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.ch2{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.ch2 .lbl{margin:0}
+.badge{font-size:12px;font-weight:600;color:var(--ok);background:rgba(52,211,153,.13);padding:4px 10px;border-radius:99px;white-space:nowrap}
+.badge.w{color:var(--warm);background:rgba(251,191,36,.13)}.badge.h{color:var(--hot);background:rgba(251,113,133,.14)}.badge.n{color:var(--mut);background:rgba(139,147,167,.12)}
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:10px}.brow:last-of-type{margin-bottom:0}
+.bn{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;flex:none}
+.cg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:1}
+.cl{text-align:center;min-width:0}
+.tube{height:54px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);position:relative;overflow:hidden}
+.tube i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(52,211,153,.75),rgba(34,211,238,.35));border-top:2px solid #6ee7b7;transition:height 1s}
+.tube.mx i{border-top-color:#fbbf24}.tube.mn i{border-top-color:#22d3ee}
+.tube .bl{position:absolute;top:5px;left:0;right:0;font-size:9px;font-weight:700;color:#fde68a;letter-spacing:.06em}
+.cv{font-size:13px;font-weight:500;margin-top:6px;font-variant-numeric:tabular-nums}
+.cn{font-size:10px;color:var(--mut);letter-spacing:.06em;white-space:nowrap}
+.mm{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:12px}
+.mm b{color:#cfd5e6;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.tile{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:20px;padding:14px 15px;min-width:0}
+.tv{font-size:26px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color 1s}
+.tv small{font-size:13px;color:var(--mut);margin-left:2px}
+.tv.md{font-size:21px;padding:2px 0 1px}
+.tv.sm{font-size:19px;font-weight:400;padding:4px 0 3px}
+.ts{font-size:12px;color:var(--mut);margin-top:3px;line-height:1.35}
+.wait{display:flex;gap:14px;align-items:center;padding:4px 0 2px}
+.wico{width:52px;height:52px;border-radius:16px;flex:none;display:grid;place-items:center;background:rgba(139,147,167,.1);border:1px dashed rgba(139,147,167,.35);color:var(--mut)}
+.wico svg{width:26px;height:26px}
+.wt{font-size:16px;font-weight:600;margin-bottom:4px}.ws{font-size:13px;color:var(--mut);line-height:1.45}
+.hasbms .nobms,.nob .yesbms{display:none!important}
+details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+summary{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}summary:after{content:"+";font-size:16px;line-height:12px}details[open] summary:after{content:"−"}
+.dt{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.dt th{font-weight:500;color:var(--mut);text-align:right;padding:5px 0;font-size:11px;letter-spacing:.08em}
+.dt td{text-align:right;padding:5px 0;border-top:1px solid rgba(255,255,255,.05);color:#cfd5e6}
+.dt td:first-child,.dt th:first-child{text-align:left;color:var(--mut)}
+/* fan */
+.fan{display:flex;align-items:center;gap:16px}
+.fico{position:relative;width:58px;height:58px;border-radius:18px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.06)}
+.fico svg{width:34px;height:34px;color:var(--mut)}
+.on .fico{background:linear-gradient(135deg,rgba(34,211,238,.25),rgba(52,211,153,.2));box-shadow:0 0 30px rgba(34,211,238,.25)}
+.on .fico:after{content:"";position:absolute;inset:-4px;border-radius:22px;border:1px solid rgba(34,211,238,.45);animation:ring 2s ease-out infinite}
+@keyframes ring{from{opacity:1;transform:scale(.92)}to{opacity:0;transform:scale(1.18)}}
+.on .fico svg{color:var(--cool);animation:spin .9s linear infinite}
+.fstate{font-size:22px;font-weight:700;letter-spacing:.02em}.on .fstate{color:var(--cool)}
+.mode{font-size:14.5px;color:#cfd5e6;line-height:1.4;margin-top:3px}
+.fan .tag{margin-left:auto;align-self:flex-start;font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:3px 9px;white-space:nowrap}
+.fdesc{font-size:12.5px;color:var(--mut);line-height:1.45;margin-top:12px}
+/* charts */
+.seg{display:inline-flex;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:2px}
+.seg button{border:0;background:none;font-size:11.5px;font-weight:600;color:var(--mut);padding:4px 9px;border-radius:8px;cursor:pointer}
+.seg button.sel{background:rgba(34,211,238,.15);color:#a5f3fc}
+.lg{display:flex;gap:11px;font-size:11px;color:var(--mut);flex-wrap:wrap;margin-bottom:10px}
+.lg span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+svg.ch text{font-family:inherit}
+.note{font-size:12px;color:var(--mut);line-height:1.45;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.note b{color:#cfd5e6;font-weight:600}
+/* footer */
+.foot{display:flex;justify-content:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.foot span{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#9aa2b6;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:99px;padding:5px 10px}
+.foot svg{width:12px;height:12px;color:var(--ok)}
+.foot .w svg{color:var(--warm)}.foot .x svg{color:var(--hot)}.foot .n svg{color:var(--mut)}
+.ft{text-align:center;font-size:11px;color:var(--dim);margin-top:12px;line-height:1.5}
+.ft a{color:var(--mut)}
+@media (min-width:900px){
+ .wrap{max-width:1080px}
+ .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="nob">
+<div class="ptr" id="ptr"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+<div class="wrap isempty" id="app">
+<div class="top"><div>
+ <h1>Battery Fan</h1>
+ <div class="pill" id="pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg><span id="pillt">Loading</span></div>
+ <div class="upd"><span class="dot"></span><span id="ago">loading…</span></div>
+</div>
+<button class="rf" id="rf" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+
+<div class="banner err" id="err">Couldn't reach the sheet. Showing the last data. <u id="retry">Try again</u></div>
+<div class="banner warn">No new Shelly reading for a while. It may be offline or out of Wi-Fi range.</div>
+<div class="card empty"><div class="et" id="et">Loading readings…</div><div class="es" id="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
+
+<div class="live cols">
+<div class="col">
+ <!-- HERO -->
+ <div class="card">
+  <div class="hero">
+   <div><div class="lbl" id="bigl">Case probe</div><div class="big" id="big">--<sup>°C</sup></div></div>
+   <div class="side">
+    <div class="yesbms"><div class="sl">Case probe</div><div class="sv" id="case">--<sup>°C</sup></div></div>
+    <div><div class="sl">Ambient</div><div class="sv" id="amb" style="color:#b9bfcd">--<sup>°C</sup></div></div>
+   </div>
+  </div>
+  <div class="chip" id="chip">—</div>
+  <div class="lad" id="lad"><b id="brk"></b><em id="brke"></em><i class="a" id="ka"></i><i class="p" id="kp"></i><i class="c yesbms" id="kc"></i></div>
+  <div class="scale" id="scale"></div>
+  <div class="mini">
+   <div><div class="sl">Cells · BMS A / B</div><div id="mcell"><span class="w">waiting for BMS</span></div></div>
+   <div><div class="sl">BMS boards A / B</div><div id="mbrd"><span class="w">waiting for BMS</span></div></div>
+  </div>
+ </div>
+
+ <!-- BATTERY -->
+ <div class="card" id="batcard">
+  <div class="chd"><div class="lbl">Battery · Invicta BMS</div><div class="sub" id="bsub">80Ah LiFePO₄ · 2 × 40Ah</div></div>
+  <div class="nobms">
+   <div class="wait">
+    <div class="wico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="16" height="11" rx="2.5"/><path d="M22 11v3"/><path d="M7 12.5h.01M11 12.5h.01M15 12.5h.01" stroke-width="2.6"/></svg></div>
+    <div><div class="wt">Waiting for battery data</div><div class="ws">No BMS readings in the sheet yet. This card switches on by itself when they arrive.</div></div>
+   </div>
+   <div class="grid">
+    <div class="tile"><div class="lbl">Battery</div><div class="tv" id="sv">--</div><div class="ts" id="svs">Shelly voltmeter</div></div>
+    <div class="tile"><div class="lbl">Charge</div><div class="tv sm" style="color:var(--mut)">Waiting</div><div class="ts">SOC from BMS</div></div>
+   </div>
+  </div>
+  <div class="yesbms">
+   <div class="bat">
+    <div class="ring">
+     <svg viewBox="0 0 118 118"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+      <circle cx="59" cy="59" r="50" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="10"/>
+      <circle class="arc" id="arc" cx="59" cy="59" r="50" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 314.2"/></svg>
+     <div class="in"><div class="pct" id="soc">--<small>%</small></div><div class="rl">SOC</div></div>
+    </div>
+    <div class="stats">
+     <div class="st"><span>Voltage</span><b id="bv">--</b></div>
+     <div class="st"><span>Current</span><b id="bi">--</b></div>
+     <div class="st"><span>Remaining</span><b id="brem">--</b></div>
+    </div>
+   </div>
+   <div class="flow" id="flow"></div>
+   <div class="cells">
+    <div class="ch2"><div class="lbl">Cell balance</div><div class="badge" id="bal">--</div></div>
+    <div id="cellrows"></div>
+    <div class="mm"><span>min <b id="cmin">--</b></span><span>max <b id="cmax">--</b></span><span>delta <b id="cdel">--</b></span></div>
+   </div>
+   <div class="grid">
+    <div class="tile"><div class="lbl">Power</div><div class="tv" id="pw">--</div><div class="ts">volts × amps</div></div>
+    <div class="tile"><div class="lbl">Protection</div><div class="tv sm" id="prot">--</div><div class="ts" id="prots">--</div></div>
+    <div class="tile"><div class="lbl">Cycles</div><div class="tv md" id="cyc">--</div><div class="ts">board A / B</div></div>
+    <div class="tile"><div class="lbl">BMS board</div><div class="tv md" id="tb">--</div><div class="ts">sensor A / B</div></div>
+   </div>
+   <details><summary>Board details</summary><table class="dt" id="dt"></table></details>
+  </div>
+ </div>
+</div>
+
+<div class="col">
+ <!-- FAN -->
+ <div class="card" id="fancard">
+  <div class="fan">
+   <div class="fico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg></div>
+   <div><div class="fstate" id="fstate">FAN —</div><div class="mode" id="mode">—</div></div>
+  </div>
+  <div class="fdesc" id="fdesc"></div>
+  <div class="grid">
+   <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">off target</div></div>
+   <div class="tile"><div class="lbl">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts">on target</div></div>
+   <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
+   <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
+  </div>
+ </div>
+
+ <!-- TEMP CHART -->
+ <div class="card">
+  <div class="chd"><div class="lbl" id="chl">Last 6 hours</div><div class="seg" id="seg"><button data-h="6">6h</button><button data-h="12">12h</button><button data-h="24">24h</button></div></div>
+  <div class="lg"><span style="--c:var(--hot)">Case probe</span><span class="yesbms" style="--c:var(--cool)">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span></div>
+  <svg class="ch" id="ch" viewBox="0 0 340 196"></svg>
+  <div class="note" id="note"></div>
+ </div>
+
+ <!-- BATTERY CHART -->
+ <div class="card">
+  <div class="chd"><div class="lbl" id="bchl">Battery · last 6 hours</div><div class="sub" id="bchs">5-min readings</div></div>
+  <div class="lg yesbms"><span style="--c:var(--ok)">SOC %</span><span style="--c:var(--warm)">Current A (+ charge)</span></div>
+  <div class="lg nobms"><span style="--c:var(--warm)">Voltage (Shelly)</span></div>
+  <svg class="ch" id="bch" viewBox="0 0 340 170"></svg>
+  <div class="note nobms">SOC and current from the BMS will appear here once battery data arrives.</div>
+ </div>
+</div>
+</div>
+
+<div class="foot" id="foot"></div>
+<div class="ft" id="ft">Refreshes every minute</div>
+</div>
+<script>
+(function(){
+"use strict";
+var SHEET="10Xp3xuxtlholYFS-oJ5VRpQiAplPkU5YD3JqET3iA_A";
+var MAIN_URL="https://docs.google.com/spreadsheets/d/"+SHEET+"/export?format=csv";
+var BMS_URL="https://docs.google.com/spreadsheets/d/"+SHEET+"/gviz/tq?tqx=out:csv&sheet=BMS";
+var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
+var FAN_SVG=document.querySelector(".pill svg").outerHTML;
+var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Very hot: fan forced on until it drops below 45°C.",cold:"Cold: fan never runs below 5°C.","sensor-fault":"Temperature sensor fault. Check the sensors."};
+var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Fan on",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Parked 8 h+",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
+var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1};
+var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
+function $(i){return document.getElementById(i)}
+function n(v){if(v===null||v===undefined)return null;if(typeof v==="number")return isFinite(v)?v:null;v=String(v).trim();if(v===""||/^(null|nan|none|undefined|-)$/i.test(v))return null;var x=Number(v.replace(/,/g,""));return isFinite(x)?x:null}
+function mask(v){if(v===null||v===undefined)return null;v=String(v).trim();if(!v||/^null$/i.test(v))return null;var x=/^0x/i.test(v)?parseInt(v,16):Number(v);return isFinite(x)?Math.round(x):null}
+function bool(v){if(v===null||v===undefined)return null;v=String(v).trim().toLowerCase();if(v===""||v==="null")return null;return v==="1"||v==="true"||v==="on"||v==="yes"}
+function f1(v){return v===null||isNaN(v)?"--":(Math.round(v*10)/10).toFixed(1)}
+function sgn(v,d){var s=(Math.abs(v)).toFixed(d);return (v<0&&Number(s)!==0?"−":v>0&&Number(s)!==0?"+":"")+s}
+function amps(v){var r=Math.round(v*100)/100;var s=Math.abs(r).toString();if(s.indexOf(".")<0)s+=".0";return (r<0?"−":"")+s}
+function deg(v){return f1(v)+"<sup>°C</sup>"}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function hm(t){return new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}).replace(/\s/g," ").toLowerCase()}
+function dur(ms){var m=Math.max(0,Math.round(ms/60000));if(m<60)return m+" min";var h=Math.floor(m/60);if(h<48)return h+" h "+String(m%60).padStart(2,"0")+" min";return Math.floor(h/24)+" d "+(h%24)+" h"}
+function ago(ms){var m=Math.max(0,Math.round(ms/60000));return m<1?"just now":m<60?m+" min ago":dur(ms)+" ago"}
+
+/* ---------- CSV ---------- */
+function parseCSV(t){var rows=[],row=[],f="",q=false,i=0,c;t=t.replace(/^\uFEFF/,"");
+ for(;i<t.length;i++){c=t[i];
+  if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===","){row.push(f);f=""}
+  else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}
+  else f+=c}
+ if(f!==""||row.length){row.push(f);rows.push(row)}return rows}
+function table(text){var r=parseCSV(text);if(!r.length)return{h:[],rows:[]};var h=r[0].map(function(x){return x.trim().toLowerCase()});
+ return{h:h,rows:r.slice(1).map(function(a){var o={};h.forEach(function(k,j){o[k]=a[j]});return o})}}
+
+function shellyRows(text){var tb=table(text);if(tb.h.indexOf("unix")<0||tb.h.indexOf("pack_c")<0)throw new Error("unexpected sheet columns");
+ var out=[],seen={};tb.rows.forEach(function(o){var u=n(o.unix);if(u===null||u<1e9||seen[u])return;seen[u]=1;
+  var f=n(o.fan_on);out.push({t:u*1000,u:u,pack:n(o.pack_c),amb:n(o.ambient_c),fan:f===null?null:(f>=1?1:0),volt:n(o.battery_v),latch:n(o.latch_c),off:n(o.off_c),on:n(o.on_c),mode:(o.mode||"").trim().toLowerCase()})});
+ out.sort(function(a,b){return a.t-b.t});return out}
+
+var BF=["v","a","rem_ah","nom_ah","cycles","soc","t_brd","t_int","cell1_v","cell2_v","cell3_v","cell4_v","cell_min","cell_max","cell_delta","cell_count"];
+function isBMSHeader(h){return h.indexOf("unix")>=0&&(h.indexOf("v_a")>=0||h.indexOf("soc_a")>=0||h.indexOf("cell1_v_a")>=0||h.indexOf("v_b")>=0)}
+function cellV(x){x=n(x);if(x===null)return null;return x>100?x/1000:x}
+function board(o,s){var b={},any=false;BF.forEach(function(k){var v=n(o[k+"_"+s]);b[k]=v;if(v!==null&&k!=="cell_count")any=true});
+ b.cells=[1,2,3,4].map(function(i){return cellV(o["cell"+i+"_v_"+s])});
+ var cc=b.cell_count;if(cc!==null&&cc>4)for(var i=5;i<=cc&&i<=16;i++)b.cells.push(cellV(o["cell"+i+"_v_"+s]));
+ b.cell_min=cellV(o["cell_min_"+s]);b.cell_max=cellV(o["cell_max_"+s]);
+ b.prot=mask(o["prot_mask_"+s]);b.bal=mask(o["bal_mask_"+s]);b.fc=bool(o["fet_chg_"+s]);b.fd=bool(o["fet_dsg_"+s]);
+ b.mfg=(o["mfg_date_"+s]||"").trim();b.sw=(o["sw_ver_"+s]||"").trim();b.name=(o["name_"+s]||o["name"]||"").trim();
+ b.any=any;return b}
+function bmsRows(text){var tb=table(text);if(!isBMSHeader(tb.h))return null;var out=[],seen={};
+ tb.rows.forEach(function(o){var u=n(o.unix);if(u===null||u<1e9)return;if(u>1e12)u=u/1000;var A=board(o,"a"),B=board(o,"b");if(!A.any&&!B.any)return;
+  var r={t:u*1000,u:u,device:(o.device||"").trim(),A:A,B:B};if(seen[u]){out[seen[u]-1]=r;return}out.push(r);seen[u]=out.length});
+ out.sort(function(a,b){return a.t-b.t});return out}
+
+/* combine the two parallel boards */
+function packOf(r){var A=r.A,B=r.B,bs=[A,B].filter(function(b){return b.any});
+ function vals(k){return bs.map(function(b){return b[k]}).filter(function(v){return v!==null})}
+ function avg(a){return a.length?a.reduce(function(s,x){return s+x},0)/a.length:null}
+ function sum(a){return a.length?a.reduce(function(s,x){return s+x},0):null}
+ var p={boards:bs.length,v:avg(vals("v")),i:null,iParts:vals("a").length};
+ var ia=vals("a");p.i=ia.length?Math.round(sum(ia)*100)/100:null;
+ var rem=vals("rem_ah");p.nom=bs.reduce(function(t,b){return t+(b.nom_ah!==null&&b.nom_ah>0?b.nom_ah:40)},0)||80;
+ p.rem=rem.length===bs.length&&rem.length?sum(rem):null;
+ p.soc=p.rem!==null?Math.max(0,Math.min(100,p.rem/p.nom*100)):avg(vals("soc"));
+ var ti=vals("t_int");p.tint=ti.length?Math.max.apply(null,ti):null;
+ p.power=(p.v!==null&&p.i!==null)?p.v*p.i:null;
+ var all=[];[A,B].forEach(function(b){b.cells.forEach(function(c){if(c!==null&&c>1&&c<5)all.push(c)})});
+ if(all.length){p.cmin=Math.min.apply(null,all);p.cmax=Math.max.apply(null,all)}else{var mn=vals("cell_min"),mx=vals("cell_max");p.cmin=mn.length?Math.min.apply(null,mn):null;p.cmax=mx.length?Math.max.apply(null,mx):null}
+ if(p.cmin!==null&&p.cmax!==null)p.cdel=(p.cmax-p.cmin)*1000;else{var d=vals("cell_delta");p.cdel=d.length?Math.max.apply(null,d.map(function(x){return x<1?x*1000:x})):null}
+ var pm=0,anyp=false;bs.forEach(function(b){if(b.prot!==null){anyp=true;pm|=b.prot}});p.prot=anyp?pm:null;
+ return p}
+
+/* ---------- state ---------- */
+var S={rows:[],bms:null,okAt:0,fetchOk:true,bmsMode:"filtered"};
+var hours=Number(localStorage.getItem("bf2-hours"))||6;if([6,12,24].indexOf(hours)<0)hours=6;
+try{var c=JSON.parse(localStorage.getItem("bf2-cache")||"null");if(c&&c.rows){S.rows=c.rows;S.bms=c.bms;S.okAt=c.at||0}}catch(e){}
+function save(){try{var from=Date.now()-KEEP_H*3600e3,ko=keyOffInfo(S.rows,Date.now());
+ if(ko&&ko.idx!==undefined)from=Math.min(from,S.rows[Math.max(0,ko.idx-1)].t);
+ localStorage.setItem("bf2-cache",JSON.stringify({rows:S.rows.filter(function(r){return r.t>=from}),bms:S.bms?S.bms.filter(function(r){return r.t>=Date.now()-KEEP_H*3600e3}):null,at:S.okAt}))}catch(e){}}
+
+/* key-off: the Shelly logs mode "driving" while the ignition is on, then switches
+   (normally to "cooldown") at key-off. Key-off = the first logged row after the
+   last "driving" row. Fan minutes = fan_on rows since then x 5 min. */
+function keyOffInfo(rows,now){var L=rows.length-1;if(L<0)return null;
+ if(rows[L].mode==="driving"){var j=L;while(j>0&&rows[j-1].mode==="driving"&&rows[j].t-rows[j-1].t<=20*60e3)j--;return{driving:true,since:rows[j].t,idx:j}}
+ var k=-1;for(var i=L;i>=0;i--)if(rows[i].mode==="driving"){k=i;break}
+ if(k<0)return{none:true};
+ var f=k+1,gap=rows[f].t-rows[k].t,t=gap<=10*60e3?rows[k].t+gap/2:rows[f].t,fr=0;
+ for(i=f;i<=L;i++)if(rows[i].fan===1)fr+=Math.max(0,Math.min(300e3,(i<L?rows[i+1].t:now)-rows[i].t));
+ return{t:t,fanMin:Math.round(fr/60e3),parked:now-t,idx:f,lastDrive:rows[k].t}}
+
+function match(rows,bms){var out=rows.map(function(){return null});if(!bms||!bms.length)return out;var j=0;
+ for(var i=0;i<rows.length;i++){var u=rows[i].u;while(j<bms.length-1&&bms[j+1].u<=u)j++;var best=null,bd=1e9;
+  [j,j+1].forEach(function(k){if(k<bms.length){var d=Math.abs(bms[k].u-u);if(d<=MATCH_S&&d<bd){bd=d;best=bms[k]}}});out[i]=best}return out}
+
+/* ---------- fetch ---------- */
+function get(url){return fetch(url+(url.indexOf("?")<0?"?":"&")+"_="+Date.now(),{cache:"no-store",redirect:"follow"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.text()})}
+function bmsUrl(){if(S.bmsMode!=="filtered")return BMS_URL+"&headers=1";
+ var since=Math.floor(Date.now()/1000-KEEP_H*3600);return BMS_URL+"&headers=1&tq="+encodeURIComponent("select * where A > "+since)}
+function loadBMS(){return get(bmsUrl()).then(function(t){var b=bmsRows(t);
+  if(b===null)return null; // tab missing: gviz falls back to the first tab, which has no BMS columns
+  if(!b.length&&S.bmsMode==="filtered"){ // tab exists but filter returned nothing: try the plain read once
+   return get(BMS_URL+"&headers=1").then(function(t2){var b2=bmsRows(t2);if(b2&&b2.length)S.bmsMode="plain";return b2})}
+  return b}).catch(function(){return S.bms})}
+var loading=false;
+function load(){if(loading)return;loading=true;$("app").classList.add("busy");
+ Promise.all([get(MAIN_URL).then(shellyRows),loadBMS()]).then(function(res){
+  S.rows=res[0];S.bms=res[1]&&res[1].length?res[1]:null;S.okAt=Date.now();S.fetchOk=true;save()
+ }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;$("app").classList.remove("busy");render()})}
+
+/* ---------- render ---------- */
+function setCls(el,cls,on){el.classList.toggle(cls,!!on)}
+function render(){var app=$("app"),now=Date.now(),rows=S.rows;
+ setCls(app,"haserr",!S.fetchOk&&rows.length);
+ setCls(app,"isempty",!rows.length);
+ if(!rows.length){$("et").textContent=S.fetchOk?(S.okAt?"Waiting for the first reading":"Loading readings…"):"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(now,null,null);return}
+ var r=rows[rows.length-1],age=now-r.t;
+ $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);
+ setCls(app,"stale",age>STALE_MIN*60e3);
+ var off=lastv(rows,"off"),on=lastv(rows,"on");
+ var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bAge=bl?now-bl.t:null;
+ var has=!!p;setCls(document.body,"hasbms",has);setCls(document.body,"nob",!has);
+ /* pill */
+ var fan=r.fan===1,m=r.mode,pill=$("pill");pill.className="pill"+(BAD[m]?" bad":fan?" on":m==="driving"?" drv":"");
+ $("pillt").textContent=(SHORT[m]||(m?m:"Running"))+", fan "+(fan?"ON":"OFF");
+ /* temps */
+ var pk=r.pack,amb=r.amb,cells=p?p.tint:null;
+ var pc="var(--ok)",g="rgba(52,211,153,.16)",word="Comfortable";
+ if(pk!==null){if(pk>=45){pc="var(--hot)";g="rgba(251,113,133,.28)";word="Very hot"}
+  else if(on!==null&&pk>on){pc="var(--hot)";g="rgba(251,113,133,.2)";word="Above start point"}
+  else if(off!==null&&pk>off){pc="var(--warm)";g="rgba(251,191,36,.18)";word="Between targets"}
+  else if(pk<10){pc="var(--cool)";g="rgba(34,211,238,.18)";word="Cold"}
+  else word="At or below stop point"}
+ document.body.style.setProperty("--glow",has?"rgba(34,211,238,.20)":g);
+ var chip=$("chip");
+ if(has&&cells!==null){
+  var cc=cells>=45?"var(--hot)":cells>=38?"var(--warm)":"var(--cool)";document.documentElement.style.setProperty("--cc",cc);
+  $("bigl").textContent="Internal · cells";$("big").innerHTML=deg(cells);$("case").innerHTML=deg(pk);$("case").style.color=pc;
+  if(pk!==null){var d=pk-cells;chip.innerHTML=arrow(d>=0)+"Cells "+f1(Math.abs(d))+"° "+(d>=0?"cooler":"warmer")+" than the case";chip.style.setProperty("--chip",d>=0?"var(--cool)":"var(--warm)")}
+  else{chip.textContent="Case probe offline";chip.style.setProperty("--chip","var(--mut)")}
+ }else{
+  document.documentElement.style.setProperty("--cc",pc);$("bigl").textContent="Case probe";$("big").innerHTML=deg(pk);
+  chip.textContent=word;chip.style.setProperty("--chip",pc);
+ }
+ $("amb").innerHTML=deg(amb);
+ ladder(amb,has?cells:null,pk);
+ if(has){var A=bl.A,B=bl.B;
+  $("mcell").innerHTML=pair(A.t_int,B.t_int,"°C");$("mbrd").innerHTML=pair(A.t_brd,B.t_brd,"°C")}
+ else{$("mcell").innerHTML=$("mbrd").innerHTML='<span class="w">waiting for BMS</span>'}
+ /* battery */
+ if(has)battery(bl,p,bAge,r);else{var v=r.volt;$("sv").innerHTML=v===null?"--":v.toFixed(2)+"<small>V</small>";$("sv").style.color=v!==null&&v<12.9?"var(--hot)":v!==null&&v<13.1?"var(--warm)":"";
+  $("svs").textContent=v===null?"Shelly voltmeter":"Shelly · "+(v<12.9?"low, fan held off":v<13.1?"recovering":"healthy");$("bsub").textContent="80Ah LiFePO₄ · 2 × 40Ah"}
+ /* fan */
+ $("fancard").className="card"+(fan?" on":"");$("fstate").textContent=fan?"FAN ON":"FAN OFF";
+ var ctx=m==="driving"?"engine running":(m==="cap"||m==="cooldown"||m==="cooldown-done"||m==="run-on"||m==="early-stop")?"engine off":"";
+ $("mode").textContent=(SHORT[m]||(fan?"Running":"Off"))+(ctx?" · "+ctx:"");
+  var fs=rows.length-1;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
+ $("fdesc").innerHTML="<b style=\"color:#cfd5e6;font-weight:600\">Fan "+(fan?"on":"off")+" since "+hm(rows[fs].t)+".</b> "+esc(MODES[m]||"");
+ $("off").innerHTML=off===null?"--":f1(off)+"<small>°C</small>";$("on").innerHTML=on===null?"--":f1(on)+"<small>°C</small>";
+ var ko=keyOffInfo(rows,now);
+ if(!ko||ko.none){$("ko").innerHTML="--";$("kos").textContent="no drive in the log yet"}
+ else if(ko.driving){$("ko").innerHTML='<span style="color:#fde68a">Driving</span>';$("kos").textContent="since "+hm(ko.since)+" · fan held off"}
+ else{var fm=ko.fanMin;$("ko").innerHTML=fm<60?fm+"<small>min fan</small>":Math.floor(fm/60)+"<small>h</small> "+String(fm%60).padStart(2,"0")+"<small>min fan</small>";
+  $("kos").textContent="parked "+dur(ko.parked)}
+ if(has&&p.i!==null){$("draw").innerHTML=amps(p.i)+"<small>A</small>";$("draws").textContent="reported by BMS"+(p.iParts<2?" (one board)":"")}
+ else{$("draw").innerHTML='<span style="color:var(--mut)">--</span>';$("draws").textContent=has?"no current reading":"waiting for BMS"}
+ /* charts */
+ var mt=match(rows,S.bms);
+ tempChart(rows,mt,now,off,on);batChart(rows,now);
+ note(rows,mt,now,ko);
+ footer(now,age,bAge);
+ $("ft").innerHTML="Refreshes every minute · last reading "+esc(new Date(r.t).toLocaleString([],{weekday:"short",hour:"numeric",minute:"2-digit"}).toLowerCase())+' · <a href="../">classic view</a>';
+}
+function lastv(rows,k){for(var i=rows.length-1;i>=0;i--)if(rows[i][k]!==null)return rows[i][k];return null}
+function arrow(down){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="'+(down?"M12 4v16M5 13l7 7 7-7":"M12 20V4M5 11l7-7 7 7")+'"/></svg>'}
+function pair(a,b,u){if(a===null&&b===null)return'<span class="w">no reading</span>';return"<b>"+f1(a)+'<span class="sl2">/</span>'+f1(b)+"<small>"+u+"</small></b>"}
+function ladder(amb,cells,pk){var vs=[amb,cells,pk].filter(function(v){return v!==null});var lad=$("lad");
+ if(!vs.length){lad.style.visibility="hidden";return}lad.style.visibility="";
+ var lo=Math.floor(Math.min.apply(null,vs)-4),hi=Math.ceil(Math.max.apply(null,vs)+4);if(hi-lo<16){var mid=(hi+lo)/2;lo=Math.floor(mid-8);hi=lo+16}
+ function P(v){return Math.max(2,Math.min(98,(v-lo)/(hi-lo)*100))}
+ function place(el,v){if(v===null){el.style.display="none";return}el.style.display="";el.style.left=P(v)+"%"}
+ place($("ka"),amb);place($("kp"),pk);place($("kc"),cells);
+ var ref=cells!==null?cells:amb,brk=$("brk"),em=$("brke");
+ if(ref!==null&&pk!==null){var a=P(Math.min(ref,pk)),b=P(Math.max(ref,pk));brk.style.display=em.style.display="";brk.style.left=a+"%";brk.style.width=(b-a)+"%";em.style.left=(a+b)/2+"%";
+  em.textContent=cells!==null?sgn(cells-pk,1)+"°":sgn(pk-amb,1)+"° over Ambient"}else{brk.style.display=em.style.display="none"}
+ var L=[];if(amb!==null)L.push({p:P(amb),t:"Ambient "+f1(amb)+"°",s:""});
+ if(cells!==null)L.push({p:P(cells),t:"Cells "+f1(cells)+"°",s:"color:var(--cool);font-weight:600"});
+ if(pk!==null)L.push({p:P(pk),t:"Case "+f1(pk)+"°",s:"color:#fda4af"+(cells===null?";font-weight:600":"")});
+ L.sort(function(x,y){return x.p-y.p});var gap=27,i;for(i=0;i<L.length;i++){L[i].p=Math.max(L[i].p,13);if(i)L[i].p=Math.max(L[i].p,L[i-1].p+gap)}
+ for(i=L.length-1;i>=0;i--){L[i].p=Math.min(L[i].p,i===L.length-1?87:L[i+1].p-gap)}
+ $("scale").innerHTML=L.map(function(x){return'<span style="left:'+x.p+'%;'+x.s+'">'+x.t+"</span>"}).join("")}
+function battery(bl,p,bAge,r){
+ var stale=bAge>BMS_STALE_MIN*60e3;
+ $("bsub").textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · "+(p.boards===2?"2 × 40Ah":"1 of 2 boards");
+ $("bsub").style.color=stale?"var(--warm)":"";
+ var soc=p.soc;$("soc").innerHTML=(soc===null?"--":Math.round(soc))+"<small>%</small>";$("arc").setAttribute("stroke-dasharray",(soc===null?0:soc/100*314.2).toFixed(1)+" 314.2");
+ $("bv").innerHTML=p.v===null?"--":p.v.toFixed(2)+"<small>V</small>";
+ var bi=$("bi");bi.className=p.i===null?"":p.i>0.05?"chg":p.i<-0.05?"dsg":"";bi.innerHTML=p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small>A</small>";
+ $("brem").innerHTML=p.rem===null?"--":f1(p.rem)+"<small>/ "+Math.round(p.nom||80)+" Ah</small>";
+ var fl=$("flow");if(p.i===null){fl.className="flow";fl.textContent=""}else if(p.i>0.2){fl.className="flow c";fl.textContent="⚡ Charging"+(r.mode==="driving"?" · engine running":"")}
+ else if(p.i<-0.2){fl.className="flow d";fl.textContent="Discharging"}else{fl.className="flow";fl.textContent="Idle · no significant current"}
+ /* cells */
+ var lo=p.cmin,hi=p.cmax,html="";
+ [["A",bl.A],["B",bl.B]].forEach(function(x){var b=x[1];if(!b.any)return;var cs=b.cells.filter(function(c,i){return i<4||c!==null});
+  html+='<div class="brow"><div class="bn">'+x[0]+'</div><div class="cg" style="grid-template-columns:repeat('+Math.max(4,cs.length)+',1fr)">';
+  cs.forEach(function(c,i){var cls="",lab="CELL "+(i+1),col="";if(c!==null&&lo!==null&&hi-lo>0.0005){if(c===hi){cls=" mx";lab+=" ▲";col="color:#fde68a"}else if(c===lo){cls=" mn";lab+=" ▼";col="color:#a5f3fc"}}
+   var h=c===null||lo===null?0:hi-lo<0.0005?55:30+50*(c-lo)/(hi-lo),bal=b.bal!==null&&(b.bal>>i)&1;
+   html+='<div class="cl"><div class="tube'+cls+'"><i style="height:'+h.toFixed(0)+'%"></i>'+(bal?'<span class="bl">BAL</span>':"")+'</div><div class="cv" style="'+col+'">'+(c===null?"--":c.toFixed(3))+'</div><div class="cn">'+lab+"</div></div>"});
+  html+="</div></div>"});
+ $("cellrows").innerHTML=html||'<div class="ws">No cell voltages reported.</div>';
+ $("cmin").textContent=lo===null?"--":lo.toFixed(3)+" V";$("cmax").textContent=hi===null?"--":hi.toFixed(3)+" V";$("cdel").textContent=p.cdel===null?"--":Math.round(p.cdel)+" mV";
+ var balOn=(bl.A.bal||0)|(bl.B.bal||0),bg=$("bal");
+ if(p.cdel===null){bg.className="badge n";bg.textContent="no data"}else{var d=Math.round(p.cdel);bg.className="badge"+(d>=60?" h":d>=25?" w":"");bg.textContent="Δ "+d+" mV · "+(balOn?"balancing":d<25?"balanced":d<60?"drifting":"out of balance")}
+ /* tiles */
+ $("pw").innerHTML=p.power===null?"--":sgn(p.power,0).replace("+","")+"<small>W</small>";$("pw").style.color=p.power>1?"var(--ok)":"";
+ var pr=$("prot"),ps=$("prots");
+ var fets=[bl.A,bl.B].filter(function(b){return b.any&&(b.fc===false||b.fd===false)});
+ if(p.prot===null&&!fets.length){pr.textContent="--";pr.style.color="var(--mut)";ps.textContent="no status reported"}
+ else if(!p.prot&&!fets.length){pr.textContent="All clear";pr.style.color="var(--ok)";ps.textContent="FETs on"}
+ else{var names=[];for(var i=0;i<13;i++)if(p.prot&(1<<i))names.push(PROT[i]);
+  fets.forEach(function(b){names.push((b===bl.A?"A":"B")+": "+(b.fc===false?"charge ":"")+(b.fd===false?"discharge ":"")+"FET off")});
+  pr.textContent=p.prot?"Tripped":"FET off";pr.style.color="var(--hot)";ps.textContent=names.join(", ")}
+ $("cyc").innerHTML=(bl.A.cycles===null?"--":bl.A.cycles)+'<span class="sl2">/</span>'+(bl.B.cycles===null?"--":bl.B.cycles);
+ $("tb").innerHTML=f1(bl.A.t_brd)+'<span class="sl2">/</span>'+f1(bl.B.t_brd)+"<small>°</small>";
+ /* details */
+ function row(l,fa,fb){return"<tr><td>"+l+"</td><td>"+fa(bl.A)+"</td><td>"+fb(bl.B)+"</td></tr>"}
+ function k(key,d,u){return function(b){var v=b[key];return v===null||v===undefined?"--":(typeof v==="number"?v.toFixed(d):esc(v))+(u||"")}}
+ function s(key){return function(b){return b[key]?esc(b[key]):"--"}}
+ function fet(b){return(b.fc===null?"?":b.fc?"on":"off")+" / "+(b.fd===null?"?":b.fd?"on":"off")}
+ function hx(key){return function(b){return b[key]===null?"--":"0x"+b[key].toString(16).padStart(4,"0")}}
+ $("dt").innerHTML="<tr><th></th><th>Board A</th><th>Board B</th></tr>"+row("Name",s("name"),s("name"))+row("Voltage",k("v",2," V"),k("v",2," V"))+row("Current",k("a",2," A"),k("a",2," A"))+row("Remaining",k("rem_ah",1," Ah"),k("rem_ah",1," Ah"))+row("Nominal",k("nom_ah",0," Ah"),k("nom_ah",0," Ah"))+row("SOC",k("soc",0,"%"),k("soc",0,"%"))+row("Cells (internal)",k("t_int",1,"°"),k("t_int",1,"°"))+row("Board temp",k("t_brd",1,"°"),k("t_brd",1,"°"))+row("FET chg / dsg",fet,fet)+row("Protection",hx("prot"),hx("prot"))+row("Balance",hx("bal"),hx("bal"))+row("Made",s("mfg"),s("mfg"))+row("Firmware",s("sw"),s("sw"))+"<tr><td>Reading</td><td colspan=2>"+hm(bl.t)+" · "+ago(Date.now()-bl.t)+"</td></tr>"}
+
+/* ---------- charts ---------- */
+function smooth(p){if(p.length===1)return"M"+p[0][0].toFixed(1)+" "+p[0][1].toFixed(1)+"h.1";var d="M"+p[0][0].toFixed(1)+" "+p[0][1].toFixed(1);
+ for(var k=0;k<p.length-1;k++){var p0=p[k-1]||p[k],p1=p[k],p2=p[k+1],p3=p[k+2]||p2,c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6,mn=Math.min(p1[1],p2[1]),mx=Math.max(p1[1],p2[1]);
+  c1y=Math.min(Math.max(c1y,mn),mx);c2y=Math.min(Math.max(c2y,mn),mx);d+="C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+p2[0].toFixed(1)+" "+p2[1].toFixed(1)}return d}
+function stepd(p,end){var d="";p.forEach(function(q,k){d+=(k?"H"+q[0].toFixed(1)+"V":"M"+q[0].toFixed(1)+" ")+q[1].toFixed(1)});return d+"H"+end.toFixed(1)}
+function segs(list,get,X,Y){var out=[],cur=[],lt=null;list.forEach(function(o){var v=get(o);if(v===null||v===undefined)return;if(cur.length&&o.t-lt>15*60e3){out.push(cur);cur=[]}cur.push([X(o.t),Y(v),o.t,v]);lt=o.t});if(cur.length)out.push(cur);return out}
+function timeAxis(t0,t1,X,H,W,R){var span=(t1-t0)/3600e3,hs=span>16?4:span>8?2:span>4?1:span>2?1:0.5,s="",tk=Math.ceil(t0/(hs*3600e3))*hs*3600e3;
+ for(;tk<t1-hs*1800e3;tk+=hs*3600e3){var dd=new Date(tk);dd.setMinutes(0);var lab=new Date(tk).toLocaleTimeString([],{hour:"numeric",minute:hs<1?"2-digit":undefined}).replace(/\s/g,"").replace(":00","").toLowerCase();
+  if(X(tk)<30)continue;s+='<text x="'+X(tk).toFixed(1)+'" y="'+(H-5)+'" fill="#596075" font-size="9.5" text-anchor="middle">'+lab+"</text>"}
+ return s+'<text x="'+(W-R)+'" y="'+(H-5)+'" fill="#8b93a7" font-size="9.5" text-anchor="end">now</text>'}
+function bands(rows,t0,X,T,hgt,fill){var s="",band=null;function flush(){if(band){s+='<rect x="'+X(band[0]).toFixed(1)+'" y="'+T+'" width="'+Math.max(2,X(band[1])-X(band[0])).toFixed(1)+'" height="'+hgt+'" rx="4" fill="'+fill+'"/><line x1="'+X(band[0]).toFixed(1)+'" x2="'+X(band[0]).toFixed(1)+'" y1="'+T+'" y2="'+(T+hgt)+'" stroke="rgba(34,211,238,.35)"/>';band=null}}
+ rows.forEach(function(r){if(r.t<t0-300e3)return;var a=Math.max(t0,r.t-150e3),b=r.t+150e3;if(r.fan===1){if(band&&a<=band[1]+1)band[1]=b;else{flush();band=[a,b]}}});flush();return s}
+function endDot(sg,c,big){if(!sg.length)return"";var l=sg[sg.length-1],q=l[l.length-1];return(big?'<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="9" fill="'+c+'" opacity=".18"/>':"")+'<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+(big?4.5:3.5)+'" fill="'+c+'" stroke="#0b0e16" stroke-width="2"/>'}
+function window0(rows,now){var t0=now-hours*3600e3;return t0}
+function tempChart(rows,mt,now,offN,onN){
+ var W=340,H=196,L=26,R=6,T=8,B=20,t1=now,t0=window0(rows,now),el=$("ch");
+ var pts=[],cellPts=[];rows.forEach(function(r,i){if(r.t>=t0-300e3){pts.push(r);var b=mt[i];if(b){var pp=packOf(b);if(pp.tint!==null)cellPts.push({t:r.t,v:pp.tint})}}});
+ $("chl").textContent="Last "+hours+" hours";
+ if(pts.length<2){el.innerHTML='<text x="170" y="98" fill="#8b93a7" font-size="12" text-anchor="middle">No readings in the last '+hours+' hours</text>';return}
+ var vals=[];pts.forEach(function(r){[r.pack,r.amb,r.off,r.on].forEach(function(v){if(v!==null)vals.push(v)})});cellPts.forEach(function(c){vals.push(c.v)});
+ var lo=Math.floor((Math.min.apply(null,vals)-1)/5)*5,hi=Math.ceil((Math.max.apply(null,vals)+1)/5)*5;if(hi-lo<10)hi=lo+10;
+ var X=function(t){return L+(t-t0)/(t1-t0)*(W-L-R)},Y=function(v){return T+(hi-v)/(hi-lo)*(H-T-B)};
+ var s='<defs><linearGradient id="cgr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fb7185" stop-opacity=".30"/><stop offset="1" stop-color="#fb7185" stop-opacity="0"/></linearGradient><linearGradient id="fgr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".22"/><stop offset="1" stop-color="#22d3ee" stop-opacity=".04"/></linearGradient><filter id="gl" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><clipPath id="cp"><rect x="'+L+'" y="0" width="'+(W-L-R+8)+'" height="'+H+'"/></clipPath></defs>';
+ s+='<g clip-path="url(#cp)">'+bands(pts,t0,X,T,H-T-B,"url(#fgr)")+"</g>";
+ var step=(hi-lo)>25?10:5;for(var v=lo;v<=hi;v+=step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="rgba(255,255,255,.055)"/><text x="'+(L-6)+'" y="'+(Y(v)+3.5).toFixed(1)+'" fill="#596075" font-size="9.5" text-anchor="end">'+v+"°</text>";
+ s+=timeAxis(t0,t1,X,H,W,R);
+ s+='<g clip-path="url(#cp)">';
+ segs(pts,function(r){return r.on},X,Y).forEach(function(p){s+='<path d="'+stepd(p,X(p[p.length-1][2]+150e3))+'" fill="none" stroke="#fb7185" stroke-width="1.1" stroke-dasharray="3 4" opacity=".6"/>'});
+ segs(pts,function(r){return r.off},X,Y).forEach(function(p){s+='<path d="'+stepd(p,X(p[p.length-1][2]+150e3))+'" fill="none" stroke="#34d399" stroke-width="1.1" stroke-dasharray="3 4" opacity=".7"/>'});
+ var ps=segs(pts,function(r){return r.pack},X,Y),as=segs(pts,function(r){return r.amb},X,Y),cs=segs(cellPts,function(c){return c.v},X,Y);
+ ps.forEach(function(p){if(p.length>1)s+='<path d="'+smooth(p)+"L"+p[p.length-1][0].toFixed(1)+" "+(H-B)+"L"+p[0][0].toFixed(1)+" "+(H-B)+'Z" fill="url(#cgr)"/>'});
+ as.forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#8b93a7" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>'});
+ cs.forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linecap="round" filter="url(#gl)"/>'});
+ ps.forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#fb7185" stroke-width="2.4" stroke-linecap="round" filter="url(#gl)"/>'});
+ s+="</g>";
+ var onv=lastv(pts,"on"),offv=lastv(pts,"off");
+ if(onv!==null)s+='<text x="'+(L+5)+'" y="'+(Y(onv)-5).toFixed(1)+'" fill="#fb7185" font-size="9" opacity=".9">start '+f1(onv)+"°</text>";
+ if(offv!==null)s+='<text x="'+(L+5)+'" y="'+(Y(offv)+12).toFixed(1)+'" fill="#34d399" font-size="9" opacity=".95">stop '+f1(offv)+"°</text>";
+ s+=endDot(ps,"#fb7185",1)+endDot(cs,"#22d3ee",1)+endDot(as,"#8b93a7",0);
+ el.innerHTML=s}
+function batChart(rows,now){var W=340,H=170,L=26,R=26,T=8,B=20,t1=now,t0=window0(rows,now),el=$("bch");
+ $("bchl").textContent="Battery · last "+hours+" hours";
+ var X=function(t){return L+(t-t0)/(t1-t0)*(W-L-R)},s="";
+ var defs='<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity=".28"/><stop offset="1" stop-color="#34d399" stop-opacity="0"/></linearGradient><linearGradient id="fgr2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".12"/><stop offset="1" stop-color="#22d3ee" stop-opacity=".02"/></linearGradient><clipPath id="cp2"><rect x="'+L+'" y="0" width="'+(W-L-R+6)+'" height="'+H+'"/></clipPath></defs>';
+ var pts=rows.filter(function(r){return r.t>=t0-300e3});
+ var bms=(S.bms||[]).filter(function(b){return b.t>=t0-300e3}).map(function(b){var p=packOf(b);return{t:b.t,soc:p.soc,i:p.i}});
+ if(bms.length>=1){
+  var Ys=function(v){return T+(100-v)/100*(H-T-B)};
+  var iv=bms.map(function(b){return b.i}).filter(function(v){return v!==null}),imax=Math.max(5,Math.ceil(Math.max.apply(null,iv.map(Math.abs).concat([1]))/5)*5);
+  var Yi=function(v){return T+(imax-v)/(2*imax)*(H-T-B)};
+  s+='<g clip-path="url(#cp2)">'+bands(pts,t0,X,T,H-T-B,"url(#fgr2)")+"</g>";
+  [0,25,50,75,100].forEach(function(v){s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Ys(v).toFixed(1)+'" y2="'+Ys(v).toFixed(1)+'" stroke="rgba(255,255,255,.055)"/><text x="'+(L-6)+'" y="'+(Ys(v)+3.5).toFixed(1)+'" fill="#596075" font-size="9.5" text-anchor="end">'+v+"%</text>"});
+  [-imax,0,imax].forEach(function(v){s+='<text x="'+(W-R+5)+'" y="'+(Yi(v)+3.5).toFixed(1)+'" fill="#a1824a" font-size="9.5">'+(v>0?"+":v<0?"−":"")+Math.abs(v)+"</text>"});
+  s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Yi(0).toFixed(1)+'" y2="'+Yi(0).toFixed(1)+'" stroke="rgba(251,191,36,.25)" stroke-dasharray="2 3"/>';
+  s+=timeAxis(t0,t1,X,H,W,R);
+  var ss=segs(bms,function(b){return b.soc},X,Ys),is=segs(bms,function(b){return b.i},X,Yi);
+  s+='<g clip-path="url(#cp2)">';
+  ss.forEach(function(p){if(p.length>1)s+='<path d="'+smooth(p)+"L"+p[p.length-1][0].toFixed(1)+" "+(H-B)+"L"+p[0][0].toFixed(1)+" "+(H-B)+'Z" fill="url(#sg)"/>';s+='<path d="'+smooth(p)+'" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round"/>'});
+  is.forEach(function(p){s+='<path d="'+stepd(p,p[p.length-1][0])+'" fill="none" stroke="#fbbf24" stroke-width="1.6" stroke-linejoin="round" opacity=".9"/>'});
+  s+="</g>"+endDot(ss,"#34d399",1)+endDot(is,"#fbbf24",0);
+  $("bchs").textContent="5-min readings";
+ }else{
+  var vv=pts.map(function(r){return r.volt}).filter(function(v){return v!==null});
+  if(vv.length<2){el.innerHTML=defs+'<text x="170" y="85" fill="#8b93a7" font-size="12" text-anchor="middle">Waiting for battery data</text>';$("bchs").textContent="";return}
+  var lo=Math.floor((Math.min.apply(null,vv)-.05)*10)/10,hi=Math.ceil((Math.max.apply(null,vv)+.05)*10)/10;if(hi-lo<0.4){lo=Math.round((lo+hi)/2*10)/10-0.2;hi=lo+0.4}
+  var Yv=function(v){return T+(hi-v)/(hi-lo)*(H-T-B)},st=(hi-lo)>0.8?0.2:0.1;R=6;
+  s+='<g clip-path="url(#cp2)">'+bands(pts,t0,X,T,H-T-B,"url(#fgr2)")+"</g>";
+  for(var v=lo;v<=hi+1e-9;v+=st)s+='<line x1="'+L+'" x2="'+(W-26)+'" y1="'+Yv(v).toFixed(1)+'" y2="'+Yv(v).toFixed(1)+'" stroke="rgba(255,255,255,.055)"/><text x="'+(L-6)+'" y="'+(Yv(v)+3.5).toFixed(1)+'" fill="#596075" font-size="9" text-anchor="end">'+v.toFixed(1)+"</text>";
+  s+=timeAxis(t0,t1,X,H,W,26);
+  var vs=segs(pts,function(r){return r.volt},X,Yv);s+='<g clip-path="url(#cp2)">';vs.forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>'});s+="</g>"+endDot(vs,"#fbbf24",0);
+  $("bchs").textContent="volts";
+ }
+ el.innerHTML=defs+s}
+function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
+ for(i=0;i<rows.length;i++)if(rows[i].t>=t0)pts.push(i);if(!pts.length){el.textContent="";return}
+ var parts=[];
+ function peak(from){var best=null;for(var k=from;k<rows.length;k++){var v=rows[k].pack;if(v!==null&&(!best||v>best.v))best={v:v,t:rows[k].t,k:k}}return best}
+ if(ko&&ko.driving){parts.push("Driving since <b>"+hm(ko.since)+"</b>. The fan is held off until key-off, then the cool-down starts.")}
+ else if(ko&&!ko.none&&ko.t>=t0){var pk=peak(ko.idx),cur=rows[rows.length-1].pack;
+  parts.push("Engine off at <b>"+hm(ko.t)+"</b>.");
+  if(pk){var rise=rows[ko.idx].pack!==null?pk.v-rows[ko.idx].pack:null;
+   if(rise!==null&&rise>=0.5&&pk.t>ko.t)parts.push("Heat-soak took the case to <b>"+f1(pk.v)+"°</b> at "+hm(pk.t)+".");
+   else parts.push("Case probe peaked at <b>"+f1(pk.v)+"°</b>.");
+   if(ko.fanMin)parts.push("The fan has run <b>"+ko.fanMin+" min</b> since"+(cur!==null&&pk.v-cur>=0.5?" and the case is down <b>"+f1(pk.v-cur)+"°</b> from its peak.":"."))}
+ }else{var mn=null,mx=null,fr=0;pts.forEach(function(k){var v=rows[k].pack;if(v!==null){mn=mn===null?v:Math.min(mn,v);mx=mx===null?v:Math.max(mx,v)}if(rows[k].fan===1)fr++});
+  if(mn!==null)parts.push("Case probe ranged <b>"+f1(mn)+"–"+f1(mx)+"°</b>"+(fr?", fan ran <b>"+fr*5+" min</b>":", fan stayed off")+" in the last "+hours+" h.")}
+ var cmax=null;pts.forEach(function(k){var b=mt[k];if(b){var t=packOf(b).tint;if(t!==null&&(cmax===null||t>cmax))cmax=t}});
+ if(cmax!==null)parts.push("Cells peaked at just <b>"+f1(cmax)+"°</b>.");
+ el.innerHTML=parts.join(" ")}
+function footer(now,age,bAge){var ok='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  wt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  x='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>';
+ function chip(cls,ic,t){return'<span class="'+cls+'">'+ic+t+"</span>"}
+ var h="";
+ h+=age===null?chip("n",wt,"Shelly"):age>STALE_MIN*60e3?chip("w",wt,"Shelly · "+ago(age)):chip("",ok,"Shelly");
+ h+=bAge===null?chip("n",wt,"BMS bridge · waiting"):bAge>BMS_STALE_MIN*60e3?chip("w",wt,"BMS · "+ago(bAge)):chip("",ok,"BMS bridge");
+ h+=S.fetchOk?chip("",ok,"Sheet synced"):chip("x",x,"Sheet offline");
+ $("foot").innerHTML=h}
+
+/* ---------- wiring ---------- */
+function segUI(){[].forEach.call($("seg").children,function(b){b.classList.toggle("sel",Number(b.dataset.h)===hours)})}
+$("seg").addEventListener("click",function(e){var h=Number(e.target.dataset&&e.target.dataset.h);if(!h)return;hours=h;localStorage.setItem("bf2-hours",h);segUI();render()});
+segUI();
+$("rf").onclick=load;$("retry").onclick=load;
+document.addEventListener("visibilitychange",function(){if(!document.hidden)load()});
+window.addEventListener("pageshow",function(e){if(e.persisted)load()});
+setInterval(function(){if(!document.hidden)load()},REFRESH_MS);
+setInterval(function(){if(S.rows.length)render()},30000);
+(function(){var y0=null,dy=0,p=$("ptr");document.addEventListener("touchstart",function(e){y0=(window.scrollY<=0)?e.touches[0].clientY:null;dy=0},{passive:true});
+ document.addEventListener("touchmove",function(e){if(y0===null)return;dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
+ document.addEventListener("touchend",function(){if(y0!==null&&dy>70)load();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
+window.__bf={S:S,keyOffInfo:keyOffInfo,packOf:packOf,render:render};
+if(S.rows.length)render();
+load();
+})();
+</script>
+</body>
+</html>
