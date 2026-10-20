@@ -171,11 +171,13 @@ svg.ch text{font-family:inherit}
 /* scrub crosshair + tooltip */
 .chw{position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-x pan-y}
 .chw.scrubbing{touch-action:none}
-.chw.zoomed{touch-action:pan-y}
-#pww .zr{right:34px}
+#pww .zc{right:34px}
 .notcool .warn{display:none!important}.notcool.stale .dot{background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.15)}#app .upd.old .dot{background:var(--hot);box-shadow:0 0 0 4px rgba(251,113,133,.15)}
 .brand{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#596075;margin-bottom:3px}
-.zr{position:absolute;right:4px;top:4px;z-index:4;font-size:11px;font-weight:600;color:#a5f3fc;background:rgba(34,211,238,.13);border:1px solid rgba(34,211,238,.28);border-radius:99px;padding:3px 9px;cursor:pointer}
+.chw svg.ch{touch-action:none}
+.zc{position:absolute;right:4px;top:2px;z-index:4;display:flex;gap:4px;opacity:.55;transition:opacity .2s}.zc.on{opacity:1}
+.zc button{min-width:26px;height:24px;font-size:13px;font-weight:600;color:#a5f3fc;background:rgba(13,17,25,.7);border:1px solid rgba(34,211,238,.25);border-radius:99px;padding:0 8px;cursor:pointer}
+.zc button[data-z=reset]{font-size:11px}.zc:not(.on) button[data-z=reset]{display:none}
 svg .xh{transition:opacity .35s}svg .xh.out{opacity:0}
 svg .xh circle{transform-box:fill-box;transform-origin:center}
 svg .xh.pop circle{animation:dotpop .22s ease-out}
@@ -670,45 +672,79 @@ function scrubAt(id,clientX){var g=CH[id];if(!g||!g.pts.length)return;var r=$(id
 function scrubEnd(id,delay){var sc=SC[id];clearTimeout(sc.hide);sc.hide=setTimeout(function(){sc.out=true;$(sc.tip).classList.remove("on","pop");var x=$(id).querySelector(".xh");if(x)x.classList.add("out");
   sc.hide=setTimeout(function(){sc.on=false;drawXH(id)},400)},delay===undefined?1500:delay)}
 /* ---------- chart zoom (pinch) + pan; zoom state = visible fraction [a,b] of the full window ---------- */
-var Z={},RD={},FULL={},ZR={};
-function zoomUI(id){var w=$(id).parentNode,z=Z[id],b=w.querySelector(".zr");
- if(!b){b=document.createElement("button");b.className="zr";b.type="button";b.textContent="Reset zoom";
-  b.addEventListener("touchstart",function(e){e.stopPropagation()},{passive:true});b.addEventListener("click",function(e){e.stopPropagation();resetZoom(id)});w.appendChild(b)}
- b.style.display=z?"":"none";w.classList.toggle("zoomed",!!z)}
-function redraw(id){if(ZR[id])return;ZR[id]=requestAnimationFrame(function(){ZR[id]=0;if(RD[id])RD[id]()})}
-function setZoom(id,a,sp){var mn=Math.min(1,20*60e3/(FULL[id]||36e5));sp=Math.max(mn,Math.min(1,sp));
+var Z={},RD={},FULL={},ZR={},GL={};
+function zoomUI(id){var w=$(id).parentNode,z=Z[id],g=w.querySelector(".zc");
+ if(!g){g=document.createElement("div");g.className="zc";
+  g.innerHTML='<button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="reset">Reset</button>';
+  g.addEventListener("touchstart",function(e){e.stopPropagation()},{passive:true});
+  g.addEventListener("click",function(e){e.stopPropagation();var k=e.target.dataset&&e.target.dataset.z;if(!k)return;var s=zs(id);
+   if(k==="reset")resetZoom(id);else{var c=s.a+s.sp/2,sp=k==="in"?s.sp/2:s.sp*2;setZoom(id,c-sp/2,sp)}});w.appendChild(g)}
+ g.classList.toggle("on",!!z)}
+function zs(id){var z=Z[id];return z?{a:z.a,sp:z.b-z.a}:{a:0,sp:1}}
+function minSp(id){return Math.min(1,20*60e3/(FULL[id]||36e5))}
+function redraw(id){if(ZR[id])return;ZR[id]=requestAnimationFrame(function(){ZR[id]=0;if(RD[id]){var t=performance.now();RD[id]();RT.push(performance.now()-t);if(RT.length>200)RT.shift()}})}
+var RT=[];
+/* hard clamp (buttons, pinch) */
+function setZoom(id,a,sp){sp=Math.max(minSp(id),Math.min(1,sp));
  if(sp>=0.999)delete Z[id];else{a=Math.max(0,Math.min(1-sp,a));Z[id]={a:a,b:a+sp}}redraw(id)}
-function resetZoom(id){delete Z[id];if(RD[id])RD[id]()}
-function plotFrac(id,cx){var g=CH[id],r=$(id).getBoundingClientRect();if(!g||!r.width)return .5;var ux=(cx-r.left)*g.W/r.width;return Math.max(0,Math.min(1,(ux-g.L)/(g.W-g.L-g.R)))}
+/* soft clamp (one-finger pan): overshoot past an edge is resisted, then springs back */
+function setPan(id,a,sp){var lo=0,hi=1-sp;if(a<lo)a=lo-rub(lo-a,sp);else if(a>hi)a=hi+rub(a-hi,sp);Z[id]={a:a,b:a+sp};redraw(id)}
+function rub(o,sp){var m=sp*.25;return m*(1-1/(o/m+1))}
+function stopGlide(id){if(GL[id]){cancelAnimationFrame(GL[id]);GL[id]=0}}
+function glide(id,v){stopGlide(id);var last=performance.now();
+ (function step(){var now=performance.now(),dt=Math.min(40,now-last);last=now;var z=Z[id];if(!z){GL[id]=0;return}var sp=z.b-z.a,a=z.a,hi=1-sp;
+  if(a<0||a>hi){/* spring back to the edge */var tgt=a<0?0:hi;a+=(tgt-a)*Math.min(1,dt/90);v=0;if(Math.abs(a-tgt)<sp*.002)a=tgt;Z[id]={a:a,b:a+sp};redraw(id);if(a!==tgt){GL[id]=requestAnimationFrame(step)}else GL[id]=0;return}
+  a+=v*dt;v*=Math.pow(.993,dt);if(a<0||a>hi){a=a<0?-rub(-a,sp)*.4:hi+rub(a-hi,sp)*.4;v=0}
+  Z[id]={a:a,b:a+sp};redraw(id);if(Math.abs(v)*1000>sp*.02||a<0||a>hi)GL[id]=requestAnimationFrame(step);else GL[id]=0})()}
+function resetZoom(id){stopGlide(id);delete Z[id];if(RD[id])RD[id]()}
+function plotFracRaw(id,cx){var g=CH[id],r=$(id).getBoundingClientRect();if(!g||!r.width)return .5;var ux=(cx-r.left)*g.W/r.width;return (ux-g.L)/(g.W-g.L-g.R)}
+function plotFrac(id,cx){return Math.max(0,Math.min(1,plotFracRaw(id,cx)))}
 function pxFrac(id,dx){var g=CH[id],r=$(id).getBoundingClientRect();if(!g||!r.width)return 0;return dx*g.W/r.width/(g.W-g.L-g.R)}
-function attachScrub(wrapId,id,tipId){var w=$(wrapId),st=null,lastTap=0;SC[id]={on:false,i:-1,tip:tipId};
- function zs(){var z=Z[id];return z?{a:z.a,sp:z.b-z.a}:{a:0,sp:1}}
- function pinchStart(e){if(st)clearTimeout(st.timer);if(st&&st.mode==="scrub")scrubEnd(id,0);
-  var a=e.touches[0],b=e.touches[1],cx=(a.clientX+b.clientX)/2,z=zs();
-  st={mode:"pinch",d0:Math.max(20,Math.abs(a.clientX-b.clientX)),f:z.a+plotFrac(id,cx)*z.sp,sp0:z.sp};scrubbing=true;w.classList.add("scrubbing")}
- w.addEventListener("gesturestart",function(e){e.preventDefault()});
- w.addEventListener("touchstart",function(e){
-  if(e.touches.length===2){if(e.cancelable)e.preventDefault();pinchStart(e);return}
-  if(e.touches.length!==1){st=null;return}var t=e.touches[0];
-  st={x:t.clientX,y:t.clientY,t0:Date.now(),mode:"wait"};
-  st.timer=setTimeout(function(){if(st&&st.mode==="wait"){st.mode="scrub";scrubbing=true;w.classList.add("scrubbing");scrubAt(id,st.x)}},250)},{passive:false});
- w.addEventListener("touchmove",function(e){if(!st)return;
-  if(st.mode==="pinch"||st.mode==="pinchdone"){if(e.cancelable)e.preventDefault();if(st.mode==="pinch"&&e.touches.length>=2){var a=e.touches[0],b=e.touches[1],d=Math.max(20,Math.abs(a.clientX-b.clientX)),sp=st.sp0*st.d0/d,cf=plotFrac(id,(a.clientX+b.clientX)/2);setZoom(id,st.f-cf*Math.max(sp,0),sp)}return}
-  var t=e.touches[0],dx=t.clientX-st.x,dy=t.clientY-st.y;
+/* One gesture = from the first finger down until ALL fingers are up.
+   1 finger: hold 300 ms (<8 px) -> scrub; zoomed + horizontal -> pan (with glide); vertical -> page scroll (with glide);
+             unzoomed horizontal: quick flick -> page swipe, slower drag -> scrub; short tap x2 -> reset zoom.
+   2nd finger lands at any point -> pinch until all fingers lift; leftover finger is ignored. */
+function attachScrub(wrapId,id,tipId){var w=$(wrapId),svg=$(id),st=null,lastTap=0,pg=w.closest(".page");SC[id]={on:false,i:-1,tip:tipId};
+ ["gesturestart","gesturechange","gestureend"].forEach(function(n){w.addEventListener(n,function(e){e.preventDefault()},{passive:false})});
+ function pair(e){var a=null,b=null;for(var i=0;i<e.touches.length;i++){var t=e.touches[i];if(t.identifier===st.ia)a=t;else if(t.identifier===st.ib)b=t}return a&&b?[a,b]:null}
+ function startPinch(e){if(st){clearTimeout(st.timer);if(st.mode==="scrub")scrubEnd(id,0);if(st.mode==="vscroll"&&GL.v)cancelAnimationFrame(GL.v)}stopGlide(id);
+  var a=e.touches[0],b=e.touches[1],z=zs(id),mx=(a.clientX+b.clientX)/2;
+  st={mode:"pinch",ia:a.identifier,ib:b.identifier,d0:Math.max(30,Math.abs(a.clientX-b.clientX)),sp0:z.sp,f0:z.a+plotFracRaw(id,mx)*z.sp};
+  scrubbing=true;w.classList.add("scrubbing")}
+ function vglide(v){if(GL.v)cancelAnimationFrame(GL.v);var last=performance.now();(function s(){var n=performance.now(),dt=Math.min(40,n-last);last=n;pg.scrollTop-=v*dt;v*=Math.pow(.995,dt);if(Math.abs(v)>.02)GL.v=requestAnimationFrame(s);else GL.v=0})()}
+ w.addEventListener("touchstart",function(e){if(e.cancelable)e.preventDefault();
+  if(e.touches.length>=2){if(!st||st.mode!=="pinch"&&st.mode!=="ignore")startPinch(e);return}
+  if(st)return;stopGlide(id);if(GL.v){cancelAnimationFrame(GL.v);GL.v=0}
+  var t=e.touches[0];st={mode:"wait",x:t.clientX,y:t.clientY,t0:Date.now(),top:pg?pg.scrollTop:0,hist:[]};
+  st.timer=setTimeout(function(){if(st&&st.mode==="wait"){st.mode="scrub";scrubbing=true;w.classList.add("scrubbing");scrubAt(id,st.x)}},300)},{passive:false});
+ w.addEventListener("touchmove",function(e){if(e.cancelable)e.preventDefault();if(!st)return;
+  if(st.mode==="pinch"){var p=pair(e);if(!p)return;var d=Math.max(30,Math.abs(p[0].clientX-p[1].clientX)),sp=st.sp0*st.d0/d,mx=(p[0].clientX+p[1].clientX)/2;
+   sp=Math.max(minSp(id),Math.min(1,sp));setZoom(id,st.f0-plotFracRaw(id,mx)*sp,sp);return}
+  if(st.mode==="ignore")return;
+  var t=e.touches[0],dx=t.clientX-st.x,dy=t.clientY-st.y,now=performance.now();st.hist.push([now,t.clientX,t.clientY]);if(st.hist.length>6)st.hist.shift();
   if(st.mode==="wait"&&Math.max(Math.abs(dx),Math.abs(dy))>=8){clearTimeout(st.timer);
-   /* zoomed: horizontal drag pans the chart. Not zoomed: vertical -> page scroll; fast horizontal flick (<150 ms) -> page swipe; slower horizontal drag -> scrub */
-   if(Z[id]&&Math.abs(dx)>=Math.abs(dy)){st.mode="pan";st.z=zs();scrubbing=true;w.classList.add("scrubbing")}
-   else st.mode=Math.abs(dy)>Math.abs(dx)||Date.now()-st.t0<150?"native":"scrub";
-   if(st.mode==="scrub"){scrubbing=true;w.classList.add("scrubbing")}}
-  if(st.mode==="pan"){if(e.cancelable)e.preventDefault();setZoom(id,st.z.a-pxFrac(id,dx)*st.z.sp,st.z.sp);return}
-  if(st.mode==="scrub"){if(e.cancelable)e.preventDefault();scrubAt(id,t.clientX)}},{passive:false});
+   if(Math.abs(dy)>Math.abs(dx))st.mode="vscroll";
+   else if(Z[id]){st.mode="pan";st.z=zs(id)}
+   else st.mode=Date.now()-st.t0<150?"flick":"scrub";
+   if(st.mode!=="vscroll"){scrubbing=true;w.classList.add("scrubbing")}}
+  if(st.mode==="pan")setPan(id,st.z.a-pxFrac(id,dx)*st.z.sp,st.z.sp);
+  else if(st.mode==="vscroll"){if(pg)pg.scrollTop=st.top-dy}
+  else if(st.mode==="scrub")scrubAt(id,t.clientX);
+  st.dx=dx},{passive:false});
+ function vel(axis){var h=st.hist;if(h.length<2)return 0;var a=h[0],b=h[h.length-1],dt=b[0]-a[0];if(dt<=0||performance.now()-b[0]>80)return 0;return (b[axis]-a[axis])/dt}
  function end(e){if(!st)return;
-  if(st.mode==="pinch"&&e&&e.touches&&e.touches.length){st.mode="pinchdone";return}
-  if(st.mode==="pinchdone"&&e&&e.touches&&e.touches.length)return;
-  clearTimeout(st.timer);if(st.mode==="scrub")scrubEnd(id);
-  if(st.mode==="wait"&&Date.now()-st.t0<250){var now=Date.now();if(now-lastTap<320){lastTap=0;if(Z[id]){resetZoom(id);if(e&&e.cancelable)e.preventDefault()}}else lastTap=now}
+  if(e.touches&&e.touches.length){if(st.mode==="pinch"||st.mode==="ignore"){st.mode="ignore";return}
+   /* a different finger lifted while one is still down: treat as a broken gesture */
+   clearTimeout(st.timer);if(st.mode==="scrub")scrubEnd(id);st.mode="ignore";return}
+  clearTimeout(st.timer);var m=st.mode;
+  if(m==="scrub")scrubEnd(id);
+  else if(m==="pan"){var v=-pxFrac(id,vel(1))*st.z.sp;glide(id,v)}
+  else if(m==="vscroll"){var vv=vel(2);if(pg&&Math.abs(vv)>.1)vglide(vv)}
+  else if(m==="flick"){if(Math.abs(st.dx||0)>30&&typeof go==="function")go(cur+((st.dx||0)<0?1:-1),true)}
+  else if(m==="pinch"||m==="ignore"){var z=Z[id];if(z&&(z.a<0||z.b>1))setZoom(id,z.a,z.b-z.a)}
+  else if(m==="wait"&&Date.now()-st.t0<250){var now=Date.now();if(now-lastTap<320){lastTap=0;if(Z[id])resetZoom(id)}else lastTap=now}
   st=null;scrubbing=false;w.classList.remove("scrubbing")}
- w.addEventListener("touchend",end);w.addEventListener("touchcancel",end);
+ w.addEventListener("touchend",end);w.addEventListener("touchcancel",end);w.__st=function(){return st};
  w.addEventListener("dblclick",function(){if(Z[id])resetZoom(id)});
  w.addEventListener("contextmenu",function(e){e.preventDefault()});
  w.addEventListener("pointermove",function(e){if(e.pointerType==="mouse")scrubAt(id,e.clientX)});
@@ -893,7 +929,7 @@ setInterval(function(){if(S.rows.length)render();renderExtra()},30000);
  document.addEventListener("touchmove",function(e){if(y0===null)return;if(scrubbing){y0=null;p.style.opacity=0;return}if(Math.abs(e.touches[0].clientX-x0)>Math.abs(e.touches[0].clientY-y0)){y0=null;p.style.opacity=0;return}dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
  document.addEventListener("touchend",function(){if(y0!==null&&dy>70)loadAll();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
 var render0=render;render=function(){render0();capHC();hdr()};
-window.__bf={S:S,X2:X2,renderExtra:renderExtra,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
+window.__bf={RT:RT,Z:Z,S:S,X2:X2,renderExtra:renderExtra,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
 if(S.rows.length)render();
 renderExtra();
 loadAll();
