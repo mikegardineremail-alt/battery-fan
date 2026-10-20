@@ -252,6 +252,16 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .skl{display:inline-block;width:150px;height:10px;margin:0;vertical-align:middle}
 @keyframes shim{0%{background-position:100% 0}100%{background-position:0 0}}
 .pill.skp{min-width:120px;min-height:30px;background:rgba(255,255,255,.06);animation:none}.pill.skp svg{opacity:.3}
+.hr{display:flex;gap:8px;align-items:flex-start}
+.hfan{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;background:rgba(255,255,255,.05);transition:background .4s,box-shadow .4s}
+.hfan svg{width:30px;height:30px;transition:opacity .4s}.hfan .bl path{fill:#8b93a7}.hfan .hub{fill:#0b0e16;stroke:#8b93a7;stroke-width:1.6}
+.hfan.off svg{opacity:.45}
+.hfan.on{background:radial-gradient(circle,rgba(34,211,238,.22),rgba(34,211,238,.06) 70%);box-shadow:0 0 0 1px rgba(34,211,238,.25),0 0 18px rgba(34,211,238,.25)}
+.hfan.on .bl path{fill:#67e8f9}.hfan.on .hub{stroke:#a5f3fc}
+.hfan.on svg{animation:hspin 1.6s linear infinite;will-change:transform}
+@keyframes hspin{to{transform:rotate(360deg)}}
+.notcool .hfan{display:none}
+@media (prefers-reduced-motion:reduce){.hfan.on svg{animation:none}}
 .fd{animation:vfade .45s ease-out}@keyframes vfade{from{opacity:.35}to{opacity:1}}
 .empty .skel{text-align:left}
 
@@ -300,7 +310,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
  <div class="pill off" id="pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg><span id="pillt">Loading</span></div>
  <div class="upd"><span class="dot"></span><span id="ago"><i class="skl"></i></span></div>
 </div>
-<button class="rf" id="rf" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<div class="hr"><div class="hfan" id="hfan" role="img" aria-label="Fan off"><svg viewBox="0 0 48 48"><g class="bl"><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z"/><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate(120 24 24)"/><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate(240 24 24)"/></g><circle cx="24" cy="24" r="3.4" class="hub"/></svg></div><button class="rf" id="rf" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
 
 <div class="banner err">Couldn't reach the sheet. Showing the last data. <u id="retry">Try again</u></div>
 <div class="banner warn">No new Shelly reading for a while. It may be offline or out of Wi-Fi range.</div>
@@ -898,6 +908,7 @@ function fadeVals(){[].forEach.call(document.querySelectorAll(".big,.big2,.sv,.t
 function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.now(),c="pill off",t="Waiting",a="no data yet",old=false;
  $("htitle").textContent=TITLES[i];document.title=TITLES[i]+" · Battery Monitor";app.classList.toggle("notcool",i!==0);
  function upd(ts){a="Updated "+hm(ts)+" · "+ago(now-ts);old=now-ts>STALE_MIN*60e3}
+ var lr=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(lr&&lr.fan===1),hf=$("hfan");hf.className="hfan "+(lr?(fon?"on":"off"):"off");hf.setAttribute("aria-label",fon?"Fan on":"Fan off");
  if(i===0){if(HC){c=HC.c;t=HC.t;a=HC.a}}
  else if(i===1){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(bl){var p=packOf(bl);upd(bl.t);
    var st=p.i===null?"":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";c="pill"+(st==="Discharging"?" drv":st==="Charging"?"":" off");
