@@ -162,6 +162,7 @@ svg.ch text{font-family:inherit}
 .mtiles .tv{font-size:21px}.mtiles .tv small{font-size:11px}
 .mtiles .ts{font-size:10.5px;line-height:1.35;margin-top:2px}
 .mtiles .dim,.dim{color:#596075}
+.pkl{white-space:nowrap;font-size:9.5px;letter-spacing:-.01em}
 .cd{display:inline-block;width:6px;height:6px;border-radius:2px;background:rgba(34,211,238,.45);margin-right:4px;vertical-align:1px}
 /* range pills */
 .range{display:inline-flex;gap:4px}
@@ -626,8 +627,15 @@ function miniTiles(rows,mt,now,has){var L=rows.length-1,r=rows[L],i;
  /* today's peak */
  var md=new Date(now);md.setHours(0,0,0,0);var pk=null,cp=null;
  for(i=L;i>=0&&rows[i].t>=md.getTime();i--){if(rows[i].pack!==null&&(!pk||rows[i].pack>pk.pack))pk=rows[i];var b=mt[i];if(b){var c=packOf(b).tint;if(c!==null&&(!cp||c>cp.v))cp={v:c,t:rows[i].t}}}
- $("pkv").innerHTML=pk?f1(pk.pack)+"<small>°C</small>":'<span class="dim">--</span>';
- $("pks").innerHTML=(pk?"case at "+hm(pk.t):"no readings today")+"<br>"+(cp?"cells "+f1(cp.v)+"°":'<span class="dim"><i class="cd"></i>waiting for BMS</span>');
+ /* cell peak today from BMS rows (max t_int over both boards); other peaks as deltas */
+ var c0=null,bp=null,ap=null,first=null,bst=null;(S.bms||[]).forEach(function(x){if(x.t<md.getTime())return;
+  [x.A,x.B].forEach(function(bd){if(!bd.any)return;if(bd.t_int!==null){if(bst===null)bst=x.t;if(!c0||bd.t_int>c0.v)c0={v:bd.t_int,t:x.t}}if(bd.t_brd!==null&&(!bp||bd.t_brd>bp.v))bp={v:bd.t_brd,t:x.t}})});
+ for(i=L;i>=0&&rows[i].t>=md.getTime();i--){first=rows[i].t;if(rows[i].amb!==null&&(!ap||rows[i].amb>ap.v))ap={v:rows[i].amb,t:rows[i].t}}
+ function dl(name,o){return o?'<span class="pkl" title="'+name+" peak "+f1(o.v)+"° at "+hm(o.t)+'">'+name+" "+sgn(o.v-c0.v,1)+"° <span class=\"dim\">("+f1(o.v)+"°)</span></span>":""}
+ if(c0){$("pkv").innerHTML=f1(c0.v)+"<small>°C</small>";
+  $("pks").innerHTML=["cells at "+hm(c0.t),dl("Case",pk?{v:pk.pack,t:pk.t}:null),dl("Board",bp),dl("Ambient",ap),first!==null&&bst>first+15*60e3?'<span class="dim pkl">cells since '+hm(bst)+"</span>":""].filter(Boolean).join("<br>")}
+ else{$("pkv").innerHTML=pk?f1(pk.pack)+"<small>°C</small>":'<span class="dim">--</span>';
+  $("pks").innerHTML=(pk?"case at "+hm(pk.t):"no readings today")+'<br><span class="dim"><i class="cd"></i>cells: no data today</span>'}
  /* gap to Ambient */
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,cells=has&&bl?packOf(bl).tint:null,base=cells!==null?cells:r.pack;
  if(base===null||r.amb===null){$("gap").innerHTML='<span class="dim">--</span>';$("gaps").textContent="no reading"}
