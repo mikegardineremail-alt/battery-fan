@@ -714,7 +714,7 @@ function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,bod
   return h+'<div class="pkn'+(bad?" x":"")+'">'+notes.join("<br>")+"</div></div>"}).join("")+"</div>"}
 
 /* ---------- Power (SmartShunt) + Protect (BatteryProtect) ---------- */
-var SHUNT_ID="11bP6_w0Wc39pC1jxkmRUfJNhOV8mRMtBefH5zRRWSnw",BP_ID="1JwgQc2wk_58zryqTfBLm_HX_Xbp50mqIGLFUz7u3_Uo";
+var SHUNT_ID="11bP6_w0Wc39pC1jxkmRUfJNhOV8mRMtBefH5zRRWSnw",BP_ID=SHUNT_ID;
 function gvizUrl(id,tab,hrs){var u="https://docs.google.com/spreadsheets/d/"+id+"/gviz/tq?tqx=out:csv&headers=1&sheet="+encodeURIComponent(tab);
  return u+"&tq="+encodeURIComponent("select * where C > "+Math.floor(Date.now()/1000-hrs*3600))}
 var X2={sh:null,shErr:false,shAt:0,bp:null,bpErr:false,bpAt:0};
