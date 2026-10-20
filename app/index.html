@@ -184,6 +184,26 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
 .tip .r span:before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:6px;background:var(--c)}
 .tip .r b{font-weight:600;color:#eef2ff;font-variant-numeric:tabular-nums}
 .tip .m{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08);color:var(--mut);white-space:nowrap}
+/* cooling page: temps + fan + history stacked */
+.csec{margin-top:14px}
+/* packs A/B, power, protect */
+.pk2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pkc{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:18px;padding:12px 12px 10px;min-width:0}
+.pkh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.pkh b{font-size:13px;letter-spacing:.12em;color:var(--mut)}
+.pks{font-size:34px;font-weight:250;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ok)}
+.pks small{font-size:15px;color:var(--mut)}
+.kv{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.kv:last-child{border:0}.kv span{color:var(--mut)}.kv b{font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+.kv b.hl{color:var(--hot)}.kv b.g{color:var(--ok)}.kv b.w{color:#fde68a}
+.pkn{font-size:11.5px;line-height:1.4;margin-top:8px;color:#cfd5e6}.pkn.x{color:#fecdd3}
+.wbox{text-align:center;padding:26px 14px}
+.big2{font-size:84px;font-weight:200;line-height:.9;letter-spacing:-.04em;color:var(--ok);font-variant-numeric:tabular-nums}
+.big2 sup{font-size:30px;font-weight:300;vertical-align:top;position:relative;top:10px;margin-left:2px}
+.outst{font-size:40px;font-weight:700;letter-spacing:.02em}
+.al{border-radius:14px;padding:10px 12px;font-size:13.5px;line-height:1.4;margin-top:12px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.35);color:#fecdd3}
+.al.w{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fde68a}
+.al.i{background:rgba(255,255,255,.04);border-color:var(--line);color:#cfd5e6}
 @media (min-width:900px){
  body{height:auto;overflow:auto}#app{height:auto;display:block}
  .head{max-width:1080px}
@@ -210,7 +230,7 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
 <div class="banner warn">No new Shelly reading for a while. It may be offline or out of Wi-Fi range.</div>
 </header>
 <main class="pager" id="pager">
-<section class="page" id="temps" aria-label="Temps"><div class="in tin">
+<section class="page" id="cooling" aria-label="Cooling"><div class="in tin" id="temps">
 <div class="card empty"><div class="et" id="et">Loading readings…</div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
 <!-- HERO -->
 <div class="card live">
@@ -235,7 +255,35 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
  <div class="tile"><div class="lbl">Today's peak</div><div class="tv" id="pkv">--</div><div class="ts" id="pks">--</div></div>
  <div class="tile"><div class="lbl">Gap to Ambient</div><div class="tv" id="gap">--</div><div class="ts" id="gaps">--</div></div>
 </div>
-</div></section>
+</div>
+<div class="in csec" id="fan">
+<!-- FAN -->
+<div class="card live" id="fancard">
+ <div class="fan">
+  <div class="fico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg></div>
+  <div><div class="fstate" id="fstate">FAN —</div><div class="mode" id="mode">—</div></div>
+  <div class="tag" id="ftag">—</div>
+ </div>
+ <div class="grid">
+  <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">off target</div></div>
+  <div class="tile"><div class="lbl">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts">on target</div></div>
+  <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
+  <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
+ </div>
+</div>
+</div>
+<div class="in csec" id="history">
+<!-- CHART -->
+<div class="card live">
+ <div class="chd"><div class="lbl" id="chl" style="cursor:pointer">Last 6 hours</div><div class="range" id="range"><button data-h="6">6h</button><button data-h="12">12h</button><button data-h="24">24h</button></div></div>
+ <div class="lg"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)" id="lgc">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span></div>
+ <div class="chw" id="hw"><svg class="ch" id="ch" viewBox="0 0 340 196"></svg><div class="tip" id="htip"></div></div>
+ <div class="note" id="note"></div>
+</div>
+<div class="foot" id="foot"></div>
+<div class="ft" id="ft">Refreshes every minute</div>
+</div>
+</section>
 <section class="page" id="battery" aria-label="Battery"><div class="in">
 <!-- BATTERY -->
 <div class="card live">
@@ -264,37 +312,32 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
   <div class="tile"><div class="lbl">BMS board</div><div class="tv" id="tb">--</div><div class="ts" id="tbs">sensor A / B</div></div>
  </div>
 </div>
-</div></section>
-<section class="page" id="fan" aria-label="Fan"><div class="in">
-<!-- FAN -->
-<div class="card live" id="fancard">
- <div class="fan">
-  <div class="fico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg></div>
-  <div><div class="fstate" id="fstate">FAN —</div><div class="mode" id="mode">—</div></div>
-  <div class="tag" id="ftag">—</div>
- </div>
- <div class="grid">
-  <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">off target</div></div>
-  <div class="tile"><div class="lbl">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts">on target</div></div>
-  <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
-  <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
- </div>
+<!-- PACKS A / B -->
+<div class="card" id="packs">
+ <div class="chd"><div class="lbl">Packs A &amp; B</div><div class="sub" id="pksub">Invicta BMS</div></div>
+ <div id="pkbody"><div class="wbox"><div class="et">Waiting for first BMS reading</div><div class="es">Each pack will show here once the BMS bridge logs its first reading.</div></div></div>
 </div>
 </div></section>
-<section class="page" id="history" aria-label="History"><div class="in">
-<!-- CHART -->
-<div class="card live">
- <div class="chd"><div class="lbl" id="chl" style="cursor:pointer">Last 6 hours</div><div class="range" id="range"><button data-h="6">6h</button><button data-h="12">12h</button><button data-h="24">24h</button></div></div>
- <div class="lg"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)" id="lgc">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span></div>
- <div class="chw" id="hw"><svg class="ch" id="ch" viewBox="0 0 340 196"></svg><div class="tip" id="htip"></div></div>
- <div class="note" id="note"></div>
+<section class="page" id="power" aria-label="Power"><div class="in">
+<div class="card" id="pwcard">
+ <div class="chd"><div class="lbl">Aux battery · SmartShunt</div><div class="sub" id="pwupd">loading…</div></div>
+ <div id="pwbody"><div class="wbox"><div class="et">Loading…</div></div></div>
 </div>
-<div class="foot" id="foot"></div>
-<div class="ft" id="ft">Refreshes every minute</div>
+<div class="card" id="pwchc" style="display:none">
+ <div class="chd"><div class="lbl">Last 24 hours</div><div class="sub">hold to scrub</div></div>
+ <div class="lg"><span style="--c:var(--ok)">State of charge</span><span style="--c:#fbbf24">Current</span></div>
+ <div class="chw" id="pww"><svg class="ch" id="pwch" viewBox="0 0 340 180"></svg><div class="tip" id="pwtip"></div></div>
+</div>
+</div></section>
+<section class="page" id="protect" aria-label="Protect"><div class="in">
+<div class="card" id="prcard">
+ <div class="chd"><div class="lbl">Smart BatteryProtect</div><div class="sub" id="prupd">loading…</div></div>
+ <div id="prbody"><div class="wbox"><div class="et">Loading…</div></div></div>
+</div>
 </div></section>
 </main>
 <nav class="tabs" aria-label="Pages"><div class="tabbar" id="tabbar" role="tablist"><span class="ind" id="ind"></span>
-<button role="tab" data-p="0">Temps</button><button role="tab" data-p="1">Battery</button><button role="tab" data-p="2">Fan</button><button role="tab" data-p="3">History</button>
+<button role="tab" data-p="0">Cooling</button><button role="tab" data-p="1">Battery</button><button role="tab" data-p="2">Power</button><button role="tab" data-p="3">Protect</button>
 </div></nav>
 </div>
 <script>
@@ -406,7 +449,7 @@ var loading=false;
 function load(){if(loading)return;loading=true;$("app").classList.add("busy");
  Promise.all([get(MAIN_URL).then(shellyRows),loadBMS()]).then(function(res){
   S.rows=res[0];S.bms=res[1]&&res[1].length?res[1]:null;S.okAt=Date.now();S.fetchOk=true;save()
- }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;$("app").classList.remove("busy");render()})}
+ }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;$("app").classList.remove("busy");render();renderPacks()})}
 
 
 /* ---------- render (mockup layout) ---------- */
@@ -589,7 +632,7 @@ function miniTiles(rows,mt,now,has){var L=rows.length-1,r=rows[L],i;
 /* ---------- press-and-hold scrub ---------- */
 var CH={},SC={},scrubbing=false;
 function nearestIdx(g,ux){var best=-1,bd=1e9;g.pts.forEach(function(p,k){var d=Math.abs(g.X(p.t)-ux);if(d<bd){bd=d;best=k}});return best}
-function drawXH(id){var svg=$(id),g=CH[id],sc=SC[id],old=svg.querySelector(".xh");if(old)old.remove();
+function drawXH(id){if(id==="pwch")return drawPwXH();var svg=$(id),g=CH[id],sc=SC[id],old=svg.querySelector(".xh");if(old)old.remove();
  if(!g||!sc||!sc.on||!g.pts.length)return;if(sc.i>=g.pts.length)sc.i=g.pts.length-1;var p=g.pts[sc.i],x=g.X(p.t);
  var h='<g class="xh'+(sc.pop?" pop":"")+(sc.out?" out":"")+'"><line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+g.T+'" y2="'+(g.H-g.B)+'" stroke="rgba(238,242,255,.55)" stroke-width="1" stroke-dasharray="2 3"/>';
  [["amb","#8b93a7",3.5],["cells","#22d3ee",4.5],["pack","#fb7185",4.5]].forEach(function(q){var v=p[q[0]];if(v===null||v===undefined)return;
@@ -645,14 +688,116 @@ function footer(age,bAge){var ok='<svg viewBox="0 0 24 24" fill="none" stroke="c
  $("foot").innerHTML=(age===null?c("n",wt,"Shelly"):age>STALE_MIN*60e3?c("w",wt,"Shelly · "+ago(age)):c("",ok,"Shelly"))+
   (bAge===null?c("n",wt,"BMS bridge · waiting"):bAge>BMS_STALE_MIN*60e3?c("w",wt,"BMS · "+ago(bAge)):c("",ok,"BMS bridge"))+
   (S.fetchOk?c("",ok,"Sheet synced"):c("x",x,"Sheet offline"))}
+/* ---------- Battery: packs A & B side by side ---------- */
+var PROT_PLAIN=["a cell is over-voltage","a cell is under-voltage","pack over-voltage","pack under-voltage","too hot to charge","too cold to charge","too hot to discharge","too cold to discharge","charge current too high","discharge current too high","short circuit","BMS chip fault","switches locked"];
+function kv(k,v,c){return'<div class="kv"><span>'+k+'</span><b'+(c?' class="'+c+'"':"")+'>'+v+"</b></div>"}
+function fx(v,d,u){return v===null||v===undefined?"--":v.toFixed(d)+(u?" "+u:"")}
+function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,body=$("pkbody");
+ if(!bl){$("pksub").textContent="Invicta BMS";body.innerHTML='<div class="wbox"><div class="et">Waiting for first BMS reading</div><div class="es">Each pack will show here once the BMS bridge logs its first reading.</div></div>';return}
+ $("pksub").textContent="Updated "+hm(bl.t)+" · "+ago(Date.now()-bl.t);
+ body.innerHTML='<div class="pk2">'+[["A",bl.A],["B",bl.B]].map(function(x){var b=x[1];
+  if(!b.any)return'<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="es">No reading from this pack.</div></div>';
+  var w=b.v!==null&&b.a!==null?b.v*b.a:null,cs=b.cells.slice(0,4),ok=cs.filter(function(c){return c!==null&&c>1&&c<5});
+  var lo=ok.length?Math.min.apply(null,ok):b.cell_min,hi=ok.length?Math.max.apply(null,ok):b.cell_max;
+  var del=lo!==null&&hi!==null?hi-lo:(b.cell_delta!==null?(b.cell_delta>=1?b.cell_delta/1000:b.cell_delta):null);
+  var h='<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="pks">'+(b.soc===null?"--":Math.round(b.soc))+"<small>%</small></div>";
+  h+=kv("Voltage",fx(b.v,2,"V"))+kv("Current",b.a===null?"--":(b.a>0?"+":"")+amps(b.a)+" A",b.a>0.05?"g":b.a<-0.05?"w":"")+kv("Power",w===null?"--":(w>0?"+":"")+Math.round(w)+" W");
+  h+=kv("Remaining",b.rem_ah===null?"--":f1(b.rem_ah)+" of "+(b.nom_ah===null?"--":Math.round(b.nom_ah))+" Ah");
+  h+=kv("Cells temp",b.t_int===null?"--":f1(b.t_int)+"°C")+kv("Board temp",b.t_brd===null?"--":f1(b.t_brd)+"°C");
+  cs.forEach(function(c,i){h+=kv("Cell "+(i+1),fx(c,3,"V"),c!==null&&lo!==null&&hi-lo>0.0005&&(c===hi||c===lo)?(c===hi?"w":""):"")});
+  h+=kv("Min / max",(lo===null?"--":lo.toFixed(3))+" / "+(hi===null?"--":hi.toFixed(3)))+kv("Difference",del===null?"--":Math.round(del*1000)+" mV",del!==null&&del>0.05?"hl":"");
+  var notes=[],bad=false;
+  if(b.prot){var pn=[];for(var i=0;i<13;i++)if(b.prot&(1<<i))pn.push(PROT_PLAIN[i]);notes.push("⚠ Protection on: "+(pn.join(", ")||"code "+b.prot));bad=true}else if(b.prot===0)notes.push("✓ No protection active");
+  if(b.fc!==null||b.fd!==null){if(b.fc!==false&&b.fd!==false)notes.push("✓ Charging and discharging allowed");else{bad=true;notes.push("⚠ "+(b.fc===false&&b.fd===false?"Charging and discharging switched off":b.fc===false?"Charging switched off":"Discharging switched off"))}}
+  if(b.bal){var bc=[];for(i=0;i<16;i++)if(b.bal&(1<<i))bc.push(i+1);notes.push("Balancing cell"+(bc.length>1?"s ":" ")+bc.join(", "))}else if(b.bal===0)notes.push("Not balancing");
+  if(del!==null&&del>0.05){bad=true;notes.push("⚠ Cells are more than 50 mV apart")}
+  return h+'<div class="pkn'+(bad?" x":"")+'">'+notes.join("<br>")+"</div></div>"}).join("")+"</div>"}
+
+/* ---------- Power (SmartShunt) + Protect (BatteryProtect) ---------- */
+var SHUNT_ID="11bP6_w0Wc39pC1jxkmRUfJNhOV8mRMtBefH5zRRWSnw",BP_ID="1JwgQc2wk_58zryqTfBLm_HX_Xbp50mqIGLFUz7u3_Uo";
+function gvizUrl(id,tab,hrs){var u="https://docs.google.com/spreadsheets/d/"+id+"/gviz/tq?tqx=out:csv&headers=1&sheet="+encodeURIComponent(tab);
+ return u+"&tq="+encodeURIComponent("select * where C > "+Math.floor(Date.now()/1000-hrs*3600))}
+var X2={sh:null,shErr:false,shAt:0,bp:null,bpErr:false,bpAt:0};
+try{var c2=JSON.parse(localStorage.getItem("bf2-x2")||"null");if(c2){X2.sh=c2.sh;X2.bp=c2.bp}}catch(e){}
+function vrows(text,need){var tb=table(text);if(tb.h.indexOf("unix")<0||tb.h.indexOf(need)<0)throw new Error("not the expected tab");
+ var out=[];tb.rows.forEach(function(o){var u=n(o.unix);if(u===null||u<1e9)return;o.t=u*1000;out.push(o)});out.sort(function(a,b){return a.t-b.t});return out}
+function loadExtra(){
+ var a=get(gvizUrl(SHUNT_ID,"SmartShunt",26)).then(function(t){X2.sh=vrows(t,"soc").map(function(o){return{t:o.t,v:n(o.v),a:n(o.a),soc:n(o.soc),ah:n(o.consumed_ah),ttg:n(o.ttg_min),sv:n(o.starter_v),mid:n(o.mid_v),tc:n(o.temp_c),al:(o.alarm||"").trim()}});X2.shErr=false;X2.shAt=Date.now()}).catch(function(e){X2.shErr=true;console.warn("shunt",e)});
+ var b=get(gvizUrl(BP_ID,"BatteryProtect",48)).then(function(t){var r=vrows(t,"output_state");X2.bp=r.length?r[r.length-1]:null;X2.bpErr=false;X2.bpAt=Date.now()}).catch(function(e){X2.bpErr=true;console.warn("bp",e)});
+ return Promise.all([a,b]).then(function(){try{localStorage.setItem("bf2-x2",JSON.stringify({sh:X2.sh,bp:X2.bp}))}catch(e){}renderExtra()})}
+function loadAll(){load();loadExtra()}
+function hmin(m){m=Math.round(m);if(m<60)return m+" min";var h=Math.floor(m/60);if(h<48)return h+" h "+String(m%60).padStart(2,"0")+" min";return Math.floor(h/24)+" days "+(h%24)+" h"}
+var ALARM=["low voltage","high voltage","low state of charge","low starter battery voltage","high starter battery voltage","low temperature","high temperature","mid-point voltage off","overload","DC ripple","low AC output voltage","high AC output voltage","short circuit","BMS lockout"];
+var OFFR=["no input power","switched off by the power switch","switched off in settings","remote input off","protection active","pay-as-you-go","BMS shut it off","engine shutdown detected","checking input voltage"];
+function bits(v,names){if(v===null||v===undefined)return null;var s=String(v).trim();if(!s||/^(0|0x0+|none|null|-)$/i.test(s))return[];
+ var x=/^0x[0-9a-f]+$/i.test(s)?parseInt(s,16):/^\d+$/.test(s)?Number(s):NaN;if(isNaN(x))return[s.replace(/_/g," ").toLowerCase()];
+ var out=[];for(var i=0;i<names.length;i++)if(x&(1<<i))out.push(names[i]);return out.length?out:["code "+s]}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function waitBox(t,s){return'<div class="wbox"><div class="et">'+t+'</div><div class="es">'+s+"</div></div>"}
+function renderExtra(){renderPower();renderProtect();renderPacks()}
+function renderPower(){var rows=(X2.sh||[]).filter(function(r){return r.v!==null||r.soc!==null}),body=$("pwbody");
+ if(!rows.length){$("pwupd").textContent=X2.shErr?"can't read sheet":"";$("pwchc").style.display="none";
+  body.innerHTML=X2.shErr&&!X2.sh?waitBox("Can't read the SmartShunt sheet","The sheet needs to be shared as “Anyone with the link can view”."):waitBox(X2.sh?"Waiting for first reading":"Loading…","The SmartShunt logs a reading every 5 minutes.");return}
+ var r=rows[rows.length-1],age=Date.now()-r.t,w=r.v!==null&&r.a!==null?r.v*r.a:null;
+ $("pwupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("pwupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
+ var ttg=r.a!==null&&r.a>0?"Charging":r.ttg===null?"—":hmin(r.ttg);
+ var h='<div class="hero"><div><div class="lbl">State of charge</div><div class="big2">'+(r.soc===null?"--":Math.round(r.soc))+'<sup>%</sup></div></div><div class="side">'+
+  '<div><div class="sl">Voltage</div><div class="sv">'+fx(r.v,2)+'<sup>V</sup></div></div>'+
+  '<div><div class="sl">Current</div><div class="sv'+(r.a>0.05?" chg":r.a<-0.05?" dsg":"")+'">'+(r.a===null?"--":(r.a>0?"+":"")+amps(r.a))+'<sup>A</sup></div></div></div></div>';
+ h+='<div class="flow'+(r.a===null?" n":r.a>0.05?"":r.a<-0.05?" d":" n")+'">'+(r.a===null?"No current reading":r.a>0.05?"⚡ Charging":r.a<-0.05?"Discharging":"Idle")+"</div>";
+ var t=[["Power",w===null?"--":(w>0?"+":"")+Math.round(w)+"<small>W</small>",w===null?"":Math.abs(w)<10?"":"right now"],["Used",r.ah===null?"--":f1(Math.abs(r.ah))+"<small>Ah</small>","since last full"],["Time left",ttg,ttg==="Charging"||ttg==="—"?"":"at this rate"]];
+ if(r.sv!==null)t.push(["Starter battery",fx(r.sv,2)+"<small>V</small>","engine battery"]);
+ if(r.mid!==null)t.push(["Mid-point",fx(r.mid,2)+"<small>V</small>",""]);
+ if(r.tc!==null)t.push(["Battery temp",f1(r.tc)+"<small>°C</small>",""]);
+ h+='<div class="grid">'+t.map(function(x){return'<div class="tile"><div class="lbl">'+x[0]+'</div><div class="tv"'+(String(x[1]).length>14&&x[1].indexOf("<")<0?' style="font-size:20px"':"")+">"+x[1]+'</div><div class="ts">'+x[2]+"</div></div>"}).join("")+"</div>";
+ var al=bits(r.al,ALARM);if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
+ body.innerHTML=h;powerChart(rows)}
+function powerChart(rows){var el=$("pwch"),now=Date.now(),t0=now-24*3600e3,W=340,H=180,L=26,R=28,T=8,B=20;
+ var pts=rows.filter(function(r){return r.t>=t0});$("pwchc").style.display=pts.length<2?"none":"";if(pts.length<2){CH.pwch=null;return}
+ var ss=pts.map(function(r){return r.soc}).filter(function(v){return v!==null}),as=pts.map(function(r){return r.a}).filter(function(v){return v!==null});
+ var lo=ss.length?Math.max(0,Math.floor((Math.min.apply(null,ss)-2)/10)*10):0,hi=100;if(hi-lo<20)lo=80;
+ var alo=as.length?Math.min(0,Math.floor(Math.min.apply(null,as))):-1,ahi=as.length?Math.max(0,Math.ceil(Math.max.apply(null,as))):1;if(ahi-alo<2){alo=Math.min(alo,-1);ahi=Math.max(ahi,1)}
+ var X=function(t){return L+(W-L-R)*(t-t0)/(now-t0)},Y=function(v){return T+(H-T-B)*(1-(v-lo)/(hi-lo))},YA=function(v){return T+(H-T-B)*(1-(v-alo)/(ahi-alo))};
+ var s="",st=(hi-lo)>40?20:10;for(var v=lo;v<=hi;v+=st)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="rgba(255,255,255,.055)"/><text x="'+(L-6)+'" y="'+(Y(v)+3.5).toFixed(1)+'" fill="#596075" font-size="9.5" text-anchor="end">'+v+"%</text>";
+ [alo,0,ahi].forEach(function(a,k){if(k===1&&(a===alo||a===ahi))return;s+='<text x="'+(W-R+5)+'" y="'+(YA(a)+3.5).toFixed(1)+'" fill="#a1824a" font-size="9.5">'+a+"A</text>"});
+ s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+YA(0).toFixed(1)+'" y2="'+YA(0).toFixed(1)+'" stroke="rgba(251,191,36,.25)" stroke-dasharray="3 4"/>';
+ for(var tk=Math.ceil(t0/(4*3600e3))*4*3600e3;tk<now-3*3600e3;tk+=4*3600e3)s+='<text x="'+X(tk).toFixed(1)+'" y="'+(H-5)+'" fill="#596075" font-size="9.5" text-anchor="middle">'+new Date(tk).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}).replace(/\s/g,"").replace(":00","").toLowerCase()+"</text>";
+ s+='<text x="'+(W-R)+'" y="'+(H-5)+'" fill="#8b93a7" font-size="9.5" text-anchor="end">now</text>';
+ segs(pts,function(r){return r.a},X,YA).forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#fbbf24" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>'});
+ segs(pts,function(r){return r.soc},X,Y).forEach(function(p){s+='<path d="'+smooth(p)+'" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round"/>'});
+ el.innerHTML=s;CH.pwch={X:X,Y:Y,YA:YA,W:W,H:H,T:T,B:B,pts:pts};drawPwXH()}
+function drawPwXH(){var id="pwch",svg=$(id),g=CH[id],sc=SC[id],old=svg.querySelector(".xh");if(old)old.remove();
+ if(!g||!sc||!sc.on||!g.pts.length)return;if(sc.i>=g.pts.length)sc.i=g.pts.length-1;var p=g.pts[sc.i],x=g.X(p.t);
+ var h='<g class="xh'+(sc.out?" out":"")+'"><line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+g.T+'" y2="'+(g.H-g.B)+'" stroke="rgba(238,242,255,.55)" stroke-width="1" stroke-dasharray="2 3"/>';
+ if(p.soc!==null)h+='<circle cx="'+x.toFixed(1)+'" cy="'+g.Y(p.soc).toFixed(1)+'" r="4.5" fill="#34d399" stroke="#0b0e16" stroke-width="2"/>';
+ if(p.a!==null)h+='<circle cx="'+x.toFixed(1)+'" cy="'+g.YA(p.a).toFixed(1)+'" r="3.5" fill="#fbbf24" stroke="#0b0e16" stroke-width="2"/>';
+ svg.insertAdjacentHTML("beforeend",h+"</g>");
+ var tip=$(sc.tip);tip.innerHTML='<div class="tt">'+hm(p.t)+"</div>"+'<div class="r"><span style="--c:var(--ok)">Charge</span><b>'+(p.soc===null?"--":f1(p.soc)+"%")+"</b></div>"+
+  '<div class="r"><span style="--c:#fbbf24">Current</span><b>'+(p.a===null?"--":amps(p.a)+" A")+"</b></div>"+'<div class="r"><span style="--c:#8b93a7">Voltage</span><b>'+fx(p.v,2,"V")+"</b></div>";
+ var wrap=tip.parentNode,ww=wrap.clientWidth,px=x*svg.getBoundingClientRect().width/g.W,tw=tip.offsetWidth,left=px+12,fl=false;
+ if(left+tw>ww){left=px-12-tw;fl=true}if(left<0)left=Math.max(0,Math.min(ww-tw,px-tw/2));tip.style.left=left.toFixed(0)+"px";tip.classList.toggle("fl",fl)}
+function renderProtect(){var r=X2.bp,body=$("prbody");
+ if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
+ var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
+ var os=(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
+ var h='<div class="hero"><div><div class="lbl">Output</div><div class="outst" style="color:'+(on===null?"var(--mut)":on?"var(--ok)":"var(--hot)")+'">'+(on===null?"—":on?"ON":"OFF")+'</div><div class="ts" style="margin-top:6px">'+(on===null?"no output reading":on?"Power is flowing to your loads":"Loads are disconnected")+"</div></div>"+
+  '<div class="side"><div><div class="sl">Input</div><div class="sv">'+fx(n(r.input_v),2)+'<sup>V</sup></div></div><div><div class="sl">Output</div><div class="sv">'+fx(n(r.output_v),2)+"<sup>V</sup></div></div></div></div>";
+ var ds=(r.device_state||"").trim();h+='<div class="grid"><div class="tile" style="grid-column:1/-1"><div class="lbl">Device state</div><div class="tv" style="font-size:22px">'+esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--")+"</div></div></div>";
+ var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=(r.error||"").trim();
+ if(off&&off.length)h+='<div class="al'+(on?" i":" w")+'">Off because: '+esc(off.join(", "))+"</div>";
+ if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
+ if(wr&&wr.length)h+='<div class="al w">Warning: '+esc(wr.join(", "))+"</div>";
+ if(er&&!/^(0|none|no error|null|-)$/i.test(er))h+='<div class="al">⚠ Error: '+esc(/^\d+$/.test(er)?"code "+er:er.replace(/_/g," "))+"</div>";
+ if(!(off&&off.length)&&!(al&&al.length)&&!(wr&&wr.length)&&!(er&&!/^(0|none|no error|null|-)$/i.test(er)))h+='<div class="al i">✓ No alarms, warnings or errors</div>';
+ body.innerHTML=h}
 /* ---------- wiring ---------- */
 $("bsw").addEventListener("click",function(e){var b=e.target.dataset&&e.target.dataset.b;if(!b)return;selBoard=b;localStorage.setItem("bf2-board",b);render()});
 function setHours(h){hours=h;try{localStorage.setItem("bf2-hours",h)}catch(e){}render()}
 $("chl").addEventListener("click",function(){setHours(hours===6?12:hours===12?24:6)});
 $("range").addEventListener("click",function(e){var h=Number(e.target.dataset&&e.target.dataset.h);if(h)setHours(h)});
-attachScrub("hw","ch","htip");attachScrub("mw","mch","mtip");
+attachScrub("hw","ch","htip");attachScrub("mw","mch","mtip");attachScrub("pww","pwch","pwtip");
 /* ---------- swipe pages ---------- */
-var PAGES=["temps","battery","fan","history"],pager=$("pager"),tabs=[].slice.call(document.querySelectorAll("#tabbar button")),ind=$("ind"),cur=-1;
+var PAGES=["cooling","battery","power","protect"],ALIAS={now:"cooling",temps:"cooling",fan:"cooling",history:"cooling"},pager=$("pager"),tabs=[].slice.call(document.querySelectorAll("#tabbar button")),ind=$("ind"),cur=-1;
 function pw(){return pager.clientWidth||1}
 function isGrid(){return window.matchMedia("(min-width:900px)").matches}
 function setActive(i,fromScroll){if(i===cur)return;cur=i;tabs.forEach(function(b,k){b.classList.toggle("sel",k===i);b.setAttribute("aria-selected",k===i)});
@@ -663,23 +808,24 @@ function go(i,smooth){i=Math.max(0,Math.min(3,i));if(isGrid()){var el=$(PAGES[i]
 var raf=0;function moveInd(){var x=pager.scrollLeft/pw();ind.style.transform="translateX("+(x*100)+"%)";var i=Math.round(x);if(Math.abs(x-i)<0.5)setActive(i,true)}
 pager.addEventListener("scroll",function(){if(!raf)raf=requestAnimationFrame(function(){raf=0;moveInd()})},{passive:true});
 tabs.forEach(function(b,k){b.addEventListener("click",function(){go(k,true)})});
-function pageFromHash(){var h=location.hash.replace("#","").toLowerCase();if(h==="now")h="temps";return PAGES.indexOf(h)}
+function pageFromHash(){var h=location.hash.replace("#","").toLowerCase();if(ALIAS[h])h=ALIAS[h];return PAGES.indexOf(h)}
 window.addEventListener("hashchange",function(){var i=pageFromHash();if(i>=0&&i!==cur)go(i,true)});
 var lastW=0,rzT=0;window.addEventListener("resize",function(){var w=pw();if(w!==lastW&&cur>=0){lastW=w;go(cur,false)}clearTimeout(rzT);rzT=setTimeout(function(){if(S.rows.length)render()},120)});
-(function(){try{if(localStorage.getItem("bf2-page")==="now")localStorage.setItem("bf2-page","temps")}catch(e){}var i=pageFromHash();if(i<0)i=PAGES.indexOf(localStorage.getItem("bf2-page")||"");if(i<0)i=0;lastW=pw();go(i,false);
+(function(){try{var lp=localStorage.getItem("bf2-page");if(ALIAS[lp])localStorage.setItem("bf2-page",ALIAS[lp])}catch(e){}var i=pageFromHash();if(i<0)i=PAGES.indexOf(localStorage.getItem("bf2-page")||"");if(i<0)i=0;lastW=pw();go(i,false);
  requestAnimationFrame(function(){go(i,false)})})();
 window.__bfpage=function(){return cur};
-$("rf").onclick=load;$("retry").onclick=load;
-document.addEventListener("visibilitychange",function(){if(!document.hidden)load()});
-window.addEventListener("pageshow",function(e){if(e.persisted)load()});
-setInterval(function(){if(!document.hidden)load()},REFRESH_MS);
-setInterval(function(){if(S.rows.length)render()},30000);
+$("rf").onclick=loadAll;$("retry").onclick=load;
+document.addEventListener("visibilitychange",function(){if(!document.hidden)loadAll()});
+window.addEventListener("pageshow",function(e){if(e.persisted)loadAll()});
+setInterval(function(){if(!document.hidden)loadAll()},REFRESH_MS);
+setInterval(function(){if(S.rows.length)render();renderExtra()},30000);
 (function(){var y0=null,x0=0,dy=0,p=$("ptr");document.addEventListener("touchstart",function(e){var pg=e.target.closest&&e.target.closest(".page");y0=((pg?pg.scrollTop:window.scrollY)<=0)?e.touches[0].clientY:null;x0=e.touches[0].clientX;dy=0},{passive:true});
  document.addEventListener("touchmove",function(e){if(y0===null)return;if(scrubbing){y0=null;p.style.opacity=0;return}if(Math.abs(e.touches[0].clientX-x0)>Math.abs(e.touches[0].clientY-y0)){y0=null;p.style.opacity=0;return}dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
- document.addEventListener("touchend",function(){if(y0!==null&&dy>70)load();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
-window.__bf={S:S,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
+ document.addEventListener("touchend",function(){if(y0!==null&&dy>70)loadAll();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
+window.__bf={S:S,X2:X2,renderExtra:renderExtra,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
 if(S.rows.length)render();
-load();
+renderExtra();
+loadAll();
 })();
 </script>
 </body>
