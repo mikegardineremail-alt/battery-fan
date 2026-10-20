@@ -542,7 +542,7 @@ function battery(bl,p,bAge,r){
   $("cmin").textContent=$("cmax").textContent=$("cdel").textContent="--";
   $("cyc").className=$("tb").className="tv na";$("cyc").innerHTML=$("tb").innerHTML="--";$("cycs").textContent="waiting for BMS";$("tbs").textContent="waiting for BMS";return}
  var stale=bAge>BMS_STALE_MIN*60e3;
- sub.textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · 4S"+(p.boards<2?" · Board "+(bl.A.any?"B":"A")+": no data yet":"");sub.style.color=stale?"var(--warm)":"";
+ sub.textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · 4S"+(p.boards<2&&seen(bl.A.any?"B":"A")?" · Board "+(bl.A.any?"B":"A")+": no data yet":"");sub.style.color=stale?"var(--warm)":"";
  var soc=p.soc;$("soc").innerHTML=(soc===null?"--":Math.round(soc))+"<small>%</small>";$("arc").setAttribute("stroke-dasharray",(soc===null?0:soc/100*314.2).toFixed(1)+" 314.2");$("arc").style.opacity=soc===null?0:1;
  $("bv").innerHTML=p.v===null?"--":p.v.toFixed(2)+"<small>V</small>";$("bv").title="";
  var bi=$("bi");bi.className=p.i===null?"":p.i>0.05?"chg":p.i<-0.05?"dsg":"";bi.innerHTML=p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small>A</small>";
@@ -703,10 +703,13 @@ function footer(age,bAge){var ok='<svg viewBox="0 0 24 24" fill="none" stroke="c
 var PROT_PLAIN=["a cell is over-voltage","a cell is under-voltage","pack over-voltage","pack under-voltage","too hot to charge","too cold to charge","too hot to discharge","too cold to discharge","charge current too high","discharge current too high","short circuit","BMS chip fault","switches locked"];
 function kv(k,v,c){return'<div class="kv"><span>'+k+'</span><b'+(c?' class="'+c+'"':"")+'>'+v+"</b></div>"}
 function fx(v,d,u){return v===null||v===undefined?"--":v.toFixed(d)+(u?" "+u:"")}
+/* a board is "known" if any recent BMS row has data for it; unknown boards are hidden entirely */
+function seen(k){return (S.bms||[]).some(function(x){return x[k].any})}
 function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,body=$("pkbody");
  if(!bl){$("pksub").textContent="Invicta BMS";body.innerHTML='<div class="wbox"><div class="et">Waiting for first BMS reading</div><div class="es">Each pack will show here once the BMS bridge logs its first reading.</div></div>';return}
  $("pksub").textContent="Updated "+hm(bl.t)+" · "+ago(Date.now()-bl.t);
- body.innerHTML='<div class="pk2">'+[["A",bl.A],["B",bl.B]].map(function(x){var b=x[1];
+ var shown=[["A",bl.A],["B",bl.B]].filter(function(x){return x[1].any||seen(x[0])});if(!shown.length)shown=[["A",bl.A]];
+ body.innerHTML='<div class="pk2"'+(shown.length<2?' style="grid-template-columns:1fr"':"")+'>'+shown.map(function(x){var b=x[1];
   if(!b.any)return'<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="es">Board '+x[0]+': no data yet</div></div>';
   var w=b.v!==null&&b.a!==null?b.v*b.a:null,cs=b.cells.slice(0,4),ok=cs.filter(function(c){return c!==null&&c>1&&c<5});
   var lo=ok.length?Math.min.apply(null,ok):b.cell_min,hi=ok.length?Math.max.apply(null,ok):b.cell_max;
