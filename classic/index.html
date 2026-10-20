@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Battery Fan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battery Fan">
+<meta name="theme-color" content="#07090f">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="manifest" href="../manifest.json">
+<style>
+  html, body { margin: 0; height: 100%; background: #07090f; overflow: hidden; }
+  body {
+    box-sizing: border-box;
+    height: 100vh; height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  }
+  #app { display: block; width: 100%; height: 100%; border: 0; background: #07090f; }
+  #splash {
+    position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(120% 60% at 50% 20%, rgba(34,211,238,.16), transparent 60%), #07090f;
+    color: #eef2ff; transition: opacity .5s ease; text-align: center; padding: 24px;
+  }
+  #splash.gone { opacity: 0; pointer-events: none; }
+  #splash svg { width: 168px; height: 168px; filter: drop-shadow(0 0 18px rgba(34,211,238,.35)); }
+  .blades { transform-origin: 60px 46px; animation: spin 1.1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .bolt { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  h1 { font-size: 24px; font-weight: 650; letter-spacing: .2px; margin: 18px 0 6px; }
+  #msg { font-size: 14px; color: #8b93a7; min-height: 20px; }
+  #msg .dots::after { content: ""; animation: dots 1.4s steps(4) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  #retry { display: none; margin-top: 18px; padding: 12px 22px; border-radius: 99px; border: 1px solid rgba(34,211,238,.45);
+    background: rgba(34,211,238,.1); color: #a5f3fc; font: inherit; font-size: 15px; font-weight: 600; }
+  .slow #retry { display: inline-block; }
+  .slow .blades { animation-duration: 3s; }
+  @media (prefers-reduced-motion: reduce) {
+    .blades, .bolt, #msg .dots::after { animation: none !important; }
+    #splash { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="splash" role="status" aria-live="polite">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs>
+      <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#14b8a6"/>
+      </linearGradient>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/>
+      </linearGradient>
+      <radialGradient id="glow"><stop offset="0" stop-color="#22d3ee" stop-opacity=".35"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="60" cy="46" r="44" fill="url(#glow)"/>
+    <!-- battery -->
+    <rect x="34" y="84" width="52" height="26" rx="6" fill="none" stroke="url(#bg)" stroke-width="4"/>
+    <rect x="86" y="91" width="5" height="12" rx="2" fill="url(#bg)"/>
+    <path class="bolt" d="M63 87 L52 99 H59 L56 108 L68 95 H61 Z" fill="url(#bg)"/>
+    <!-- fan -->
+    <circle cx="60" cy="46" r="34" fill="none" stroke="url(#fg)" stroke-width="2.5" opacity=".5"/>
+    <g class="blades" fill="url(#fg)">
+      <path id="bl" d="M60 46 C56 34 58 20 68 15 C76 12 79 22 72 31 C68 37 64 42 60 46 Z"/>
+      <use href="#bl" transform="rotate(72 60 46)"/>
+      <use href="#bl" transform="rotate(144 60 46)"/>
+      <use href="#bl" transform="rotate(216 60 46)"/>
+      <use href="#bl" transform="rotate(288 60 46)"/>
+    </g>
+    <circle cx="60" cy="46" r="6" fill="#07090f" stroke="url(#fg)" stroke-width="3"/>
+  </svg>
+  <h1>Battery Fan</h1>
+  <div id="msg">Connecting<span class="dots"></span></div>
+  <button id="retry" type="button">Tap to retry</button>
+</div>
+<iframe id="app" title="Battery Fan" allow="clipboard-write; fullscreen; screen-wake-lock"></iframe>
+<script>
+(function () {
+  // The Apps Script web app. "wrapped=1" tells it the safe areas are handled here.
+  var SRC = "https://script.google.com/macros/s/AKfycbzHIwxWawjE0lB5XArvzTQLM3D2PjTdP7cvNmWlvpxP1kPxq48V2W3Pvtwo55jJJmU9/exec?wrapped=1";
+  var MIN_MS = 1200, SLOW_MS = 20000;
+  var frame = document.getElementById("app"), splash = document.getElementById("splash"),
+      msg = document.getElementById("msg"), retry = document.getElementById("retry");
+  var started, slowTimer, loaded = false;
+
+  function hide() {
+    clearTimeout(slowTimer);
+    setTimeout(function () { splash.classList.add("gone"); }, Math.max(0, MIN_MS - (Date.now() - started)));
+  }
+  function start() {
+    loaded = false; started = Date.now();
+    splash.classList.remove("gone", "slow");
+    msg.innerHTML = 'Connecting<span class="dots"></span>';
+    clearTimeout(slowTimer);
+    slowTimer = setTimeout(function () {
+      if (loaded) return;
+      splash.classList.add("slow");
+      msg.textContent = "Taking longer than usual. Check your internet connection.";
+    }, SLOW_MS);
+    frame.src = SRC + "&t=" + started; // fresh load, no stale cache
+  }
+  frame.addEventListener("load", function () { if (!frame.src) return; loaded = true; hide(); });
+  retry.addEventListener("click", start);
+  splash.addEventListener("click", function () { if (splash.classList.contains("slow")) start(); });
+  start();
+})();
+</script>
+</body>
+</html>

@@ -10,9 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="Battery Fan">
 <meta name="theme-color" content="#07090f">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<link rel="icon" type="image/png" href="../favicon.png">
-<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/battery-fan/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/battery-fan/favicon.png">
+<link rel="manifest" href="/battery-fan/manifest.json">
 <style>
 /* ---- mockup CSS (template.html), unchanged except where noted ---- */
 :root{--bg:#07090f;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.08);--txt:#eef2ff;--mut:#8b93a7;--cool:#22d3ee;--ok:#34d399;--warm:#fbbf24;--hot:#fb7185;--amb:#a78bfa;--pc:var(--cool)}
@@ -282,9 +282,10 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
 </div>
 <div class="foot" id="foot"></div>
 <div class="ft" id="ft">Refreshes every minute</div>
+<div class="ft"><a href="/battery-fan/classic/" style="color:#6b7387;text-decoration:underline">Classic view</a></div>
 </div>
 </section>
-<section class="page" id="battery" aria-label="Battery"><div class="in">
+<section class="page" id="battery" aria-label="Invicta battery"><div class="in">
 <!-- BATTERY -->
 <div class="card live">
  <div class="chd"><div class="lbl">Battery · Invicta BMS</div><div class="sub" id="bsub">80Ah LiFePO₄ · 4S</div></div>
@@ -318,9 +319,9 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
  <div id="pkbody"><div class="wbox"><div class="et">Waiting for first BMS reading</div><div class="es">Each pack will show here once the BMS bridge logs its first reading.</div></div></div>
 </div>
 </div></section>
-<section class="page" id="power" aria-label="Power"><div class="in">
+<section class="page" id="power" aria-label="Victron Shunt"><div class="in">
 <div class="card" id="pwcard">
- <div class="chd"><div class="lbl">Aux battery · SmartShunt</div><div class="sub" id="pwupd">loading…</div></div>
+ <div class="chd"><div class="lbl">Victron Shunt · aux battery</div><div class="sub" id="pwupd">loading…</div></div>
  <div id="pwbody"><div class="wbox"><div class="et">Loading…</div></div></div>
 </div>
 <div class="card" id="pwchc" style="display:none">
@@ -329,15 +330,15 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
  <div class="chw" id="pww"><svg class="ch" id="pwch" viewBox="0 0 340 180"></svg><div class="tip" id="pwtip"></div></div>
 </div>
 </div></section>
-<section class="page" id="protect" aria-label="Protect"><div class="in">
+<section class="page" id="protect" aria-label="Victron Protect"><div class="in">
 <div class="card" id="prcard">
- <div class="chd"><div class="lbl">Smart BatteryProtect</div><div class="sub" id="prupd">loading…</div></div>
+ <div class="chd"><div class="lbl">Victron Protect</div><div class="sub" id="prupd">loading…</div></div>
  <div id="prbody"><div class="wbox"><div class="et">Loading…</div></div></div>
 </div>
 </div></section>
 </main>
 <nav class="tabs" aria-label="Pages"><div class="tabbar" id="tabbar" role="tablist"><span class="ind" id="ind"></span>
-<button role="tab" data-p="0">Cooling</button><button role="tab" data-p="1">Battery</button><button role="tab" data-p="2">Power</button><button role="tab" data-p="3">Protect</button>
+<button role="tab" data-p="0">Cooling</button><button role="tab" data-p="1">Invicta</button><button role="tab" data-p="2">Shunt</button><button role="tab" data-p="3">Protect</button>
 </div></nav>
 </div>
 <script>
@@ -739,7 +740,7 @@ function waitBox(t,s){return'<div class="wbox"><div class="et">'+t+'</div><div c
 function renderExtra(){renderPower();renderProtect();renderPacks()}
 function renderPower(){var rows=(X2.sh||[]).filter(function(r){return r.v!==null||r.soc!==null}),body=$("pwbody");
  if(!rows.length){$("pwupd").textContent=X2.shErr?"can't read sheet":"";$("pwchc").style.display="none";
-  body.innerHTML=X2.shErr&&!X2.sh?waitBox("Can't read the SmartShunt sheet","The sheet needs to be shared as “Anyone with the link can view”."):waitBox(X2.sh?"Waiting for first reading":"Loading…","The SmartShunt logs a reading every 5 minutes.");return}
+  body.innerHTML=X2.shErr&&!X2.sh?waitBox("Can't read the Victron Shunt sheet","The sheet needs to be shared as “Anyone with the link can view”."):waitBox(X2.sh?"Waiting for first reading":"Loading…","The SmartShunt logs a reading every 5 minutes.");return}
  var r=rows[rows.length-1],age=Date.now()-r.t,w=r.v!==null&&r.a!==null?r.v*r.a:null;
  $("pwupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("pwupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var ttg=r.a!==null&&r.a>0?"Charging":r.ttg===null?"—":hmin(r.ttg);
