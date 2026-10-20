@@ -1,6 +1,6 @@
 {
-  "name": "Battery Fan",
-  "short_name": "Battery Fan",
+  "name": "Battery Monitor",
+  "short_name": "Battery Monitor",
   "start_url": "/battery-fan/",
   "scope": "/battery-fan/",
   "display": "standalone",
