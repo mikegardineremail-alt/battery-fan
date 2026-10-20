@@ -383,6 +383,8 @@ function shellyRows(text){var tb=table(text);if(tb.h.indexOf("unix")<0||tb.h.ind
 var BF=["v","a","rem_ah","nom_ah","cycles","soc","t_brd","t_int","cell1_v","cell2_v","cell3_v","cell4_v","cell_min","cell_max","cell_delta","cell_count"];
 function isBMSHeader(h){return h.indexOf("unix")>=0&&(h.indexOf("v_a")>=0||h.indexOf("soc_a")>=0||h.indexOf("cell1_v_a")>=0||h.indexOf("v_b")>=0)}
 function cellV(x){x=n(x);if(x===null)return null;return x>100?x/1000:x}
+/* capScale: some BMSes report nom_ah per half-pack; if rem_ah implies >=1.5x the nominal, show nominal x2 */
+function nomOf(b){var nm=b.nom_ah;if(nm!==null&&nm>0&&b.rem_ah!==null&&b.soc!==null&&b.soc>0&&b.rem_ah/(b.soc/100*nm)>=1.5)return nm*2;return nm}
 function board(o,s){var b={},any=false;BF.forEach(function(k){var v=n(o[k+"_"+s]);b[k]=v;if(v!==null&&k!=="cell_count")any=true});
  b.cells=[1,2,3,4].map(function(i){return cellV(o["cell"+i+"_v_"+s])});
  var cc=b.cell_count;if(cc!==null&&cc>4)for(var i=5;i<=cc&&i<=16;i++)b.cells.push(cellV(o["cell"+i+"_v_"+s]));
@@ -402,7 +404,7 @@ function packOf(r){var A=r.A,B=r.B,bs=[A,B].filter(function(b){return b.any});
  function sum(a){return a.length?a.reduce(function(s,x){return s+x},0):null}
  var p={boards:bs.length,v:avg(vals("v")),i:null,iParts:vals("a").length};
  var ia=vals("a");p.i=ia.length?Math.round(sum(ia)*100)/100:null;
- var rem=vals("rem_ah");p.nom=bs.reduce(function(t,b){return t+(b.nom_ah!==null&&b.nom_ah>0?b.nom_ah:40)},0)||80;
+ var rem=vals("rem_ah");p.nom=bs.reduce(function(t,b){var nm=nomOf(b);return t+(nm!==null&&nm>0?nm:40)},0)||80;
  p.rem=rem.length===bs.length&&rem.length?sum(rem):null;
  p.soc=p.rem!==null?Math.max(0,Math.min(100,p.rem/p.nom*100)):avg(vals("soc"));
  var ti=vals("t_int");p.tint=ti.length?Math.max.apply(null,ti):null;
@@ -538,7 +540,7 @@ function battery(bl,p,bAge,r){
   $("cmin").textContent=$("cmax").textContent=$("cdel").textContent="--";
   $("cyc").className=$("tb").className="tv na";$("cyc").innerHTML=$("tb").innerHTML="--";$("cycs").textContent="waiting for BMS";$("tbs").textContent="waiting for BMS";return}
  var stale=bAge>BMS_STALE_MIN*60e3;
- sub.textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · 4S"+(p.boards<2?" · 1 of 2 boards":"");sub.style.color=stale?"var(--warm)":"";
+ sub.textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · 4S"+(p.boards<2?" · Board "+(bl.A.any?"B":"A")+": no data yet":"");sub.style.color=stale?"var(--warm)":"";
  var soc=p.soc;$("soc").innerHTML=(soc===null?"--":Math.round(soc))+"<small>%</small>";$("arc").setAttribute("stroke-dasharray",(soc===null?0:soc/100*314.2).toFixed(1)+" 314.2");$("arc").style.opacity=soc===null?0:1;
  $("bv").innerHTML=p.v===null?"--":p.v.toFixed(2)+"<small>V</small>";$("bv").title="";
  var bi=$("bi");bi.className=p.i===null?"":p.i>0.05?"chg":p.i<-0.05?"dsg":"";bi.innerHTML=p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small>A</small>";
@@ -696,13 +698,13 @@ function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,bod
  if(!bl){$("pksub").textContent="Invicta BMS";body.innerHTML='<div class="wbox"><div class="et">Waiting for first BMS reading</div><div class="es">Each pack will show here once the BMS bridge logs its first reading.</div></div>';return}
  $("pksub").textContent="Updated "+hm(bl.t)+" · "+ago(Date.now()-bl.t);
  body.innerHTML='<div class="pk2">'+[["A",bl.A],["B",bl.B]].map(function(x){var b=x[1];
-  if(!b.any)return'<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="es">No reading from this pack.</div></div>';
+  if(!b.any)return'<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="es">Board '+x[0]+': no data yet</div></div>';
   var w=b.v!==null&&b.a!==null?b.v*b.a:null,cs=b.cells.slice(0,4),ok=cs.filter(function(c){return c!==null&&c>1&&c<5});
   var lo=ok.length?Math.min.apply(null,ok):b.cell_min,hi=ok.length?Math.max.apply(null,ok):b.cell_max;
   var del=lo!==null&&hi!==null?hi-lo:(b.cell_delta!==null?(b.cell_delta>=1?b.cell_delta/1000:b.cell_delta):null);
   var h='<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="pks">'+(b.soc===null?"--":Math.round(b.soc))+"<small>%</small></div>";
   h+=kv("Voltage",fx(b.v,2,"V"))+kv("Current",b.a===null?"--":(b.a>0?"+":"")+amps(b.a)+" A",b.a>0.05?"g":b.a<-0.05?"w":"")+kv("Power",w===null?"--":(w>0?"+":"")+Math.round(w)+" W");
-  h+=kv("Remaining",b.rem_ah===null?"--":f1(b.rem_ah)+" of "+(b.nom_ah===null?"--":Math.round(b.nom_ah))+" Ah");
+  h+=kv("Remaining",b.rem_ah===null?"--":f1(b.rem_ah)+" of "+(nomOf(b)===null?"--":Math.round(nomOf(b)))+" Ah");
   h+=kv("Cells temp",b.t_int===null?"--":f1(b.t_int)+"°C")+kv("Board temp",b.t_brd===null?"--":f1(b.t_brd)+"°C");
   cs.forEach(function(c,i){h+=kv("Cell "+(i+1),fx(c,3,"V"),c!==null&&lo!==null&&hi-lo>0.0005&&(c===hi||c===lo)?(c===hi?"w":""):"")});
   h+=kv("Min / max",(lo===null?"--":lo.toFixed(3))+" / "+(hi===null?"--":hi.toFixed(3)))+kv("Difference",del===null?"--":Math.round(del*1000)+" mV",del!==null&&del>0.05?"hl":"");
@@ -727,8 +729,8 @@ function loadExtra(){
  return Promise.all([a,b]).then(function(){try{localStorage.setItem("bf2-x2",JSON.stringify({sh:X2.sh,bp:X2.bp}))}catch(e){}renderExtra()})}
 function loadAll(){load();loadExtra()}
 function hmin(m){m=Math.round(m);if(m<60)return m+" min";var h=Math.floor(m/60);if(h<48)return h+" h "+String(m%60).padStart(2,"0")+" min";return Math.floor(h/24)+" days "+(h%24)+" h"}
-var ALARM=["low voltage","high voltage","low state of charge","low starter battery voltage","high starter battery voltage","low temperature","high temperature","mid-point voltage off","overload","DC ripple","low AC output voltage","high AC output voltage","short circuit","BMS lockout"];
-var OFFR=["no input power","switched off by the power switch","switched off in settings","remote input off","protection active","pay-as-you-go","BMS shut it off","engine shutdown detected","checking input voltage"];
+var ALARM=["low voltage","high voltage","low SOC","low starter voltage","high starter voltage","low temperature","high temperature","mid-point voltage","overload","DC ripple","low AC out voltage","high AC out voltage","short circuit","BMS lockout"];
+var OFFR=["no input power","switched off by power switch","switched off by device mode","remote input off","protection active","PayGo","BMS","engine shutdown detection","analysing input voltage"];
 function bits(v,names){if(v===null||v===undefined)return null;var s=String(v).trim();if(!s||/^(0|0x0+|none|null|-)$/i.test(s))return[];
  var x=/^0x[0-9a-f]+$/i.test(s)?parseInt(s,16):/^\d+$/.test(s)?Number(s):NaN;if(isNaN(x))return[s.replace(/_/g," ").toLowerCase()];
  var out=[];for(var i=0;i<names.length;i++)if(x&(1<<i))out.push(names[i]);return out.length?out:["code "+s]}
@@ -776,15 +778,17 @@ function drawPwXH(){var id="pwch",svg=$(id),g=CH[id],sc=SC[id],old=svg.querySele
   '<div class="r"><span style="--c:#fbbf24">Current</span><b>'+(p.a===null?"--":amps(p.a)+" A")+"</b></div>"+'<div class="r"><span style="--c:#8b93a7">Voltage</span><b>'+fx(p.v,2,"V")+"</b></div>";
  var wrap=tip.parentNode,ww=wrap.clientWidth,px=x*svg.getBoundingClientRect().width/g.W,tw=tip.offsetWidth,left=px+12,fl=false;
  if(left+tw>ww){left=px-12-tw;fl=true}if(left<0)left=Math.max(0,Math.min(ww-tw,px-tw/2));tip.style.left=left.toFixed(0)+"px";tip.classList.toggle("fl",fl)}
+function prHead(r){var off=bits(r.off_reason,OFFR)||[],al=bits(r.alarm_reason,ALARM)||[];
+ return"Output OFF"+(off.length?": "+off.join(", "):"")+(al.length?" ("+al.join(", ")+")":"")}
 function renderProtect(){var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
  var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var os=(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
- var h='<div class="hero"><div><div class="lbl">Output</div><div class="outst" style="color:'+(on===null?"var(--mut)":on?"var(--ok)":"var(--hot)")+'">'+(on===null?"—":on?"ON":"OFF")+'</div><div class="ts" style="margin-top:6px">'+(on===null?"no output reading":on?"Power is flowing to your loads":"Loads are disconnected")+"</div></div>"+
+ var h='<div class="hero"><div><div class="lbl">Output</div><div class="outst" style="color:'+(on===null?"var(--mut)":on?"var(--ok)":"var(--hot)")+'">'+(on===null?"—":on?"ON":"OFF")+'</div><div class="ts" style="margin-top:6px">'+(on===null?"no output reading":on?"Power is flowing to your loads":esc(prHead(r)))+"</div></div>"+
   '<div class="side"><div><div class="sl">Input</div><div class="sv">'+fx(n(r.input_v),2)+'<sup>V</sup></div></div><div><div class="sl">Output</div><div class="sv">'+fx(n(r.output_v),2)+"<sup>V</sup></div></div></div></div>";
  var ds=(r.device_state||"").trim();h+='<div class="grid"><div class="tile" style="grid-column:1/-1"><div class="lbl">Device state</div><div class="tv" style="font-size:22px">'+esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--")+"</div></div></div>";
  var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=(r.error||"").trim();
- if(off&&off.length)h+='<div class="al'+(on?" i":" w")+'">Off because: '+esc(off.join(", "))+"</div>";
+ if(off&&off.length)h+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
  if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
  if(wr&&wr.length)h+='<div class="al w">Warning: '+esc(wr.join(", "))+"</div>";
  if(er&&!/^(0|none|no error|null|-)$/i.test(er))h+='<div class="al">⚠ Error: '+esc(/^\d+$/.test(er)?"code "+er:er.replace(/_/g," "))+"</div>";
