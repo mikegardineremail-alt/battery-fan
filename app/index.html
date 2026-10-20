@@ -282,6 +282,9 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .ovsec:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(167,139,250,.3),transparent)}
 .vic{background:linear-gradient(180deg,rgba(167,139,250,.07),rgba(255,255,255,.025))}
 .ovaux{display:flex;gap:16px;align-items:center}.ovsoc{font-size:56px;font-weight:200;letter-spacing:-.04em;line-height:1;color:var(--ok);font-variant-numeric:tabular-nums;min-width:96px}.ovsoc small{font-size:20px;color:#8b93a7;margin-left:2px}
+.ogrid.one{grid-template-columns:1fr;flex:0 0 150px}.pwg{margin-top:16px}.pwh{justify-content:space-between}
+.pwst{font-size:13px;font-weight:600;color:#8b93a7;margin-top:8px}.pwst.chg{color:var(--ok)}.pwst.dsg{color:#fde68a}
+.bat .ogrid.one{flex:1}.bat .ot b{font-size:18px}
 .ovsl{font-size:11px;color:#8b93a7;margin-bottom:4px}.ot.stl b{opacity:.55}
 .ovp .chd{margin-bottom:8px}.ovpr{display:flex;gap:12px;align-items:center}.ovpr b{display:block;font-size:17px;font-weight:600}.ovpr i{display:block;font-style:normal;font-size:12.5px;color:#a3abbf;margin-top:2px}
 .ovdot{width:10px;height:10px;border-radius:50%;flex:none}.ovdot.g{background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.15)}.ovdot.r{background:var(--hot);box-shadow:0 0 0 4px rgba(251,113,133,.15)}.ovdot.n{background:var(--mut)}
@@ -408,10 +411,10 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
     <circle id="arc" cx="59" cy="59" r="50" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 314.2" style="filter:drop-shadow(0 0 6px rgba(52,211,153,.45))"/></svg>
    <div class="in"><div class="pct" id="soc">--<small>%</small></div><div class="rl">SOC</div></div>
   </div>
-  <div class="stats">
-   <div class="st"><span>Voltage</span><b id="bv">--</b></div>
-   <div class="st"><span>Current</span><b id="bi">--</b></div>
-   <div class="st"><span>Remaining</span><b id="brem">--</b></div>
+  <div class="ogrid one">
+   <div class="ot"><span>Remaining</span><b id="brem">--</b></div>
+   <div class="ot"><span>Current</span><b id="bi">--</b></div>
+   <div class="ot"><span>Voltage</span><b id="bv">--</b></div>
   </div>
  </div>
  <div class="flow" id="flow">Waiting for battery data</div>
@@ -957,15 +960,15 @@ function renderPower(){var rows=(X2.sh||[]).filter(function(r){return r.v!==null
  var r=rows[rows.length-1],age=Date.now()-r.t,w=r.v!==null&&r.a!==null?r.v*r.a:null;
  $("pwupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("pwupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var ttg=r.a!==null&&r.a>0?"Charging":r.ttg===null?"—":hmin(r.ttg);
- var h='<div class="hero"><div><div class="lbl">State of charge</div><div class="big2">'+(r.soc===null?"--":Math.round(r.soc))+'<sup>%</sup></div></div><div class="side">'+
-  '<div><div class="sl">Voltage</div><div class="sv">'+fx(r.v,2)+'<sup>V</sup></div></div>'+
-  '<div><div class="sl">Current</div><div class="sv'+(r.a>0.05?" chg":r.a<-0.05?" dsg":"")+'">'+(r.a===null?"--":(r.a>0?"+":"")+amps(r.a))+'<sup>A</sup></div></div></div></div>';
- h+='<div class="flow'+(r.a===null?" n":r.a>0.05?"":r.a<-0.05?" d":" n")+'">'+(r.a===null?"No current reading":r.a>0.05?"⚡ Charging":r.a<-0.05?"Discharging":"Idle")+"</div>";
+ var st2=r.a===null?"No current reading":r.a>0.05?"Charging":r.a<-0.05?"Discharging":"Idle";
+ var h='<div class="ovaux pwh"><div><div class="ovsl">Charge</div><div class="ovsoc">'+(r.soc===null?"--":Math.round(r.soc))+'<small>%</small></div><div class="pwst'+(r.a>0.05?" chg":r.a<-0.05?" dsg":"")+'">'+st2+'</div></div>'+
+  '<div class="ogrid one">'+ovTile("Voltage",r.v===null?"--":r.v.toFixed(2)+"<small> V</small>")+ovTile("Current",r.a===null?"--":(r.a>0?"+":"")+amps(r.a)+"<small> A</small>","",r.a>0.05?"chg":r.a<-0.05?"dsg":"")+"</div></div>";
+ 
  var t=[["Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+"<small>W</small>",w===null?"":Math.abs(w)<10?"":"right now"],["Used",r.ah===null?"--":f1(Math.abs(r.ah))+"<small>Ah</small>","since last full"],["Time left",ttg,ttg==="Charging"||ttg==="—"?"":"at this rate"]];
  if(r.sv!==null)t.push(["Starter battery",fx(r.sv,2)+"<small>V</small>","engine battery"]);
  if(r.mid!==null)t.push(["Mid-point",fx(r.mid,2)+"<small>V</small>",""]);
  if(r.tc!==null)t.push(["Battery temp",f1(r.tc)+"<small>°C</small>",""]);
- h+='<div class="grid">'+t.map(function(x){return'<div class="tile"><div class="lbl">'+x[0]+'</div><div class="tv"'+(String(x[1]).length>14&&x[1].indexOf("<")<0?' style="font-size:20px"':"")+">"+x[1]+'</div><div class="ts">'+x[2]+"</div></div>"}).join("")+"</div>";
+ h+='<div class="ogrid pwg">'+t.map(function(x){return ovTile(x[0],String(x[1]).replace(/<small>/g,"<small> "),x[2])}).join("")+"</div>";
  var al=bits(r.al,ALARM);if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
  body.innerHTML=h;powerChart(rows)}
 function powerChart(rows){var el=$("pwch"),now=Date.now(),t0=now-24*3600e3,W=340,H=180,L=26,R=28,T=8,B=20,id="pwch";
@@ -1003,8 +1006,8 @@ function renderProtect(){var r=X2.bp,body=$("prbody");
  var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var os=(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
  var h='<div class="hero"><div><div class="lbl">Output</div><div class="outst" style="color:'+(on===null?"var(--mut)":on?"var(--ok)":"var(--hot)")+'">'+(on===null?"—":on?"ON":"OFF")+'</div><div class="ts" style="margin-top:6px">'+(on===null?"no output reading":on?"Power is flowing to your loads":esc(prHead(r)))+"</div></div>"+
-  '<div class="side"><div><div class="sl">Input</div><div class="sv">'+fx(n(r.input_v),2)+'<sup>V</sup></div></div><div><div class="sl">Output</div><div class="sv">'+fx(n(r.output_v),2)+"<sup>V</sup></div></div></div></div>";
- var ds=(r.device_state||"").trim();h+='<div class="grid"><div class="tile" style="grid-column:1/-1"><div class="lbl">Device state</div><div class="tv" style="font-size:22px">'+esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--")+"</div></div></div>";
+  '<div class="ogrid one" style="flex:0 0 132px">'+ovTile("Input",n(r.input_v)===null?"--":n(r.input_v).toFixed(2)+"<small> V</small>")+ovTile("Output",n(r.output_v)===null?"--":n(r.output_v).toFixed(2)+"<small> V</small>")+"</div></div>";
+ var ds=(r.device_state||"").trim();h+='<div class="ogrid pwg" style="grid-template-columns:1fr"><div class="ot"><span>Device state</span><b>'+esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--")+"</b></div></div>";
  var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=(r.error||"").trim();
  if(off&&off.length)h+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
  if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
