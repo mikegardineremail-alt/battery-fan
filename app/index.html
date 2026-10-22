@@ -464,10 +464,6 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 </div></section>
 <section class="page" id="protect" aria-label="Victron Protect"><div class="in">
 <div class="card" id="bpctl"></div>
-<div class="card" id="prcard">
- <div class="chd"><div class="lbl">Load output</div><div class="sub" id="prupd"></div></div>
- <div id="prbody"><div class="skel"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div></div>
-</div>
 </div></section>
 </main>
 <div class="dlg" id="bpdlg" role="dialog" aria-modal="true" aria-labelledby="bpdt"><div class="dlgc"><div class="cap">Starter battery load</div><div class="dlgt" id="bpdt">Switch starter battery load OFF?</div><div class="dlgs" id="bpds"></div><div class="dlgb"><button class="cx" id="bpcx">Cancel</button><button class="go off" id="bpgo">Turn OFF</button></div></div></div>
@@ -1093,6 +1089,15 @@ function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),no
  var h='<div class="chd" style="margin-bottom:0"><div class="cap" style="margin:0">Starter battery load</div>'+(r?'<span class="updp'+(age>STALE_MIN*60e3?" o":"")+'">Updated '+ago(age)+'</span>':'')+'</div>';
  h+='<div class="bpst"><div><div class="cap">Output</div><div class="bpbig '+(on===null?"na":on?"on":"off")+'">'+(on===null?"--":on?"ON":"OFF")+'</div></div>'+
   '<span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads disconnected")+'</span></div>';
+ if(r){var iv=n(r.input_v),ov=n(r.output_v),ds=String(r.device_state||"").trim();
+  function Q(l,v){return'<div><div class="cap">'+l+'</div><div class="bv a" style="font-size:24px">'+v+'</div></div>'}
+  h+='<div class="t3" style="margin-bottom:16px">'+Q("Input",iv===null?"--":iv.toFixed(2)+"<small>V</small>")+Q("Output",ov===null?"--":ov.toFixed(2)+"<small>V</small>")+Q("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"))+'</div>';
+  var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=String(r.error||"").trim(),erb=er&&!/^(0|none|no error|null|-)$/i.test(er),q="";
+  if(off&&off.length)q+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
+  if(al&&al.length)q+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
+  if(wr&&wr.length)q+='<div class="al w">Warning: '+esc(wr.join(", "))+"</div>";
+  if(erb)q+='<div class="al">⚠ Error: '+esc(/^\d+$/.test(er)?"code "+er:er.replace(/_/g," "))+"</div>";
+  h+=(q||'<div class="al i" style="margin:0 0 16px">✓ No alarms, warnings or errors</div>').replace(/<\/div>$/,"</div>")+(q?'<div style="height:12px"></div>':"")}
  var busy=BPC.st==="sending";
  h+='<div class="bpb"><button class="on'+(on===true?" cur":"")+'" data-bp="1"'+(busy?" disabled":"")+'>Turn ON</button><button class="off'+(on===false?" cur":"")+'" data-bp="0"'+(busy?" disabled":"")+'>Turn OFF</button></div>';
  var W=BPC.want?"ON":"OFF";
@@ -1110,7 +1115,7 @@ $("bpctl").addEventListener("click",function(e){var b=e.target.closest&&e.target
 $("bpcx").addEventListener("click",bpClose);$("bpdlg").addEventListener("click",function(e){if(e.target===this)bpClose()});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")bpClose()});
 $("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
-function renderProtect(){renderBpCtl();var r=X2.bp,body=$("prbody");
+function renderProtect(){renderBpCtl();return;var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
  var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var os=(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
