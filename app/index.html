@@ -149,7 +149,7 @@ svg.ch text{font-family:inherit}
 .tabbar .ind{position:absolute;z-index:0;top:4px;left:4px;width:calc((100% - 8px)/5);height:40px;border-radius:99px;background:rgba(34,211,238,.13);border:1px solid rgba(34,211,238,.28);will-change:transform}
 .tabbar .ind:after{content:"";position:absolute;left:50%;bottom:4px;width:16px;height:2px;margin-left:-8px;border-radius:2px;background:var(--cool);box-shadow:0 0 8px rgba(34,211,238,.7)}
 /* temps page */
-.tin{display:flex;flex-direction:column;min-height:100%}
+.tin{display:flex;flex-direction:column}
 .tin>.card:not(.empty){margin-bottom:10px}
 #temps{padding-bottom:10px}
 .mini{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:16px 18px 14px}
@@ -317,6 +317,47 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .hint{font-size:12px;color:#8b93a7;margin-top:12px;line-height:1.4}
 .hlh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
 .hlg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+/* ---- cooling hero + protect control (Invicta live-view style) ---- */
+.ch0{padding:18px 18px 16px;background:radial-gradient(130% 90% at 50% 0%,rgba(34,211,238,.10),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))}
+.ch0.on{background:radial-gradient(130% 90% at 50% 0%,rgba(34,211,238,.20),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))}
+.ch0.hot{background:radial-gradient(130% 90% at 50% 0%,rgba(251,113,133,.18),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))}
+.cap{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8b93a7;margin-bottom:6px;white-space:nowrap}
+.sp{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:99px;background:rgba(139,147,167,.14);color:#cfd5e6;white-space:nowrap}
+.sp:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.sp.g{background:rgba(52,211,153,.14);color:#6ee7b7}.sp.c{background:rgba(34,211,238,.14);color:#67e8f9}.sp.w{background:rgba(251,191,36,.14);color:#fcd34d}.sp.r{background:rgba(251,113,133,.15);color:#fda4af}
+.fanrow{display:flex;gap:14px;align-items:center;margin:14px 0 18px}
+.hfan.xl{width:64px;height:64px;border-radius:32px;flex:none}.hfan.xl svg{width:44px;height:44px}
+.fst{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}.fst.on{color:#67e8f9}
+.why{font-size:14px;color:#cfd5e6;line-height:1.4;margin-top:4px}
+.t3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)}
+.t3>div{min-width:0}.t3 .cap{font-size:10.5px}
+.bv{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}.bv small{font-size:15px;font-weight:500;color:#8b93a7;margin-left:1px}
+.bv.c{color:#67e8f9}.bv.p{color:#fda4af}.bv.a{color:#e5e7eb}.bv.na{color:#596075}
+.t3 .ts{font-size:11.5px}
+.nx{margin-top:16px;padding:14px;border-radius:18px;background:rgba(255,255,255,.045)}
+.nxt{font-size:17px;font-weight:650;line-height:1.3}.nxt b{color:#67e8f9;font-weight:700}.nx2{font-size:13px;color:#a3abbf;margin-top:6px;line-height:1.4}.nx2 b{color:#fda4af;font-weight:600}
+.seg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:12px}.seg i{height:6px;border-radius:3px;background:rgba(255,255,255,.08)}.seg i.f{background:var(--sc,#22d3ee)}
+.segl{display:flex;justify-content:space-between;font-size:11px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}
+.updp{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:99px;background:rgba(34,211,238,.10);color:#67e8f9;border:1px solid rgba(34,211,238,.28);font-variant-numeric:tabular-nums}.updp.o{background:rgba(251,191,36,.10);color:#fcd34d;border-color:rgba(251,191,36,.3)}
+.bpst{display:flex;justify-content:space-between;align-items:flex-end;margin:12px 0 16px;gap:12px}
+.bpbig{font-size:56px;font-weight:700;letter-spacing:-.03em;line-height:.95}.bpbig.on{color:#34d399}.bpbig.off{color:#fb7185}.bpbig.na{color:#596075}
+.bpb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bpb button{height:64px;border-radius:18px;font-size:18px;font-weight:700;cursor:pointer;transition:transform .12s,opacity .2s}
+.bpb button:active{transform:scale(.97)}.bpb button:disabled{opacity:.35}
+.bpb .on{background:rgba(52,211,153,.16);color:#6ee7b7;box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
+.bpb .off{background:rgba(251,113,133,.15);color:#fda4af;box-shadow:inset 0 0 0 1px rgba(251,113,133,.35)}
+.bpb button.cur{opacity:.4}
+.bpres{margin-top:12px;border-radius:16px;padding:12px 14px;font-size:13.5px;line-height:1.45;background:rgba(255,255,255,.045);color:#cfd5e6}
+.bpres.ok{background:rgba(52,211,153,.12);color:#a7f3d0}.bpres.bad{background:rgba(251,113,133,.12);color:#fecdd3}.bpres.wt{background:rgba(34,211,238,.10);color:#a5f3fc}
+.bpres .spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin2 .8s linear infinite;vertical-align:-1px;margin-right:8px}
+.wifi{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:12.5px;color:#a3abbf;line-height:1.45}.wifi svg{flex:none;width:18px;height:18px;color:#fcd34d;margin-top:1px}
+.dlg{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,10,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.dlg.open{display:flex;animation:vfade .2s ease-out}
+.dlgc{width:100%;max-width:420px;background:#131826;border-radius:26px;padding:22px 20px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);animation:dlgup .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes dlgup{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.dlgt{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:4px 0 8px}.dlgs{font-size:14px;color:#a3abbf;line-height:1.45}
+.dlgb{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:20px}.dlgb button{height:56px;border-radius:16px;font-size:16.5px;font-weight:700;cursor:pointer}
+.dlgb .cx{background:rgba(255,255,255,.07);color:#cfd5e6}.dlgb .go.off{background:#fb7185;color:#1a0b10}.dlgb .go.on{background:#34d399;color:#06150f}
 @media (min-width:900px){
  body{height:auto;overflow:auto}#app{height:auto;display:block}
  .head{max-width:1080px}
@@ -346,41 +387,15 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 <section class="page" id="overview" aria-label="Overview"><div class="in" id="ovbody"></div></section>
 <section class="page" id="cooling" aria-label="Cooling"><div class="in tin" id="temps">
 <div class="card empty"><div class="skel" id="esk"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div><div class="et" id="et"></div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
-<!-- HERO -->
-<div class="card live">
- <div class="hero">
-  <div><div class="lbl" id="bigl">Battery cells</div><div class="big" id="big">--<sup>°C</sup></div></div>
-  <div class="side">
-   <div><div class="sl" id="s1l">Case probe</div><div class="sv" id="s1" style="color:var(--hot)">--<sup>°C</sup></div></div>
-   <div><div class="sl">Ambient</div><div class="sv" id="amb" style="color:#b9bfcd">--<sup>°C</sup></div></div>
-  </div>
- </div>
- <div class="chip" id="chip">—</div>
- <div class="lad"><b id="brk"></b><em id="brke"></em><i class="a" id="ka"></i><i class="p" id="kp"></i><i class="c" id="kc"></i></div>
- <div class="scale" id="scale"></div>
-</div>
-<div class="card live mini">
- <div class="chd"><div class="lbl">Last 2 hours</div><div class="sub">hold to scrub</div></div>
- <div class="lg"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)" id="lgc2">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span></div>
- <div class="chw mw" id="mw"><svg class="ch" id="mch" viewBox="0 0 340 150"></svg><div class="tip" id="mtip"></div></div>
-</div>
-<div class="mtiles live">
- <div class="tile"><div class="lbl">Trend</div><div class="tv" id="trd">--</div><div class="ts" id="trds">case probe, 15 min</div></div>
- <div class="tile"><div class="lbl">Today's peak</div><div class="tv" id="pkv">--</div><div class="ts" id="pks">--</div></div>
- <div class="tile"><div class="lbl">Gap to Ambient</div><div class="tv" id="gap">--</div><div class="ts" id="gaps">--</div></div>
-</div>
+<!-- AT-A-GLANCE HERO (Boom v8.19) -->
+<div class="card live ch0" id="chero"></div>
 </div>
 <div class="in csec" id="fan">
-<!-- FAN -->
 <div class="card live" id="fancard">
- <div class="fan">
-  <div class="fico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm.9-1.9c.3-2.6 1-5.1 3.6-5.1 2.4 0 3.5 2.4 2.4 4.2-.9 1.5-3 2.1-5.1 2.1-.3-.4-.6-.8-.9-1.2ZM13.9 12.9c2.4 1 4.6 2.4 4 4.9-.5 2.3-3.2 2.8-4.7 1.3-1.2-1.2-1.4-3.4-.8-5.4.5-.2.9-.5 1.5-.8ZM10.2 13.1c-2.1 1.6-4.4 2.7-6.2 1-1.7-1.6-.9-4.2 1.2-4.6 1.7-.4 3.6.7 4.9 2.3 0 .5 0 .9.1 1.3Z"/></svg></div>
-  <div><div class="fstate" id="fstate">FAN —</div><div class="mode" id="mode">—</div></div>
-  <div class="tag" id="ftag">—</div>
- </div>
- <div class="grid">
-  <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">off target</div></div>
-  <div class="tile"><div class="lbl">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts">on target</div></div>
+ <div class="lbl">Fan details</div>
+ <div class="grid" style="margin-top:8px">
+  <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">probe, off target</div></div>
+  <div class="tile"><div class="lbl">Probe start point</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts" id="ons">on target</div></div>
   <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
   <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
  </div>
@@ -448,12 +463,14 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 </div>
 </div></section>
 <section class="page" id="protect" aria-label="Victron Protect"><div class="in">
+<div class="card" id="bpctl"></div>
 <div class="card" id="prcard">
  <div class="chd"><div class="lbl">Load output</div><div class="sub" id="prupd"></div></div>
  <div id="prbody"><div class="skel"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div></div>
 </div>
 </div></section>
 </main>
+<div class="dlg" id="bpdlg" role="dialog" aria-modal="true" aria-labelledby="bpdt"><div class="dlgc"><div class="cap">Starter battery load</div><div class="dlgt" id="bpdt">Switch starter battery load OFF?</div><div class="dlgs" id="bpds"></div><div class="dlgb"><button class="cx" id="bpcx">Cancel</button><button class="go off" id="bpgo">Turn OFF</button></div></div></div>
 <nav class="tabs" aria-label="Pages"><div class="tabbar" id="tabbar" role="tablist"><span class="ind" id="ind"></span>
 <button role="tab" data-p="0">Overview</button><button role="tab" data-p="1">Cooling</button><button role="tab" data-p="2">Invicta</button><button role="tab" data-p="3">Shunt</button><button role="tab" data-p="4">Protect</button>
 </div></nav>
@@ -467,7 +484,15 @@ var BMS_URL="https://docs.google.com/spreadsheets/d/"+SHEET+"/gviz/tq?tqx=out:cs
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
 var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Very hot: fan forced on until it drops below 45°C.",cold:"Cold: fan never runs below 5°C.","sensor-fault":"Temperature sensor fault. Check the sensors."};
 var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Parked 8 h+",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
-var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1};
+var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
+/* Boom v8.19 additions */
+MODES["cell-watch"]="Watching cells. The probe is above its start point, but the cells are steady, so the fan stays off.";
+MODES["cell-restart"]="Cells warming again: fan runs at least 10 min, then stops at the probe stop point.";
+MODES.backstop="Backstop: probe is more than 8° above Ambient (or over 40°). Fan on until it drops 1° below.";
+MODES.crisis="Cells over 40°: fan forced on, driving or parked, until they drop below 39°.";
+MODES.fallback="No cell data: using the probe start/stop points (v8.18 rules).";
+SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";
+var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=1,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45;
 var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
 function $(i){return document.getElementById(i)}
 function n(v){if(v===null||v===undefined)return null;if(typeof v==="number")return isFinite(v)?v:null;v=String(v).trim();if(v===""||/^(null|nan|none|undefined|-)$/i.test(v))return null;var x=Number(v.replace(/,/g,""));return isFinite(x)?x:null}
@@ -589,31 +614,12 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  var fan=r.fan===1,m=r.mode;
  $("pill").className="pill"+(BAD[m]?" bad":fan?"":m==="driving"?" drv":" off");
  $("pillt").textContent=(SHORT[m]||(m||"Running"))+", fan "+(fan?"ON":"OFF");
- /* hero */
- var pk=r.pack,amb=r.amb,cells=has?p.tint:null,pc="var(--ok)",word="Comfortable";
- if(pk!==null){if(pk>=45){pc="var(--hot)";word="Very hot"}else if(on!==null&&pk>on){pc="var(--hot)";word="Above start point"}else if(off!==null&&pk>off){pc="var(--warm)";word="Between targets"}else if(pk<10){pc="var(--cool)";word="Cold"}else word="At or below stop point"}
- var chip=$("chip"),root=document.documentElement.style;
- $("amb").innerHTML=deg(amb);
- if(cells!==null){
-  root.setProperty("--pc",cells>=45?"var(--hot)":cells>=38?"var(--warm)":"var(--cool)");
-  $("bigl").textContent="Battery cells";$("big").innerHTML=deg(cells);
-  $("s1l").textContent="Case probe";$("s1").innerHTML=deg(pk);$("s1").style.color=pc==="var(--ok)"?"#eef2ff":pc;
-  if(pk!==null){var d=pk-cells;chip.innerHTML=(d>=0?ARROW_DN:ARROW_UP)+"Cells "+f1(Math.abs(d))+"° "+(d>=0?"cooler":"warmer")+" than the case";chip.style.setProperty("--chip",d>=0?"var(--cool)":"var(--warm)")}
-  else{chip.textContent="Case probe offline";chip.style.setProperty("--chip","var(--mut)")}
- }else{
-  root.setProperty("--pc",pc);$("bigl").textContent="Case probe";$("big").innerHTML=deg(pk);
-  $("s1l").textContent="Battery cells";$("s1").innerHTML=WAIT;
-  chip.textContent=word;chip.style.setProperty("--chip",pc);
- }
- ladder(amb,cells,pk);$("lgc").style.opacity=cells===null?.4:1;
+ var pk=r.pack,amb=r.amb;
  /* battery */
  battery(bl,p,bAge,r);
  /* fan */
- $("fancard").className="card live"+(fan?" on":"");$("fstate").textContent=fan?"FAN ON":"FAN OFF";
- var ctx=m==="driving"?"engine running":/^(cap|cooldown|cooldown-done|run-on|early-stop)$/.test(m)?"engine off":"";
- $("mode").textContent=(SHORT[m]||(fan?"Running":"Off"))+(ctx?" · "+ctx:"");$("mode").title=MODES[m]||"";
- var fs=rows.length-1;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
- var fm=Math.round((now-rows[fs].t)/60000);$("ftag").textContent=(fm<60?fm+" min":Math.floor(fm/60)+" h "+String(fm%60).padStart(2,"0"));$("ftag").title=(fan?"on":"off")+" since "+hm(rows[fs].t);
+ coolHero(rows,r,now,off,on);
+ $("ons").textContent=r.mode==="cell-watch"||r.mode==="watching"?"used only without cell data":"on target";
  $("off").innerHTML=off===null?"--":f1(off)+"<small>°C</small>";$("on").innerHTML=on===null?"--":f1(on)+"<small>°C</small>";
  var ko=keyOffInfo(rows,now);
  if(!ko||ko.none){$("ko").innerHTML="--";$("kos").textContent="no drive logged yet"}
@@ -625,12 +631,71 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  /* chart + note + footer */
  var mt=match(rows,S.bms);
  tempChart($("ch"),hours,{H:196},rows,mt,now,off,on,ko);
- var mw=$("mw"),mwW=mw.clientWidth,mwH=mw.clientHeight;tempChart($("mch"),2,{mini:true,H:mwW&&mwH?Math.max(90,Math.min(420,Math.round(340*mwH/mwW))):150},rows,mt,now,off,on,ko);
- $("lgc2").style.opacity=has?1:.4;miniTiles(rows,mt,now,has);
+ $("lgc").style.opacity=has?1:.4;
  [].forEach.call($("range").children,function(b){b.classList.toggle("sel",Number(b.dataset.h)===hours)});
  note(rows,mt,now,ko);footer(age,bAge);
  $("ft").textContent="Refreshes every minute · last reading "+new Date(r.t).toLocaleString([],{weekday:"short",hour:"numeric",minute:"2-digit"}).toLowerCase();
 }
+/* ---------- Cooling hero (Boom v8.19) ----------
+   Cells = the higher of t_int / t_brd on the latest fresh BMS row (Boom v8.19 uses the advert's higher temp, which in
+   practice tracks t_int). Settled cell = lowest of that value since the fan last went off (Boom records the same on the
+   Shelly; the Pack log does not carry why/c/cs, so we rebuild it from the BMS tab). */
+function cellOf(x){var v=[];[x.A,x.B].forEach(function(b){if(b&&b.any){if(b.t_int!==null)v.push(b.t_int);if(b.t_brd!==null)v.push(b.t_brd)}});return v.length?Math.max.apply(null,v):null}
+function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]:null,cell=bl&&now-bl.t<=BMS_STALE_MIN*60e3?cellOf(bl):null;
+ var L=rows.length-1,fs=L;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
+ var since=rows[fs].t,settled=null,st=null;
+ if(r.fan!==1){bms.forEach(function(x){if(x.t<since-60e3)return;var c=cellOf(x);if(c!==null&&(settled===null||c<settled)){settled=c;st=x.t}})}
+ return{cell:cell,cellT:bl?bl.t:null,settled:settled,settledT:st,since:since}}
+function d1(v){return v===null||v===undefined?"--":f1(v)+"°"}
+function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mode||"",fan=r.fan===1,pk=r.pack,amb=r.amb,cs=coolState(rows,r,now),cell=cs.cell;
+ var rst=cs.settled!==null?Math.round((cs.settled+CELL_RISE)*10)/10:null,bsv=amb!==null?Math.round((amb+AMB_BACK)*10)/10:null;
+ var pill="",pc="",why="",nx="",nx2="",seg=null,tone="";
+ var dur0=dur(now-cs.since);
+ /* status pill + why */
+ if(m==="cell-watch"){pill="Watching cells";pc="c";why="Probe is above its start point ("+d1(on)+"), but the cells are steady"+(cell!==null?" at "+d1(cell):"")+", so the fan stays off."}
+ else if(m==="watching"){pill="Watching";pc="g";why=fan?"Cooling down.":"Temperatures are where they should be."}
+ else if(m==="cell-restart"){pill="Cells warming";pc="w";why="Cells rose 1° above where they settled, so the fan restarted."}
+ else if(m==="backstop"){pill="Backstop";pc="r";tone="hot";why="Probe is more than 8° above Ambient"+(pk!==null&&pk>PROBE_HARD?" and over 40°":"")+", so the fan is on as a safety backstop."}
+ else if(m==="crisis"){pill="Cells hot";pc="r";tone="hot";why="Cells are over 40°. Fan forced on, driving or parked."}
+ else if(m==="panic"){pill="Very hot";pc="r";tone="hot";why="Probe is over 45°. Fan forced on."}
+ else if(m==="cooldown"){pill="Cool-down";pc="c";why="After-drive cool-down: clearing heat soaked up while driving."}
+ else if(m==="cooling"){pill="Cooling";pc="c";why=fan?"Fan is bringing the probe down to its stop point.":"Between the stop and start points."}
+ else if(m==="fan-on"){pill="Probe rules";pc="w";why="Probe is above its start point and there is no fresh cell data, so the probe rules (v8.18) apply."}
+ else if(m==="plateau-band"){pill="Plateau hold";pc="c";why=MODES[m]}
+ else if(m==="run-on"){pill="Run-on";pc="c";why="Cool-down finished. A few more minutes to clear soaked heat."}
+ else if(m==="cooldown-done"||m==="early-stop"){pill=SHORT[m];pc="c";why=MODES[m]}
+ else if(m==="driving"){pill="Driving";pc="w";why="Engine running: fan held off. Cool-down starts at key-off."}
+ else if(m==="cap"){pill="Parked 8 h+";pc="";why="Parked over 8 hours: auto cooling is finished until the next drive."}
+ else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
+ else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
+ /* next likely action + trigger value */
+ if(fan){
+  if(m==="crisis"){nx="Stops when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Cells now "+d1(cell)}
+  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Stops when the probe drops to <b>"+d1(rel)+"</b>";nx2="Ambient +"+(AMB_BACK-BACK_HYST)+"°"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
+  else if(m==="panic"){nx="Stops when the probe drops below <b>"+PANIC+"°</b>"}
+  else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2=off!==null?"Then fan stops if the probe is at or below "+d1(off):""}
+  else if(m==="cell-restart"){nx="Runs at least 10 min, then stops at <b>"+d1(off)+"</b>";nx2="probe stop point"}
+  else if(off!==null){nx="Stops at <b>"+d1(off)+"</b>";nx2="when the probe reaches its stop point"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
+  if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
+ }else{
+  if(m==="driving"){nx="Cool-down starts at key-off"}
+  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Panic cooling still on above "+PANIC+"°; backstop if probe reaches Ambient +8"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")}
+  else if(m==="low-volt"||m==="volt-recover"){nx="Fan resumes when the battery reaches <b>13.1 V</b>"}
+  else if(m==="cold"){nx="Fan never runs below <b>5°</b>"}
+  else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){nx="Fan restarts if cells reach <b>"+d1(rst)+"</b>";
+   nx2="or the probe reaches Ambient +8"+(bsv!==null?" = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>":"")+(bsv!==null&&bsv>PROBE_HARD?" (40° hard limit)":"");
+   if(cell!==null)seg={f:(cell-cs.settled)/CELL_RISE,l:"settled "+d1(cs.settled)+(cs.settledT?" · "+hm(cs.settledT):""),r:"restart "+d1(rst),c:cell>=rst-0.3?"#fbbf24":"#22d3ee"}}
+  else if(on!==null){nx="Fan starts if the probe passes <b>"+d1(on)+"</b>";nx2=cell===null?"No fresh cell data, so the probe start point applies":"or the probe reaches Ambient +8"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")}
+ }
+ var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
+ var h='<div class="chd" style="margin-bottom:0"><div class="cap" style="margin:0">Pack cooling</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
+ h+='<div class="fanrow"><div class="hfan xl '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</div><div style="min-width:0"><div class="fst'+(fan?" on":"")+'">Fan '+(fan?"on":"off")+'<span style="font-size:14px;font-weight:500;color:#8b93a7;letter-spacing:0;margin-left:8px">'+dur0+'</span></div><div class="why">'+esc(why)+'</div></div></div>';
+ function T(l,v,c,sub){return'<div><div class="cap">'+l+'</div><div class="bv '+(v===null?"na":c)+'">'+(v===null?"--":f1(v)+"<small>°</small>")+'</div><div class="ts">'+sub+'</div></div>'}
+ h+='<div class="t3">'+T("Cells",cell,"c",cell===null?"no fresh BMS data":cs.settled!==null?"settled "+d1(cs.settled):"BMS · higher of int/board")+T("Probe",pk,"p",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+T("Ambient",amb,"a",r.latch!==null&&r.latch!==undefined?"latched "+d1(r.latch):"outside air")+'</div>';
+ if(nx){h+='<div class="nx"><div class="cap">Next</div><div class="nxt">'+nx+'</div>'+(nx2?'<div class="nx2">'+nx2+'</div>':"");
+  if(seg){var k=Math.max(0,Math.min(10,Math.round(seg.f*10)));h+='<div class="seg" style="--sc:'+seg.c+'">'+Array.apply(null,Array(10)).map(function(_,i){return'<i'+(i<k?' class="f"':"")+'></i>'}).join("")+'</div><div class="segl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>'}
+  h+='</div>'}
+ el.className="card live ch0"+(fan?" on":"")+(tone?" "+tone:"");el.innerHTML=h}
 function ladder(amb,cells,pk){var vs=[amb,cells,pk].filter(function(v){return v!==null});
  if(!vs.length){$("ka").style.display=$("kp").style.display=$("kc").style.display=$("brk").style.display=$("brke").style.display="none";$("scale").innerHTML="";return}
  var lo=Math.min(20,Math.floor((Math.min.apply(null,vs)-3)/5)*5),hi=Math.max(50,Math.ceil((Math.max.apply(null,vs)+3)/5)*5); /* mockup scale is 20..50 */
@@ -912,12 +977,12 @@ var SHUNT_ID="11bP6_w0Wc39pC1jxkmRUfJNhOV8mRMtBefH5zRRWSnw",BP_ID=SHUNT_ID;
 function gvizUrl(id,tab,hrs){var u="https://docs.google.com/spreadsheets/d/"+id+"/gviz/tq?tqx=out:csv&headers=1&sheet="+encodeURIComponent(tab);
  return u+"&tq="+encodeURIComponent("select * where C > "+Math.floor(Date.now()/1000-hrs*3600))}
 var X2={sh:null,shErr:false,shAt:0,bp:null,bpErr:false,bpAt:0};
-try{var c2=JSON.parse(localStorage.getItem("bf2-x2")||"null");if(c2){X2.sh=c2.sh;X2.bp=c2.bp}}catch(e){}
+try{var c2=JSON.parse(localStorage.getItem("bf2-x2")||"null");if(c2){X2.sh=Array.isArray(c2.sh)?c2.sh:null;X2.bp=c2.bp&&c2.bp.t?c2.bp:null}}catch(e){}
 function vrows(text,need){var tb=table(text);if(tb.h.indexOf("unix")<0||tb.h.indexOf(need)<0)throw new Error("not the expected tab");
  var out=[];tb.rows.forEach(function(o){var u=n(o.unix);if(u===null||u<1e9)return;o.t=u*1000;out.push(o)});out.sort(function(a,b){return a.t-b.t});return out}
 function loadExtra(){
  var a=get(gvizUrl(SHUNT_ID,"SmartShunt",8*24)).then(function(t){X2.sh=vrows(t,"soc").map(function(o){return{t:o.t,v:n(o.v),a:n(o.a),soc:n(o.soc),ah:n(o.consumed_ah),ttg:n(o.ttg_min),sv:n(o.starter_v),mid:n(o.mid_v),tc:n(o.temp_c),al:(o.alarm||"").trim()}});X2.shErr=false;X2.shAt=Date.now()}).catch(function(e){X2.shErr=true;console.warn("shunt",e)});
- var b=get(gvizUrl(BP_ID,"BatteryProtect",48)).then(function(t){var r=vrows(t,"output_state");X2.bp=r.length?r[r.length-1]:null;X2.bpErr=false;X2.bpAt=Date.now()}).catch(function(e){X2.bpErr=true;console.warn("bp",e)});
+ var b=get(gvizUrl(BP_ID,"BatteryProtect",48)).then(function(t){var r=vrows(t,"output_state").filter(function(o){return String(o.output_state||"").trim()!==""||n(o.output_state_code)!==null||n(o.input_v)!==null});X2.bp=r.length?r[r.length-1]:(X2.bp||null);X2.bpErr=false;X2.bpAt=Date.now()}).catch(function(e){X2.bpErr=true;console.warn("bp",e)});
  return Promise.all([a,b]).then(function(){try{localStorage.setItem("bf2-x2",JSON.stringify({sh:X2.sh,bp:X2.bp}))}catch(e){}renderExtra()})}
 function loadAll(){load();loadExtra();loadHealth()}
 function hmin(m){m=Math.round(m);if(m<60)return m+" min";var h=Math.floor(m/60);if(h<48)return h+" h "+String(m%60).padStart(2,"0")+" min";return Math.floor(h/24)+" days "+(h%24)+" h"}
@@ -1001,7 +1066,51 @@ function drawPwXH(){var id="pwch",svg=$(id),g=CH[id],sc=SC[id],old=svg.querySele
  if(left+tw>ww){left=px-12-tw;fl=true}if(left<0)left=Math.max(0,Math.min(ww-tw,px-tw/2));tip.style.left=left.toFixed(0)+"px";tip.classList.toggle("fl",fl)}
 function prHead(r){var off=bits(r.off_reason,OFFR)||[],al=bits(r.alarm_reason,ALARM)||[];
  return"Output OFF"+(off.length?": "+off.join(", "):"")+(al.length?" ("+al.join(", ")+")":"")}
-function renderProtect(){var r=X2.bp,body=$("prbody");
+/* ---------- BatteryProtect control (starter battery load) ----------
+   State shown here always comes from the BatteryProtect sheet tab. Commands go through a pluggable adapter:
+   BP_ADAPTER = "link" (now): opens the ESP32 bridge page (ESPHome, LAN only) so the user taps BP Output ON/OFF there.
+   The app is HTTPS, so iOS Safari blocks fetch() to http://192.168.86.52 (mixed content) and the bridge has no CORS.
+   "relay" (future option, not shown in the UI): write a command row to a sheet the bridge polls, then watch
+   text_sensor/bp_control_status for "confirmed"/"failed". Bridge entities: button/bp_output_on, button/bp_output_off,
+   text_sensor/bp_control_status, sensor/batteryprotect_output, batteryprotect_input_voltage, batteryprotect_output_voltage. */
+var BRIDGE="http://192.168.86.52",BP_ADAPTER="link",BPC={want:null,st:null,msg:"",at:0};
+var BP_ADAPTERS={
+ link:function(on){var w=null;try{w=window.open(BRIDGE+"/","_blank","noopener")}catch(e){}
+  return Promise.resolve({status:"opened"})},
+ relay:function(on){/* FUTURE: POST {cmd:on?"ON":"OFF",id,ts} to the command relay; poll bp_control_status up to 20 s.
+   Resolve {status:"confirmed"} on "BP control: last command ON|OFF at HH:MM:SS, confirmed", {status:"failed",reason} on "... failed (<reason>)". */
+  return Promise.reject(new Error("relay not configured"))}};
+function sendBpCommand(on){var f=BP_ADAPTERS[BP_ADAPTER]||BP_ADAPTERS.link;return f(on)}
+function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
+function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now()};renderBpCtl();
+ var to=setTimeout(function(){if(BPC.st==="sending"){BPC.st="failed";BPC.msg="No reply within 20 s.";renderBpCtl()}},20000);
+ sendBpCommand(on).then(function(res){clearTimeout(to);if(res.status==="confirmed"){BPC.st="confirmed"}else if(res.status==="failed"){BPC.st="failed";BPC.msg=res.reason||""}else BPC.st="opened";renderBpCtl()})
+ .catch(function(e){clearTimeout(to);BPC.st="failed";BPC.msg=e&&e.message||"";renderBpCtl()})}
+function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),now=Date.now(),age=r?now-r.t:null;
+ /* the sheet confirms a deep-link command once it logs the wanted state after we opened the bridge */
+ if(BPC.st==="opened"&&on===BPC.want&&r&&r.t>=BPC.at-60e3)BPC.st="confirmed";
+ if(BPC.st==="opened"&&now-BPC.at>15*60e3){BPC.st="failed";BPC.msg="The sheet still shows "+(on?"ON":"OFF")+" 15 min later."}
+ var h='<div class="chd" style="margin-bottom:0"><div class="cap" style="margin:0">Starter battery load</div>'+(r?'<span class="updp'+(age>STALE_MIN*60e3?" o":"")+'">Updated '+ago(age)+'</span>':'')+'</div>';
+ h+='<div class="bpst"><div><div class="cap">Output</div><div class="bpbig '+(on===null?"na":on?"on":"off")+'">'+(on===null?"--":on?"ON":"OFF")+'</div></div>'+
+  '<span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads disconnected")+'</span></div>';
+ var busy=BPC.st==="sending";
+ h+='<div class="bpb"><button class="on'+(on===true?" cur":"")+'" data-bp="1"'+(busy?" disabled":"")+'>Turn ON</button><button class="off'+(on===false?" cur":"")+'" data-bp="0"'+(busy?" disabled":"")+'>Turn OFF</button></div>';
+ var W=BPC.want?"ON":"OFF";
+ if(BPC.st==="sending")h+='<div class="bpres wt"><span class="spin"></span>Sending… up to 20 s</div>';
+ else if(BPC.st==="opened")h+='<div class="bpres wt"><span class="spin"></span>Bridge page opened. Tap <b>BP Output '+W+'</b> there. This shows confirmed once the sheet logs '+W+' (within about 5 min).</div>';
+ else if(BPC.st==="confirmed")h+='<div class="bpres ok">✓ Confirmed: output is '+W+'.</div>';
+ else if(BPC.st==="failed")h+='<div class="bpres bad">Not confirmed'+(BPC.msg?": "+esc(BPC.msg):"")+' Check you are on home Wi-Fi and try again.</div>';
+ h+='<div class="wifi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16.2a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg><span>Opens the bridge page. Home Wi-Fi only. Tap BP Output ON/OFF there.<br><span class="dim">State shown here comes from the BatteryProtect log (every 5 min).</span></span></div>';
+ el.innerHTML=h}
+function bpAsk(on){var d=$("bpdlg");$("bpdt").textContent="Switch starter battery load "+(on?"ON":"OFF")+"?";
+ $("bpds").textContent=(on?"Power will flow to the loads on the starter battery. ":"Everything on the starter battery load output will lose power. ")+"Opens the bridge page. Home Wi-Fi only. Tap BP Output "+(on?"ON":"OFF")+" there.";
+ var g=$("bpgo");g.className="go "+(on?"on":"off");g.textContent=on?"Turn ON":"Turn OFF";g.dataset.v=on?"1":"0";d.classList.add("open");setTimeout(function(){$("bpcx").focus()},50)}
+function bpClose(){$("bpdlg").classList.remove("open")}
+$("bpctl").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-bp]");if(b&&!b.disabled)bpAsk(b.dataset.bp==="1")});
+$("bpcx").addEventListener("click",bpClose);$("bpdlg").addEventListener("click",function(e){if(e.target===this)bpClose()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")bpClose()});
+$("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
+function renderProtect(){renderBpCtl();var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
  var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var os=(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
@@ -1164,7 +1273,7 @@ $("bsw").addEventListener("click",function(e){var b=e.target.dataset&&e.target.d
 function setHours(h){hours=h;delete Z.ch;try{localStorage.setItem("bf2-hours",h)}catch(e){}render()}
 $("chl").addEventListener("click",function(){setHours(hours===6?12:hours===12?24:6)});
 $("range").addEventListener("click",function(e){var h=Number(e.target.dataset&&e.target.dataset.h);if(h)setHours(h)});
-attachScrub("hw","ch","htip");attachScrub("mw","mch","mtip");attachScrub("pww","pwch","pwtip");
+attachScrub("hw","ch","htip");attachScrub("pww","pwch","pwtip");
 /* ---------- swipe pages ---------- */
 var PAGES=["overview","cooling","battery","power","protect"],ALIAS={now:"cooling",temps:"cooling",fan:"cooling",history:"cooling"},pager=$("pager"),tabs=[].slice.call(document.querySelectorAll("#tabbar button")),ind=$("ind"),cur=-1;
 function pw(){return pager.clientWidth||1}
