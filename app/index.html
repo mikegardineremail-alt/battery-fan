@@ -358,6 +358,66 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .dlgt{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:4px 0 8px}.dlgs{font-size:14px;color:#a3abbf;line-height:1.45}
 .dlgb{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:20px}.dlgb button{height:56px;border-radius:16px;font-size:16.5px;font-weight:700;cursor:pointer}
 .dlgb .cx{background:rgba(255,255,255,.07);color:#cfd5e6}.dlgb .go.off{background:#fb7185;color:#1a0b10}.dlgb .go.on{background:#34d399;color:#06150f}
+/* ---- big design language (shared with the Invicta live view) ---- */
+.thero{position:relative;overflow:hidden;isolation:isolate;padding:16px 16px 14px;--glowc:rgba(34,211,238,.16)}
+.thero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(72% 60% at 50% 58%,var(--glowc),transparent 72%)}
+.hHead{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:8px}
+.hHead .cap{margin:0;display:flex;align-items:center;gap:8px}
+.gauge{position:relative;width:100%;max-width:340px;margin:6px auto 0;aspect-ratio:300/178}
+.gauge svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.gauge .tk{stroke:rgba(255,255,255,.28);stroke-width:1.5;stroke-linecap:round}
+.gauge text{font:600 10.5px -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif;fill:#596075;letter-spacing:.02em}
+.gauge text.lim{fill:#8b93a7}.gauge text.m{font-size:10px;font-weight:700}
+.mkh{animation:halo 4.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes halo{0%,100%{opacity:.2;transform:scale(.85)}50%{opacity:.38;transform:scale(1.12)}}
+.gIn{position:absolute;left:0;right:0;bottom:2%;display:flex;flex-direction:column;align-items:center}
+.gIn .cap{font-size:10.5px;margin:0}
+.tMain{font-size:84px;font-weight:700;letter-spacing:-.05em;line-height:.95;margin-top:4px;font-variant-numeric:tabular-nums}
+.tMain .u{font-size:28px;font-weight:500;letter-spacing:0;color:#8b93a7;margin-left:3px;vertical-align:1.2em}
+.duo{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;margin-top:14px;padding:12px 4px 2px;border-top:1px solid rgba(255,255,255,.07)}
+.duo.three{grid-template-columns:1fr 1px 1fr 1px 1fr}
+.duo .sep{height:38px;background:rgba(255,255,255,.07)}
+.ro{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.ro .k{font-size:11px;color:#8b93a7;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.ro .v{font-size:24px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ro .v .u{font-size:13px;font-weight:500;color:#8b93a7;margin-left:2px}
+.ro .s{font-size:11.5px;color:#8b93a7;white-space:nowrap}
+.whyc{text-align:center;font-size:13.5px;line-height:1.45;color:#cfd5e6;margin:10px 8px 0}
+.hfan.sm{width:34px;height:34px;border-radius:17px}.hfan.sm svg{width:24px;height:24px}
+.hfan.sm.on{box-shadow:0 0 0 1px rgba(34,211,238,.3),0 0 16px rgba(34,211,238,.35)}
+.bigc{padding:16px 16px 18px}
+.bigm{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px}
+.bign{font-size:56px;font-weight:700;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}.bign .u{font-size:22px;font-weight:500;color:#8b93a7;margin-left:2px}
+.bigs{font-size:13px;color:#a3abbf;text-align:right;line-height:1.45;padding-bottom:4px;max-width:52%}.bigs b{font-weight:650}
+.trk{position:relative;height:10px;margin-top:16px;border-radius:6px;background:#0b0e16;border:1px solid rgba(255,255,255,.07);overflow:hidden}
+.trk i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#14b8a6,#22d3ee);transition:width .8s}
+.trk.w i{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.trk:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(7,9,15,.85) calc(10% - 1px) 10%)}
+.trl{display:flex;justify-content:space-between;font-size:11.5px;color:#8b93a7;margin-top:8px;font-variant-numeric:tabular-nums}
+.ring2{position:relative;width:196px;height:196px;margin:8px auto 0}
+.ring2 svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ring2 .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring2 .w{font-size:76px;font-weight:750;letter-spacing:-.05em;line-height:.95}
+.ring2.on .w{color:#34d399}.ring2.off .w{color:#fb7185}.ring2.na .w{color:#596075}
+.ring2 .pulse{transform-box:fill-box;transform-origin:center;animation:halo 4.2s ease-in-out infinite}
+.updc{display:flex;justify-content:center;margin-top:12px}
+.bpc{padding:16px}
+.pbtn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.pbtn button{height:60px;border-radius:999px;font-size:18px;font-weight:700;cursor:pointer;transition:transform .12s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.pbtn button:active{transform:scale(.97)}.pbtn button:disabled{opacity:.35}
+.pbtn .on{background:linear-gradient(#34d399,#10b981);color:#04140d;box-shadow:0 8px 24px rgba(52,211,153,.25)}
+.pbtn .off{background:rgba(251,113,133,.14);color:#fda4af;box-shadow:inset 0 0 0 1.5px rgba(251,113,133,.5)}
+.pbtn .cur{opacity:.38;box-shadow:none}.pbtn button.act:disabled{opacity:1}.pbtn .off.act{background:rgba(251,113,133,.22)}
+.rcrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.rcrow .v{font-size:15px;font-weight:650;margin-top:2px}.rcrow .v.g{color:#6ee7b7}.rcrow .v.m{color:#8b93a7}
+.rcb{height:36px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.07);color:#cfd5e6;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rcb svg{width:15px;height:15px}
+.setup{margin-top:12px;border-radius:18px;padding:16px;background:rgba(34,211,238,.08);box-shadow:inset 0 0 0 1px rgba(34,211,238,.22)}
+.setup .t{font-size:17px;font-weight:700}.setup .s{font-size:13px;color:#a3abbf;margin-top:4px;line-height:1.45}
+.setup button{margin-top:12px;height:50px;width:100%;border-radius:999px;background:linear-gradient(#22d3ee,#14b8a6);color:#04121a;font-size:16px;font-weight:700;cursor:pointer}
+.tok{width:100%;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:#0b0e16;color:#eef2ff;font:inherit;font-size:18px;padding:0 16px;letter-spacing:.12em;outline:none}.tok:focus{border-color:rgba(34,211,238,.6)}
+.adv{display:flex;justify-content:space-between;align-items:center;margin-top:16px}.adv button{font-size:14px;color:#8b93a7;font-weight:600;cursor:pointer;padding:8px 0}.adv a{font-size:11.5px;color:#596075}
+.dlgs .err{color:#fda4af}
+.glg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:11.5px;color:#8b93a7}.glg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}.glg b{color:#cfd5e6;font-weight:600}
 @media (min-width:900px){
  body{height:auto;overflow:auto}#app{height:auto;display:block}
  .head{max-width:1080px}
@@ -388,7 +448,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 <section class="page" id="cooling" aria-label="Cooling"><div class="in tin" id="temps">
 <div class="card empty"><div class="skel" id="esk"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div><div class="et" id="et"></div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
 <!-- AT-A-GLANCE HERO (Boom v8.19) -->
-<div class="card live ch0" id="chero"></div>
+<div class="live" id="chero"></div>
 </div>
 <div class="in csec" id="fan">
 <div class="card live" id="fancard">
@@ -463,10 +523,14 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 </div>
 </div></section>
 <section class="page" id="protect" aria-label="Victron Protect"><div class="in">
-<div class="card" id="bpctl"></div>
+<div id="bpctl"></div><div class="card bpc" id="bpcmd"></div>
 </div></section>
 </main>
 <div class="dlg" id="bpdlg" role="dialog" aria-modal="true" aria-labelledby="bpdt"><div class="dlgc"><div class="cap">Starter battery load</div><div class="dlgt" id="bpdt">Switch starter battery load OFF?</div><div class="dlgs" id="bpds"></div><div class="dlgb"><button class="cx" id="bpcx">Cancel</button><button class="go off" id="bpgo">Turn OFF</button></div></div></div>
+<div class="dlg" id="bpset" role="dialog" aria-modal="true" aria-labelledby="bpst"><div class="dlgc"><div class="cap">Remote control</div><div class="dlgt" id="bpst">Set up remote control</div><div class="dlgs" id="bpss">Enter the remote control passcode once. It is saved on this phone only.</div>
+<label class="cap" for="bptok" style="display:block;margin:18px 0 8px">Passcode</label><input id="bptok" class="tok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Passcode">
+<div class="dlgb"><button class="cx" id="bpfg">Forget</button><button class="go on" id="bpsv">Save</button></div>
+<div class="adv"><button id="bpsx">Close</button><a href="http://192.168.86.52/" target="_blank" rel="noopener">Advanced: open bridge page</a></div></div></div>
 <nav class="tabs" aria-label="Pages"><div class="tabbar" id="tabbar" role="tablist"><span class="ind" id="ind"></span>
 <button role="tab" data-p="0">Overview</button><button role="tab" data-p="1">Cooling</button><button role="tab" data-p="2">Invicta</button><button role="tab" data-p="3">Shunt</button><button role="tab" data-p="4">Protect</button>
 </div></nav>
@@ -684,14 +748,50 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   else if(on!==null){nx="Fan starts if the probe passes <b>"+d1(on)+"</b>";nx2=cell===null?"No fresh cell data, so the probe start point applies":"or the probe reaches Ambient +8"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")}
  }
  var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
- var h='<div class="chd" style="margin-bottom:0"><div class="cap" style="margin:0">Pack cooling</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
- h+='<div class="fanrow"><div class="hfan xl '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</div><div style="min-width:0"><div class="fst'+(fan?" on":"")+'">Fan '+(fan?"on":"off")+'<span style="font-size:14px;font-weight:500;color:#8b93a7;letter-spacing:0;margin-left:8px">'+dur0+'</span></div><div class="why">'+esc(why)+'</div></div></div>';
- function T(l,v,c,sub){return'<div><div class="cap">'+l+'</div><div class="bv '+(v===null?"na":c)+'">'+(v===null?"--":f1(v)+"<small>°</small>")+'</div><div class="ts">'+sub+'</div></div>'}
- h+='<div class="t3">'+T("Cells",cell,"c",cell===null?"no fresh BMS data":cs.settled!==null?"settled "+d1(cs.settled):"BMS · higher of int/board")+T("Probe",pk,"p",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+T("Ambient",amb,"a",r.latch!==null&&r.latch!==undefined?"latched "+d1(r.latch):"outside air")+'</div>';
- if(nx){h+='<div class="nx"><div class="cap">Next</div><div class="nxt">'+nx+'</div>'+(nx2?'<div class="nx2">'+nx2+'</div>':"");
-  if(seg){var k=Math.max(0,Math.min(10,Math.round(seg.f*10)));h+='<div class="seg" style="--sc:'+seg.c+'">'+Array.apply(null,Array(10)).map(function(_,i){return'<i'+(i<k?' class="f"':"")+'></i>'}).join("")+'</div><div class="segl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>'}
-  h+='</div>'}
- el.className="card live ch0"+(fan?" on":"")+(tone?" "+tone:"");el.innerHTML=h}
+ var gv=cell!==null?cell:pk,col=tempColor(gv),mk=[];
+ var watch=!fan&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m);
+ if(cs.settled!==null&&watch)mk.push({v:cs.settled,c:"#67e8f9",t:"settled",in:1});
+ if(rst!==null&&watch)mk.push({v:rst,c:"#fbbf24",t:"restart"});
+ if(bsv!==null&&m!=="driving")mk.push({v:Math.min(bsv,PROBE_HARD),c:"#fb7185",t:"probe backstop"});
+ if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
+ var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
+ h+=gaugeSVG(gv,10,50,mk,col)+'';
+ h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
+ h+='<div class="whyc">'+esc(why)+'</div>';
+ function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
+ h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"outside air")+'</div></section>';
+ /* NEXT card */
+ if(nx){var big=null,bc="#fbbf24",bl2="Next";
+  if(!fan&&rst!==null&&/restarts/.test(nx)){big=rst;bl2="Fan restarts at"}
+  else if(fan&&/^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
+  else if(m==="crisis"){big=CRISIS_OFF;bl2="Fan stops below";bc="#34d399"}
+  else if(m==="backstop"){big=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);bl2="Fan stops at";bc="#34d399"}
+  else if(!fan&&on!==null&&/probe passes/.test(nx)){big=on;bl2="Fan starts at"}
+  h+='<section class="card bigc"><div class="hHead"><div class="cap">'+bl2+'</div>'+(cell!==null?'<span class="sp c">Cells '+d1(cell)+' now</span>':"")+'</div>';
+  if(big!==null){var sub=nx2||nx.replace(/<[^>]+>/g,"");
+   if(bl2==="Fan restarts at")sub="if cells rise <b style=\"color:#fbbf24\">"+f1(Math.max(0,rst-(cell!==null?cell:rst)))+"°</b> more<br>"+(nx2||"");
+   h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+f1(big)+'<span class="u">°C</span></div><div class="bigs">'+sub+'</div></div>'}
+  else h+='<div class="nxt" style="margin-top:10px;font-size:20px">'+nx+'</div>'+(nx2?'<div class="nx2">'+nx2+'</div>':"");
+  if(seg){var pct=Math.max(0,Math.min(1,seg.f))*100;h+='<div class="trk'+(seg.c==="#fbbf24"?" w":"")+'"><i style="width:'+pct.toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>'}
+  h+='</section>'}
+ el.innerHTML=h}
+var TEMP_STOPS=[[-20,[34,211,238]],[0,[34,211,238]],[10,[45,212,191]],[15,[52,211,153]],[28,[52,211,153]],[35,[251,191,36]],[42,[245,158,11]],[48,[251,113,133]],[80,[251,113,133]]];
+function tempColor(t){if(t===null||t===undefined||!isFinite(t))return"#8b93a7";var S=TEMP_STOPS;t=Math.max(S[0][0],Math.min(S[S.length-1][0],t));var i=0;while(i<S.length-2&&t>S[i+1][0])i++;
+ var a=S[i],b=S[i+1],f=b[0]===a[0]?0:(t-a[0])/(b[0]-a[0]);return"#"+a[1].map(function(c,j){return Math.round(c+(b[1][j]-c)*f).toString(16).padStart(2,"0")}).join("")}
+function rgba(hex,a){return"rgba("+[1,3,5].map(function(i){return parseInt(hex.slice(i,i+2),16)}).join(",")+","+a+")"}
+/* 180° arc gauge (Invicta live view geometry: centre 150,150, r 120) */
+function gaugeSVG(v,lo,hi,marks,col){var CX=150,CY=150,R=120;
+ function P(t,r){var a=Math.PI*Math.max(0,Math.min(1,(t-lo)/(hi-lo)));return[(CX-r*Math.cos(a)),(CY-r*Math.sin(a))]}
+ var seg="",st=(hi-lo)/60;for(var t=lo;t<hi;t+=st){var p0=P(t,R),p1=P(Math.min(hi,t+st*1.15),R);seg+='<path d="M'+p0[0].toFixed(2)+" "+p0[1].toFixed(2)+" A"+R+" "+R+" 0 0 1 "+p1[0].toFixed(2)+" "+p1[1].toFixed(2)+'" stroke="'+tempColor(t+st/2)+'" stroke-width="12" fill="none"/>'}
+ var pct=v===null?0:Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)),id="g"+Math.random().toString(36).slice(2,7);
+ var s='<div class="gauge"><svg viewBox="0 0 300 178" aria-hidden="true"><defs><mask id="'+id+'m" maskUnits="userSpaceOnUse" x="-20" y="-20" width="340" height="220"><path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="'+(100-pct).toFixed(1)+'"/></mask><filter id="'+id+'f" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter></defs>';
+ s+='<g opacity=".16">'+seg+'</g><g mask="url(#'+id+'m)">'+seg+'</g>';
+ [20,30,40].forEach(function(t){var a=P(t,R+10),b=P(t,R+15);s+='<line class="tk" x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" opacity=".5"/>'});
+ s+='<text x="30" y="174" text-anchor="middle">'+lo+'°</text><text x="270" y="174" text-anchor="middle">'+hi+'°</text>';
+ /* threshold markers: coloured radial ticks just outside the arc; names go in the legend below */
+ marks.forEach(function(m){var a=P(m.v,R+9),b=P(m.v,R+20);s+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+m.c+'" stroke-width="3" stroke-linecap="round"/>'});
+ if(v!==null){var k=P(v,R);s+='<circle class="mkh" cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="13" fill="'+col+'" filter="url(#'+id+'f)"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="8.5" fill="#0b0e16" stroke="'+col+'" stroke-width="3.2"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="2.6" fill="#eef2ff"/>'}
+ return s+'</svg><!--GIN--></div>'+(marks.length?'<div class="glg">'+marks.map(function(m){return'<span><i style="background:'+m.c+'"></i>'+m.t+' <b>'+f1(m.v)+'°</b></span>'}).join("")+'</div>':"")}
 function ladder(amb,cells,pk){var vs=[amb,cells,pk].filter(function(v){return v!==null});
  if(!vs.length){$("ka").style.display=$("kp").style.display=$("kc").style.display=$("brk").style.display=$("brke").style.display="none";$("scale").innerHTML="";return}
  var lo=Math.min(20,Math.floor((Math.min.apply(null,vs)-3)/5)*5),hi=Math.max(50,Math.ceil((Math.max.apply(null,vs)+3)/5)*5); /* mockup scale is 20..50 */
@@ -1063,58 +1163,90 @@ function drawPwXH(){var id="pwch",svg=$(id),g=CH[id],sc=SC[id],old=svg.querySele
 function prHead(r){var off=bits(r.off_reason,OFFR)||[],al=bits(r.alarm_reason,ALARM)||[];
  return"Output OFF"+(off.length?": "+off.join(", "):"")+(al.length?" ("+al.join(", ")+")":"")}
 /* ---------- BatteryProtect control (starter battery load) ----------
-   State shown here always comes from the BatteryProtect sheet tab. Commands go through a pluggable adapter:
-   BP_ADAPTER = "link" (now): opens the ESP32 bridge page (ESPHome, LAN only) so the user taps BP Output ON/OFF there.
-   The app is HTTPS, so iOS Safari blocks fetch() to http://192.168.86.52 (mixed content) and the bridge has no CORS.
-   "relay" (future option, not shown in the UI): write a command row to a sheet the bridge polls, then watch
-   text_sensor/bp_control_status for "confirmed"/"failed". Bridge entities: button/bp_output_on, button/bp_output_off,
-   text_sensor/bp_control_status, sensor/batteryprotect_output, batteryprotect_input_voltage, batteryprotect_output_voltage. */
-var BRIDGE="http://192.168.86.52",BP_ADAPTER="link",BPC={want:null,st:null,msg:"",at:0};
+   Bridge entities: button/bp_output_on, button/bp_output_off, text_sensor/bp_control_status, sensor/batteryprotect_output. */
+/* Commands go only through the remote relay (Apps Script receiver). The bridge (fw 1.3.5+) polls it every ~30 s.
+   The passcode lives in localStorage only (never in the repo). State shown always comes from the BatteryProtect sheet. */
+var RELAY="https://script.google.com/macros/s/AKfycbzHIwxWawjE0lB5XArvzTQLM3D2PjTdP7cvNmWlvpxP1kPxq48V2W3Pvtwo55jJJmU9/exec",TOKK="bf2-bp-token";
+var BPC={want:null,st:null,msg:"",at:0,pend:null};
+function bpTok(){try{return localStorage.getItem(TOKK)||""}catch(e){return""}}
+var jpN=0;
+function jsonp(url){return new Promise(function(res,rej){var cb="__bfj"+(++jpN)+"_"+Date.now(),sc=document.createElement("script"),to=setTimeout(function(){done();rej(new Error("timeout"))},15000);
+ function done(){clearTimeout(to);try{delete window[cb]}catch(e){window[cb]=undefined}if(sc.parentNode)sc.parentNode.removeChild(sc)}
+ window[cb]=function(d){done();res(d)};sc.onerror=function(){done();rej(new Error("network"))};sc.src=url+"&callback="+cb;document.head.appendChild(sc)})}
+function relayGet(q){var u=RELAY+"?"+q+"&_="+Date.now();
+ return fetch(u,{cache:"no-store",redirect:"follow"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).catch(function(){return jsonp(u)})}
 var BP_ADAPTERS={
- link:function(on){var w=null;try{w=window.open(BRIDGE+"/","_blank","noopener")}catch(e){}
-  return Promise.resolve({status:"opened"})},
- relay:function(on){/* FUTURE: POST {cmd:on?"ON":"OFF",id,ts} to the command relay; poll bp_control_status up to 20 s.
-   Resolve {status:"confirmed"} on "BP control: last command ON|OFF at HH:MM:SS, confirmed", {status:"failed",reason} on "... failed (<reason>)". */
-  return Promise.reject(new Error("relay not configured"))}};
-function sendBpCommand(on){var f=BP_ADAPTERS[BP_ADAPTER]||BP_ADAPTERS.link;return f(on)}
+ relay:function(on,prog){var tok=encodeURIComponent(bpTok());
+  return relayGet("cmd=bp_cmd&action="+(on?"on":"off")+"&token="+tok).then(function(d){
+   if(!d||d.ok===false)return{status:d&&d.error==="auth"?"auth":"failed",reason:d&&d.error||"no reply"};
+   var id=d.id,t0=Date.now();
+   return new Promise(function(res){(function poll(){if(Date.now()-t0>185e3)return res({status:"expired"});
+    setTimeout(function(){relayGet("cmd=bp_status&id="+encodeURIComponent(id)+"&token="+tok).then(function(x){
+      if(x&&x.ok===false&&x.error==="auth")return res({status:"auth"});
+      var stt=x&&x.state;if(stt==="delivered")prog("waiting");
+      if(stt==="done")return res(x.result_ok===false?{status:"failed",reason:x.status||""}:{status:"confirmed"});
+      if(stt==="failed")return res({status:"failed",reason:x.status||""});
+      if(stt==="expired")return res({status:"expired"});poll()}).catch(function(){poll()})},5000)})()})})}};
+function sendBpCommand(on,prog){return BP_ADAPTERS.relay(on,prog||function(){})}
 function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
-function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now()};renderBpCtl();
- var to=setTimeout(function(){if(BPC.st==="sending"){BPC.st="failed";BPC.msg="No reply within 20 s.";renderBpCtl()}},20000);
- sendBpCommand(on).then(function(res){clearTimeout(to);if(res.status==="confirmed"){BPC.st="confirmed"}else if(res.status==="failed"){BPC.st="failed";BPC.msg=res.reason||""}else BPC.st="opened";renderBpCtl()})
- .catch(function(e){clearTimeout(to);BPC.st="failed";BPC.msg=e&&e.message||"";renderBpCtl()})}
+function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now()};renderBpCmd();
+ sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";renderBpCmd()})
+ .catch(function(){BPC.st="neterr";renderBpCmd()})}
+var PWR='<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>';
 function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),now=Date.now(),age=r?now-r.t:null;
- /* the sheet confirms a deep-link command once it logs the wanted state after we opened the bridge */
- if(BPC.st==="opened"&&on===BPC.want&&r&&r.t>=BPC.at-60e3)BPC.st="confirmed";
- if(BPC.st==="opened"&&now-BPC.at>15*60e3){BPC.st="failed";BPC.msg="The sheet still shows "+(on?"ON":"OFF")+" 15 min later."}
- var h='<div class="chd" style="margin-bottom:0"><div class="cap" style="margin:0">Starter battery load</div>'+(r?'<span class="updp'+(age>STALE_MIN*60e3?" o":"")+'">Updated '+ago(age)+'</span>':'')+'</div>';
- h+='<div class="bpst"><div><div class="cap">Output</div><div class="bpbig '+(on===null?"na":on?"on":"off")+'">'+(on===null?"--":on?"ON":"OFF")+'</div></div>'+
-  '<span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads disconnected")+'</span></div>';
+ var col=on===null?"#596075":on?"#34d399":"#fb7185",cls=on===null?"na":on?"on":"off";
+ var h='<section class="card thero" style="--glowc:'+(on===null?"rgba(139,147,167,.08)":on?"rgba(52,211,153,.18)":"rgba(251,113,133,.12)")+'"><div class="hHead"><div class="cap"><svg viewBox="0 0 24 24" style="width:16px;height:16px;color:'+col+'">'+PWR+'</svg>Starter battery load</div><span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads off")+'</span></div>';
+ var C=2*Math.PI*96;
+ h+='<div class="ring2 '+cls+'"><svg viewBox="0 0 230 230"><defs><linearGradient id="bprg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+(on?"#6ee7b7":"#fda4af")+'"/><stop offset="1" stop-color="'+(on?"#10b981":"#e11d48")+'"/></linearGradient><filter id="bpgl" x="-.3" y="-.3" width="1.6" height="1.6"><feGaussianBlur stdDeviation="7"/></filter></defs>'+
+  '<circle cx="115" cy="115" r="96" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>'+
+  (on?'<circle class="pulse" cx="115" cy="115" r="96" fill="none" stroke="#34d399" stroke-width="14" opacity=".35" filter="url(#bpgl)"/><circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round"/>':
+   on===false?'<circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*.06).toFixed(1)+' '+(C*.94).toFixed(1)+'" transform="rotate(-100 115 115)" opacity=".8"/>':"")+
+  [0,1,2,3,4,5,6,7,8,9,10,11].map(function(i){var a=i*Math.PI/6,x0=115+80*Math.sin(a),y0=115-80*Math.cos(a),x1=115+75*Math.sin(a),y1=115-75*Math.cos(a);return'<line x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="rgba(255,255,255,.18)" stroke-width="1.5" stroke-linecap="round"/>'}).join("")+
+  '</svg><div class="in"><div class="cap" style="margin:0 0 2px">Output</div><div class="w">'+(on===null?"--":on?"ON":"OFF")+'</div></div></div>';
  if(r){var iv=n(r.input_v),ov=n(r.output_v),ds=String(r.device_state||"").trim();
-  function Q(l,v){return'<div><div class="cap">'+l+'</div><div class="bv a" style="font-size:24px">'+v+'</div></div>'}
-  h+='<div class="t3" style="margin-bottom:16px">'+Q("Input",iv===null?"--":iv.toFixed(2)+"<small>V</small>")+Q("Output",ov===null?"--":ov.toFixed(2)+"<small>V</small>")+Q("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"))+'</div>';
+  function R(k,v,c){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+v+'</span></div>'}
+  h+='<div class="duo three">'+R("Input",iv===null?"--":iv.toFixed(2)+'<span class="u">V</span>',"#eef2ff")+'<div class="sep"></div>'+R("Output",ov===null?"--":ov.toFixed(2)+'<span class="u">V</span>',col)+'<div class="sep"></div>'+R("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"),"#eef2ff")+'</div>';
   var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=String(r.error||"").trim(),erb=er&&!/^(0|none|no error|null|-)$/i.test(er),q="";
   if(off&&off.length)q+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
   if(al&&al.length)q+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
   if(wr&&wr.length)q+='<div class="al w">Warning: '+esc(wr.join(", "))+"</div>";
   if(erb)q+='<div class="al">⚠ Error: '+esc(/^\d+$/.test(er)?"code "+er:er.replace(/_/g," "))+"</div>";
-  h+=(q||'<div class="al i" style="margin:0 0 16px">✓ No alarms, warnings or errors</div>').replace(/<\/div>$/,"</div>")+(q?'<div style="height:12px"></div>':"")}
- var busy=BPC.st==="sending";
- h+='<div class="bpb"><button class="on'+(on===true?" cur":"")+'" data-bp="1"'+(busy?" disabled":"")+'>Turn ON</button><button class="off'+(on===false?" cur":"")+'" data-bp="0"'+(busy?" disabled":"")+'>Turn OFF</button></div>';
- var W=BPC.want?"ON":"OFF";
- if(BPC.st==="sending")h+='<div class="bpres wt"><span class="spin"></span>Sending… up to 20 s</div>';
- else if(BPC.st==="opened")h+='<div class="bpres wt"><span class="spin"></span>Bridge page opened. Tap <b>BP Output '+W+'</b> there. This shows confirmed once the sheet logs '+W+' (within about 5 min).</div>';
- else if(BPC.st==="confirmed")h+='<div class="bpres ok">✓ Confirmed: output is '+W+'.</div>';
- else if(BPC.st==="failed")h+='<div class="bpres bad">Not confirmed'+(BPC.msg?": "+esc(BPC.msg):"")+' Check you are on home Wi-Fi and try again.</div>';
- h+='<div class="wifi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16.2a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg><span>Opens the bridge page. Home Wi-Fi only. Tap BP Output ON/OFF there.<br><span class="dim">State shown here comes from the BatteryProtect log (every 5 min).</span></span></div>';
+  h+=q||'<div class="whyc" style="color:#8b93a7">✓ No alarms, warnings or errors</div>';
+  h+='<div class="updc"><span class="updp'+(age>STALE_MIN*60e3?" o":"")+'">Updated '+ago(age)+'</span></div>'}
+ el.innerHTML=h+'</section>';renderBpCmd()}
+var GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>';
+function renderBpCmd(){var el=$("bpcmd");if(!el)return;var on=bpOn(X2.bp),tok=!!bpTok(),st=BPC.st,busy=st==="sending"||st==="waiting",W=BPC.want?"ON":"OFF";
+ var h='<div class="hHead"><div class="cap">Switch load</div>'+(busy?'<span class="sp c">'+(st==="sending"?"Sending":"Waiting")+'</span>':"")+'</div>';
+ if(!tok){h+='<div class="setup"><div class="t">Set up remote control</div><div class="s">Enter the remote control passcode once to switch the starter battery load from anywhere.</div><button data-setup="1">Set up remote control</button></div>'}
+ else{h+='<div class="pbtn"><button class="on'+(on===true?" cur":"")+'" data-bp="1"'+(busy?" disabled":"")+'><svg viewBox="0 0 24 24" style="width:20px;height:20px">'+PWR+'</svg>Turn ON</button><button class="off'+(on===false?" cur":"")+'" data-bp="0"'+(busy?" disabled":"")+'><svg viewBox="0 0 24 24" style="width:20px;height:20px">'+PWR+'</svg>Turn OFF</button></div>';
+  if(st==="sending")h+='<div class="bpres wt"><span class="spin"></span>Sending…</div>';
+  else if(st==="waiting")h+='<div class="bpres wt"><span class="spin"></span>Waiting for the battery bridge… it checks every 30 s.</div>';
+  else if(st==="confirmed")h+='<div class="bpres ok">Switched '+W+' ✓</div>';
+  else if(st==="failed")h+='<div class="bpres bad">Didn\'t switch'+(BPC.msg?": "+esc(BPC.msg):".")+'</div>';
+  else if(st==="expired")h+='<div class="bpres bad">The battery bridge didn\'t respond. It may be offline.</div>';
+  else if(st==="auth")h+='<div class="bpres bad">Passcode not accepted. Check it in Remote control settings.</div>';
+  else if(st==="neterr")h+='<div class="bpres bad">Couldn\'t reach the remote control service. Check your connection and try again.</div>'}
+ h+='<div class="rcrow"><div><div class="cap" style="margin:0">Remote control</div><div class="v '+(tok?"g":"m")+'">'+(tok?"Set up on this phone":"Not set up")+'</div></div><button class="rcb" data-setup="1">'+GEAR+(tok?"Settings":"Set up")+'</button></div>';
  el.innerHTML=h}
-function bpAsk(on){var d=$("bpdlg");$("bpdt").textContent="Switch starter battery load "+(on?"ON":"OFF")+"?";
- $("bpds").textContent=(on?"Power will flow to the loads on the starter battery. ":"Everything on the starter battery load output will lose power. ")+"Opens the bridge page. Home Wi-Fi only. Tap BP Output "+(on?"ON":"OFF")+" there.";
+var bpAfterSetup=null;
+function bpSetup(msg,after){bpAfterSetup=after===undefined?null:after;var t=bpTok();$("bptok").value="";$("bptok").placeholder=t?"•••••• (saved)":"Passcode";
+ $("bpst").textContent=t?"Remote control":"Set up remote control";$("bpss").innerHTML=msg||(t?"A passcode is saved on this phone. Enter a new one to replace it, or Forget it.":"Enter the remote control passcode once. It is saved on this phone only.");
+ $("bpfg").style.visibility=t?"":"hidden";$("bpset").classList.add("open");setTimeout(function(){$("bptok").focus()},60)}
+function bpSetClose(){$("bpset").classList.remove("open")}
+$("bpsv").addEventListener("click",function(){var v=$("bptok").value.trim();if(!v){$("bpss").innerHTML='<span class="err">Type the passcode first.</span>';return}
+ try{localStorage.setItem(TOKK,v)}catch(e){}$("bptok").value="";bpSetClose();if(BPC.st==="auth")BPC.st=null;renderBpCmd();var a=bpAfterSetup;bpAfterSetup=null;if(a!==null)bpAsk(a)});
+$("bpfg").addEventListener("click",function(){try{localStorage.removeItem(TOKK)}catch(e){}$("bptok").value="";bpSetClose();BPC.st=null;renderBpCmd()});
+$("bpsx").addEventListener("click",bpSetClose);$("bpset").addEventListener("click",function(e){if(e.target===this)bpSetClose()});
+$("bptok").addEventListener("keydown",function(e){if(e.key==="Enter")$("bpsv").click()});
+function bpAsk(on){if(!bpTok())return bpSetup(null,on);var d=$("bpdlg");$("bpdt").textContent="Switch starter battery load "+(on?"ON":"OFF")+"?";
+ $("bpds").textContent=(on?"Power will flow to the loads on the starter battery.":"Everything on the starter battery load output will lose power.")+" The battery bridge acts within about 30 s.";
  var g=$("bpgo");g.className="go "+(on?"on":"off");g.textContent=on?"Turn ON":"Turn OFF";g.dataset.v=on?"1":"0";d.classList.add("open");setTimeout(function(){$("bpcx").focus()},50)}
 function bpClose(){$("bpdlg").classList.remove("open")}
-$("bpctl").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-bp]");if(b&&!b.disabled)bpAsk(b.dataset.bp==="1")});
+$("bpcmd").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-bp],[data-setup]");if(!b||b.disabled)return;if(b.dataset.setup)bpSetup();else bpAsk(b.dataset.bp==="1")});
 $("bpcx").addEventListener("click",bpClose);$("bpdlg").addEventListener("click",function(e){if(e.target===this)bpClose()});
-document.addEventListener("keydown",function(e){if(e.key==="Escape")bpClose()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();bpSetClose()}});
 $("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
+
 function renderProtect(){renderBpCtl();return;var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
  var age=Date.now()-r.t;$("prupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("prupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
