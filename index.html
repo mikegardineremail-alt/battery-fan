@@ -929,7 +929,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  else if(m==="run-on"){pill="Run-on";pc="c";why="Cool-down finished. A few more minutes to clear soaked heat."}
  else if(m==="cooldown-done"||m==="early-stop"){pill=SHORT[m];pc="c";why=MODES[m]}
  else if(m==="driving"){pill="Driving";pc="w";why="Engine running: fan held off. Cool-down starts at key-off."}
- else if(m==="cap"){pill="Cooling done · parked 8 h+";pc="";why="Parked over 8 hours: auto cooling is finished until the next drive."}
+ else if(m==="cap"){var cR=S.rows||[],ci=cR.length-1;while(ci>=0&&cR[ci].mode==="cap")ci--;var cut=ci>=0&&cR[ci].fan===1;if(cut){pill="Stopped at 8 h limit";pc="w";why="The fan was still cycling when the 8 hour parked limit ended auto cooling. It starts again after the next drive."}else{pill="Cooling done · parked 8 h+";pc="";why="Cooling finished before the 8 hour limit. Auto cooling is off until the next drive."}}
  else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
  else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
  /* next likely action + trigger value */
