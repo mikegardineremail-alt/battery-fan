@@ -733,7 +733,7 @@ var CD_HOT_CELLS=40; /* hot drive if cells peaked above this (°C) */
 var CD_SAME_MIN=3, CD_SAME_DEG=1; /* differences under these read as "about usual" */
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
 var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Very hot: fan forced on until it drops below 45°C.",cold:"Cold: fan never runs below 5°C.","sensor-fault":"Temperature sensor fault. Check the sensors."};
-var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Parked 8 h+",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
+var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Cooling done",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
 var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
 /* Boom v8.19 additions */
 MODES["cell-watch"]="Watching cells. The probe is above its start point, but the cells are steady, so the fan stays off.";
@@ -929,7 +929,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  else if(m==="run-on"){pill="Run-on";pc="c";why="Cool-down finished. A few more minutes to clear soaked heat."}
  else if(m==="cooldown-done"||m==="early-stop"){pill=SHORT[m];pc="c";why=MODES[m]}
  else if(m==="driving"){pill="Driving";pc="w";why="Engine running: fan held off. Cool-down starts at key-off."}
- else if(m==="cap"){pill="Parked 8 h+";pc="";why="Parked over 8 hours: auto cooling is finished until the next drive."}
+ else if(m==="cap"){pill="Cooling done · parked 8 h+";pc="";why="Parked over 8 hours: auto cooling is finished until the next drive."}
  else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
  else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
  /* next likely action + trigger value */
@@ -1589,7 +1589,7 @@ function hmin2(m){m=Math.round(m);return m<60?m+" min":Math.floor(m/60)+" h "+St
 /* ---------- (A) Recent cooldowns (Shelly pack log; BMS cell temp when available) ---------- */
 var BUG=[Date.parse("2026-10-20T18:14:00+08:00"),Date.parse("2026-10-20T23:14:00+08:00")],openCd=null;
 function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
- for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving")continue;
+ for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving"||R[i].t-R[i-1].t>20*60e3)continue;
   var k=i,t=R[k].t,j=k-1;while(j>0&&R[j-1].mode==="driving"&&R[j].t-R[j-1].t<=20*60e3)j--;
   var end=k,lim=t+3*3600e3;if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
   var win=R.slice(k,end+1),bad=win.some(function(r){return r.note})||R[k-1].note;
