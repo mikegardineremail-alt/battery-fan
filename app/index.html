@@ -490,6 +490,13 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 .ring2{width:250px;height:250px}
 .ring2 .w{font-size:92px;text-shadow:0 0 40px currentColor}
 .tabbar .ind{box-shadow:0 0 24px rgba(34,211,238,.25)}
+/* live source status row, top of every page */
+.foot.stat{justify-content:center;gap:6px;margin:12px 0 14px;flex-wrap:nowrap}
+.foot.stat span{font-size:10.5px;font-weight:600;letter-spacing:.02em;color:#aab2c5;padding:4px 9px 4px 7px;gap:4px;background:rgba(52,211,153,.06);border:0;box-shadow:inset 0 0 0 1px rgba(52,211,153,.16),0 0 14px -4px rgba(52,211,153,.35);white-space:nowrap;transition:box-shadow .4s,background .4s}
+.foot.stat svg{width:10px;height:10px;filter:drop-shadow(0 0 3px currentColor)}
+.foot.stat .w{background:rgba(251,191,36,.07);box-shadow:inset 0 0 0 1px rgba(251,191,36,.22),0 0 14px -4px rgba(251,191,36,.4)}
+.foot.stat .x{background:rgba(251,113,133,.07);box-shadow:inset 0 0 0 1px rgba(251,113,133,.25),0 0 14px -4px rgba(251,113,133,.4)}
+.foot.stat .n{background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 @media (min-width:900px){
  body{height:auto;overflow:auto}#app{height:auto;display:block}
  .head{max-width:1080px}
@@ -511,6 +518,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
  <div class="upd"><span class="dot"></span><span id="ago"><i class="skl"></i></span></div>
 </div>
 <div class="hr"><div class="hfan" id="hfan" role="img" aria-label="Fan off"><svg viewBox="0 0 48 48"><g class="bl"><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z"/><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate(120 24 24)"/><path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate(240 24 24)"/></g><circle cx="24" cy="24" r="3.4" class="hub"/></svg></div><button class="rf" id="rf" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
+<div class="foot stat" id="foot" aria-label="Data sources"></div>
 
 <div class="banner err">Couldn't reach the sheet. Showing the last data. <u id="retry">Try again</u></div>
 <div class="banner warn">No new Shelly reading for a while. It may be offline or out of Wi-Fi range.</div>
@@ -542,7 +550,6 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
  <div class="note" id="note"></div>
 </div>
 <div class="card"><div class="chd"><div class="lbl">Recent cooldowns</div><div class="sub">tap for chart</div></div><div id="cdlist"></div></div>
-<div class="foot" id="foot"></div>
 <div class="ft" id="ft">Refreshes every minute</div>
 <div class="ft"><a href="/battery-fan/classic/" style="color:#6b7387;text-decoration:underline">Classic view</a></div>
 </div>
