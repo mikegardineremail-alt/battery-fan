@@ -745,14 +745,14 @@ var WAIT='<span class="wt">waiting for BMS</span>';
 function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  app.classList.toggle("haserr",!S.fetchOk&&rows.length>0);app.classList.toggle("isempty",!rows.length);
  if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);return}
- var r=rows[rows.length-1],age=now-r.t;
+ var r=curRow(rows),age=now-r.t,roE=runOnEnd(rows,r);
  $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);app.classList.toggle("stale",age>STALE_MIN*60e3);
  var off=lastv(rows,"off"),on=lastv(rows,"on");
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bAge=bl?now-bl.t:null,has=!!p;
  /* header pill */
  var fan=r.fan===1,m=r.mode;
  $("pill").className="pill"+(BAD[m]?" bad":fan?"":m==="driving"?" drv":" off");
- $("pillt").textContent=(SHORT[m]||(m||"Running"))+", fan "+(fan?"ON":"OFF");
+ $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
  var pk=r.pack,amb=r.amb;
  /* battery */
  battery(bl,p,bAge,r);
@@ -779,6 +779,16 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
    Cells = the higher of t_int / t_brd on the latest fresh BMS row (Boom v8.19 uses the advert's higher temp, which in
    practice tracks t_int). Settled cell = lowest of that value since the fan last went off (Boom records the same on the
    Shelly; the Pack log does not carry why/c/cs, so we rebuild it from the BMS tab). */
+/* Boom logs extra rows with a blank mode between its 5-min rows; carry the last real mode forward */
+var RUN_ON_MIN=20;
+function curRow(rows){var r=rows[rows.length-1];if(r.mode)return r;
+ for(var i=rows.length-2;i>=0&&r.t-rows[i].t<=15*60e3;i--)if(rows[i].mode){var o={};for(var k in r)o[k]=r[k];o.mode=rows[i].mode;if(o.latch===null)o.latch=rows[i].latch;return o}
+ return r}
+/* end time (ms) of Boom's post-cool-down run-on (v8.20: RUN_ON_MIN after cool-down), or null */
+function runOnEnd(rows,r){if(!r||r.fan!==1||!/^(run-on|cooldown-done)$/.test(r.mode))return null;
+ var mm=/(\d+)\s*more\s*min/i.exec(r.note||"");if(mm)return r.t+(+mm[1])*60e3;
+ var st=null;for(var i=rows.length-1;i>=0;i--){var x=rows[i];if(x.mode&&!/^(run-on|cooldown-done)$/.test(x.mode))break;if(i<rows.length-1&&rows[i+1].t-x.t>20*60e3)break;if(x.mode)st=x.t}
+ return st===null?null:st+RUN_ON_MIN*60e3}
 function cellOf(x){var v=[];[x.A,x.B].forEach(function(b){if(b&&b.any){if(b.t_int!==null)v.push(b.t_int);if(b.t_brd!==null)v.push(b.t_brd)}});return v.length?Math.max.apply(null,v):null}
 function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]:null,cell=bl&&now-bl.t<=BMS_STALE_MIN*60e3?cellOf(bl):null;
  var L=rows.length-1,fs=L;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
@@ -788,7 +798,7 @@ function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]
 function d1(v){return v===null||v===undefined?"--":f1(v)+"°"}
 function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mode||"",fan=r.fan===1,pk=r.pack,amb=r.amb,cs=coolState(rows,r,now),cell=cs.cell;
  var rst=cs.settled!==null?Math.round((cs.settled+CELL_RISE)*10)/10:null,bsv=amb!==null?Math.round((amb+AMB_BACK)*10)/10:null;
- var pill="",pc="",why="",nx="",nx2="",seg=null,tone="";
+ var pill="",pc="",why="",nx="",nx2="",seg=null,tone="",roE=runOnEnd(rows,r);
  var dur0=dur(now-cs.since);
  /* status pill + why */
  if(m==="cell-watch"){pill="Watching cells";pc="c";why="Probe is above its start point ("+d1(on)+"), but the cells are steady"+(cell!==null?" at "+d1(cell):"")+", so the fan stays off."}
@@ -801,6 +811,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  else if(m==="cooling"){pill="Cooling";pc="c";why=fan?"Fan is bringing the probe down to its stop point.":"Between the stop and start points."}
  else if(m==="fan-on"){pill="Probe rules";pc="w";why="Probe is above its start point and there is no fresh cell data, so the probe rules (v8.18) apply."}
  else if(m==="plateau-band"){pill="Plateau hold";pc="c";why=MODES[m]}
+ else if(roE){pill="Run-on · off "+hm(roE).replace(/ ?[ap]m$/,"");pc="c";why="Cool-down finished. The fan keeps running "+RUN_ON_MIN+" min more to clear soaked heat, then stops at "+hm(roE)+"."}
  else if(m==="run-on"){pill="Run-on";pc="c";why="Cool-down finished. A few more minutes to clear soaked heat."}
  else if(m==="cooldown-done"||m==="early-stop"){pill=SHORT[m];pc="c";why=MODES[m]}
  else if(m==="driving"){pill="Driving";pc="w";why="Engine running: fan held off. Cool-down starts at key-off."}
@@ -812,6 +823,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   if(m==="crisis"){nx="Stops when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Cells now "+d1(cell)}
   else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Stops when the probe drops to <b>"+d1(rel)+"</b>";nx2="Ambient +"+(AMB_BACK-BACK_HYST)+"°"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
   else if(m==="panic"){nx="Stops when the probe drops below <b>"+PANIC+"°</b>"}
+  else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2=left>0?left+" min to go":"stopping now";seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2=off!==null?"Then fan stops if the probe is at or below "+d1(off):""}
   else if(m==="cell-restart"){nx="Runs at least 10 min, then stops at <b>"+d1(off)+"</b>";nx2="probe stop point"}
   else if(off!==null){nx="Stops at <b>"+d1(off)+"</b>";nx2="when the probe reaches its stop point"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
@@ -840,14 +852,16 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* NEXT card */
- if(nx){var big=null,bc="#fbbf24",bl2="Next";
+ if(nx){var big=null,bc="#fbbf24",bl2="Next",bigT=null;
+  if(roE){bigT=hm(roE);bl2="Fan stops at";bc="#34d399"}else
   if(!fan&&rst!==null&&/restarts/.test(nx)){big=rst;bl2="Fan restarts at"}
   else if(fan&&/^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
   else if(m==="crisis"){big=CRISIS_OFF;bl2="Fan stops below";bc="#34d399"}
   else if(m==="backstop"){big=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);bl2="Fan stops at";bc="#34d399"}
   else if(!fan&&on!==null&&/probe passes/.test(nx)){big=on;bl2="Fan starts at"}
   h+='<section class="card bigc"><div class="hHead"><div class="cap">'+bl2+'</div>'+(cell!==null?'<span class="sp c">Cells '+d1(cell)+' now</span>':"")+'</div>';
-  if(big!==null){var sub=nx2||nx.replace(/<[^>]+>/g,"");
+  if(bigT){var tp=bigT.split(" ");h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+tp[0]+'<span class="u">'+(tp[1]||"")+'</span></div><div class="bigs">Stop point reached<br>run-on'+(nx2?" · "+nx2:"")+'</div></div>'}
+  else if(big!==null){var sub=nx2||nx.replace(/<[^>]+>/g,"");
    if(bl2==="Fan restarts at")sub="if cells rise <b style=\"color:#fbbf24\">"+f1(Math.max(0,rst-(cell!==null?cell:rst)))+"°</b> more<br>"+(nx2||"");
    h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+f1(big)+'<span class="u">°C</span></div><div class="bigs">'+sub+'</div></div>'}
   else h+='<div class="nxt" style="margin-top:10px;font-size:20px">'+nx+'</div>'+(nx2?'<div class="nx2">'+nx2+'</div>':"");
@@ -1472,9 +1486,9 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
   h+='<div class="cent"><span class="sp '+(p.prot?"r":dc)+'">'+dw+(d===null?"":" · "+Math.round(d)+" mV")+(p.prot?" · protection active":"")+"</span></div>"}
  h+="</div>";
  /* --- Cooling: full-width arc gauge --- */
- var r=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(r&&r.fan===1);
+ var r=S.rows.length?curRow(S.rows):null,fon=!!(r&&r.fan===1),roO=r?runOnEnd(S.rows,r):null;
  var cs=r?coolState(S.rows,r,now):null,cell=cs?cs.cell:null,gv=cell!==null?cell:r?r.pack:null,col=tempColor(gv);
- h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Pack cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">Fan '+(fon?"on":"off")+" · "+esc(SHORT[r.mode]||r.mode||"")+"</span>":"")+"</div>";
+ h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Pack cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">Fan '+(fon?"on":"off")+" · "+esc(roO?"Run-on until "+hm(roO):SHORT[r.mode]||r.mode||"")+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
  else{h+=gaugeSVG(gv,10,50,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
   h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:15px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
