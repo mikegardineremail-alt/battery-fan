@@ -298,6 +298,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .cdt{font-size:15px;font-weight:600}.cds{font-size:12px;color:#8b93a7;margin-top:2px;font-variant-numeric:tabular-nums}
 .cdp{display:flex;gap:16px;text-align:right}.cdp span{font-size:22px;font-weight:300;font-variant-numeric:tabular-nums;color:#fda4af;line-height:1}.cdp .cc{color:#a5f3fc}
 .cdp small{display:block;font-size:10.5px;color:#8b93a7;letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.cdp em{display:block;font-style:normal;font-size:11.5px;font-weight:500;color:#cbd2e1;margin-top:5px;letter-spacing:.01em;white-space:nowrap}.cdp em.lv{color:#67e8f9;text-shadow:0 0 8px rgba(34,211,238,.45)}
 .cdg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.cdg b{display:block;font-size:13.5px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}.cdg span{font-size:11px;color:#8b93a7}
 .cdc{margin-top:12px}
 .drh{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
@@ -1228,7 +1229,7 @@ function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,bod
   var w=b.v!==null&&b.a!==null?b.v*b.a:null,cs=b.cells.slice(0,4),ok=cs.filter(function(c){return c!==null&&c>1&&c<5});
   var lo=ok.length?Math.min.apply(null,ok):b.cell_min,hi=ok.length?Math.max.apply(null,ok):b.cell_max;
   var del=lo!==null&&hi!==null?hi-lo:(b.cell_delta!==null?(b.cell_delta>=1?b.cell_delta/1000:b.cell_delta):null);
-  var h='<div class="pkc"><div class="pkh"><b>PACK '+x[0]+'</b></div><div class="pks">'+(b.soc===null?"--":Math.round(b.soc))+"<small>%</small></div>";
+  var h='<div class="pkc"><div class="pkh"><b>Invicta'+(shown.length>1?" "+x[0]:"")+'</b></div><div class="pks">'+(b.soc===null?"--":Math.round(b.soc))+"<small>%</small></div>";
   function G(t,items,cols){return'<div class="kvt">'+t+'</div><div class="kvg"'+(cols?' style="grid-template-columns:repeat('+cols+',1fr)"':"")+">"+items.join("")+"</div>"}
   h+=G("Power",[kv("Voltage",fx(b.v,2,"V")),kv("Current",b.a===null?"--":(b.a>0?"+":"")+amps(b.a)+" A",b.a>0.05?"g":b.a<-0.05?"w":""),kv("Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+" W"),kv("Remaining",b.rem_ah===null?"--":f1(b.rem_ah)+" / "+(nomOf(b)===null?"--":Math.round(nomOf(b)))+" Ah")]);
   h+=G("Temperature",[kv("Cells",b.t_int===null?"--":f1(b.t_int)+" °C"),kv("Board",b.t_brd===null?"--":f1(b.t_brd)+" °C")]);
@@ -1460,15 +1461,18 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   var pk=null,tgt=null,fan=0,off=null;win.forEach(function(r,m){if(r.pack!==null&&(!pk||r.pack>pk.v))pk={v:r.pack,t:r.t};if(r.off!==null)off=off===null?r.off:off;
    if(tgt===null&&r.off!==null&&r.pack!==null&&r.pack<=r.off&&m>0)tgt=r.t;if(r.fan===1)fan+=Math.min(300e3,(m<win.length-1?win[m+1].t:r.t+300e3)-r.t)});
   var cp=null;(S.bms||[]).forEach(function(x){if(x.t<t-60e3||x.t>R[end].t+60e3)return;var v=x.A&&x.A.any?x.A.t_int:null;if(v!==null&&(!cp||v>cp.v))cp={v:v,t:x.t}});
-  out.push({t:t,drive:t-R[j].t,pk:pk,cp:cp,tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
+  var lf=-1;win.forEach(function(r,m){if(r.fan===1)lf=m});var ec=null,ecl=null,live=false,et=null;
+  if(lf>=0){if(lf===win.length-1&&end===R.length-1&&Date.now()-R[end].t<20*60e3)live=true;else{var er=lf+1<win.length?win[lf+1]:win[lf];et=er.t;ec=er.pack;var bb=null;(S.bms||[]).forEach(function(x){var d=Math.abs(x.t-et);if(d<=6*60e3&&x.A&&x.A.any&&x.A.t_int!==null&&(!bb||d<bb.d))bb={d:d,v:x.A.t_int}});ecl=bb?bb.v:null}}
+  out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
  return out.slice(-6).reverse()}
 function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
+ function E(c,v){return c.live?'<em class="lv">still cooling</em>':'<em>'+(c.et===null?"—":v===null||v===undefined?"ended —":"ended "+f1(v)+"°")+'</em>'}
  if(!S.rows.length){el.innerHTML='<div class="skel"><i style="width:60%"></i><i style="width:85%"></i><i style="width:70%"></i></div>';return}
  if(!L.length){el.innerHTML='<div class="es">No drives logged yet. Each key-off will appear here with its cooldown.</div>';return}
  el.innerHTML=L.map(function(c){var key=String(c.t),op=openCd===key;
   var stats=[["Drive",hmin2(c.drive/60e3)],["To target",c.tgt===null?(c.ongoing?"cooling…":c.off===null?"—":"not reached"):hmin2(c.tgt/60e3)],["Fan",hmin2(c.fan)],["Ambient",c.amb===null?"--":f1(c.amb)+"°C"]];
   return '<div role="button" tabindex="0" class="kc'+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
-   '<div class="cdp"><span>'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case</small></span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>cells</small></span>':"")+'</div></div>'+
+   '<div class="cdp"><span>'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case peak</small>'+E(c,c.ec)+'</span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>cells peak</small>'+E(c,c.ecl)+'</span>':"")+'</div></div>'+
    '<div class="cdg">'+stats.map(function(x){return'<div><b>'+x[1]+'</b><span>'+x[0]+"</span></div>"}).join("")+'</div>'+
    (op?'<svg class="ch cdc" id="cdc" viewBox="0 0 340 120"></svg><div class="lg" style="margin:8px 0 0"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span><span style="--c:#34d399">Stop point</span></div>':"")+"</div>"}).join("");
  if(openCd){var c=L.filter(function(x){return String(x.t)===openCd})[0];if(c){var w=S.rows.slice(Math.max(0,c.s-3),c.e+1),t0=w[0].t,t1=w[w.length-1].t,fb=[],sp=null;
