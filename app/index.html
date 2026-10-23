@@ -418,6 +418,78 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .adv{display:flex;justify-content:space-between;align-items:center;margin-top:16px}.adv button{font-size:14px;color:#8b93a7;font-weight:600;cursor:pointer;padding:8px 0}.adv a{font-size:11.5px;color:#596075}
 .dlgs .err{color:#fda4af}
 .glg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:11.5px;color:#8b93a7}.glg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}.glg b{color:#cfd5e6;font-weight:600}
+
+/* ===== Design system v2: one glowing "future product" language on every page ===== */
+:root{--card:rgba(255,255,255,.04)}
+body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),transparent 70%),radial-gradient(90% 500px at 100% 110%,rgba(167,139,250,.10),transparent 70%),var(--bg)}
+.card{position:relative;overflow:hidden;isolation:isolate;border-radius:28px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025) 60%,rgba(255,255,255,.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.035),0 18px 40px -12px rgba(0,0,0,.6)}
+.card.gl::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(80% 55% at 50% 38%,var(--glowc,rgba(34,211,238,.14)),transparent 72%)}
+.lbl,.cap{color:#9aa2b6}
+.dial{position:relative;margin:4px auto 0;max-width:100%;aspect-ratio:1}
+.dial svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dial .dr{animation:ddraw 1.2s cubic-bezier(.2,.8,.2,1)}
+@keyframes ddraw{from{stroke-dasharray:0 100}}
+.dial .tipd{animation:vfade 1.2s ease-out}
+.din{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.din .cap{margin:0 0 2px;font-size:11px}
+.dnum{font-size:88px;font-weight:700;letter-spacing:-.055em;line-height:.92;font-variant-numeric:tabular-nums;color:var(--dc);text-shadow:0 0 36px color-mix(in srgb,var(--dc) 40%,transparent)}
+.dnum .u{font-size:30px;font-weight:500;letter-spacing:0;color:#8b93a7;margin-left:2px;vertical-align:1.1em;text-shadow:none}
+.dial.md .dnum{font-size:64px}.dial.md .dnum .u{font-size:22px}
+.dial.sm .dnum{font-size:38px}.dial.sm .dnum .u{font-size:15px}
+.dst{margin-top:8px;font-size:13px;font-weight:650;letter-spacing:.02em;color:var(--dc)}
+.dial.sm .dst{font-size:11px;margin-top:4px}
+.lagt{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;letter-spacing:.04em;padding:3px 9px;border-radius:99px;background:rgba(251,191,36,.13);color:#fcd34d;box-shadow:inset 0 0 0 1px rgba(251,191,36,.3)}
+/* stat strip: label above, value huge below, always centred (never label-left / value-right) */
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.strip>div{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;text-align:center;position:relative}
+.strip>div+div::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:1px;background:rgba(255,255,255,.07)}
+.strip span{font-size:10.5px;color:#8b93a7;letter-spacing:.1em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+.strip b{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.strip b small{font-size:13px;font-weight:500;color:#8b93a7;margin-left:2px}
+.strip i{font-style:normal;font-size:11px;color:#7a8296;white-space:nowrap}
+.strip.sm b{font-size:21px}
+.cent{display:flex;justify-content:center;margin-top:12px;gap:8px;flex-wrap:wrap}
+.ovsec{margin:22px 6px 10px}
+.duo2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.duo2 .card{margin:0;padding:14px 10px 14px}
+.ovt{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
+.ovt .cap{margin:0}
+/* Invicta page: big hero ring */
+.bat{flex-direction:column;gap:6px}
+.ring{width:250px;height:250px;margin:4px auto 0}
+.ring svg{width:250px;height:250px;overflow:visible}
+.ring .pct{font-size:88px;font-weight:700;letter-spacing:-.055em;color:var(--sc,#34d399);text-shadow:0 0 36px color-mix(in srgb,var(--sc,#34d399) 40%,transparent)}
+.ring .pct small{font-size:30px;font-weight:500;color:#8b93a7}
+.ring .rl{font-size:11px;font-weight:600}
+.bat .ogrid.one{width:100%;grid-template-columns:repeat(3,1fr);gap:0;margin-top:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.bat .ot{background:none;text-align:center;padding:0 4px;border-radius:0}
+.bat .ot+.ot{border-left:1px solid rgba(255,255,255,.07)}
+.bat .ot span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
+.bat .ot b{font-size:24px;font-weight:700;letter-spacing:-.03em}
+.flow{text-align:center;font-size:13px;margin-top:12px}
+.tube{height:84px;border-radius:14px;background:rgba(0,0,0,.25)}
+.tube i{box-shadow:0 -6px 18px rgba(52,211,153,.35)}
+.cv{font-size:16px;font-weight:700}
+.mm{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-top:16px}
+.mm span{display:flex;flex-direction:column-reverse;align-items:center;gap:3px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.mm b{font-size:17px;font-weight:700;letter-spacing:-.01em;text-transform:none;color:#eef2ff}
+.tile{text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.tv{font-size:34px;font-weight:700;letter-spacing:-.04em}
+.pks{font-size:48px;font-weight:700;letter-spacing:-.05em;text-align:center;text-shadow:0 0 28px rgba(52,211,153,.35)}
+.pkh{justify-content:center}
+.kvg .kv{text-align:center}.kvg .kv b{text-align:center;font-weight:650}
+.big3{font-size:64px;font-weight:700;letter-spacing:-.05em;text-shadow:0 0 30px rgba(251,191,36,.3)}
+.drh{flex-direction:column;align-items:center;text-align:center}
+.drs{text-align:center;width:100%;justify-content:space-around}
+.drs b,.hlg b{font-size:20px;font-weight:700}
+.hlg{text-align:center}
+.bar i{box-shadow:0 0 14px rgba(251,191,36,.35)}
+/* chart tooltip: value first, then label */
+.tip .r{flex-direction:row-reverse;justify-content:flex-end;gap:8px}
+/* protect */
+.ring2{width:250px;height:250px}
+.ring2 .w{font-size:92px;text-shadow:0 0 40px currentColor}
+.tabbar .ind{box-shadow:0 0 24px rgba(34,211,238,.25)}
 @media (min-width:900px){
  body{height:auto;overflow:auto}#app{height:auto;display:block}
  .head{max-width:1080px}
@@ -477,13 +549,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 </section>
 <section class="page" id="battery" aria-label="Invicta battery"><div class="in">
 <!-- BATTERY -->
-<div class="card live">
+<div class="card live gl" id="bcard">
  <div class="chd"><div class="lbl">Invicta pack</div><div class="sub" id="bsub">80Ah LiFePO₄ · 4S</div></div>
  <div class="bat">
   <div class="ring">
    <svg viewBox="0 0 118 118"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
-    <circle cx="59" cy="59" r="50" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="10"/>
-    <circle id="arc" cx="59" cy="59" r="50" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 314.2" style="filter:drop-shadow(0 0 6px rgba(52,211,153,.45))"/></svg>
+    <circle cx="59" cy="59" r="50" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>
+    <circle id="arc" cx="59" cy="59" r="50" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="0 314.2" style="filter:drop-shadow(0 0 5px var(--sc,#34d399));transition:stroke-dasharray .9s cubic-bezier(.2,.8,.2,1)"/></svg>
    <div class="in"><div class="pct" id="soc">--<small>%</small></div><div class="rl">SOC</div></div>
   </div>
   <div class="ogrid one">
@@ -759,7 +831,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
- h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"outside air")+'</div></section>';
+ h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* NEXT card */
  if(nx){var big=null,bc="#fbbf24",bl2="Next";
   if(!fan&&rst!==null&&/restarts/.test(nx)){big=rst;bl2="Fan restarts at"}
@@ -820,7 +892,7 @@ function battery(bl,p,bAge,r){
   $("cyc").className=$("tb").className="tv na";$("cyc").innerHTML=$("tb").innerHTML="--";$("cycs").textContent="waiting for BMS";$("tbs").textContent="waiting for BMS";return}
  var stale=bAge>BMS_STALE_MIN*60e3;
  sub.textContent=stale?"last BMS reading "+ago(bAge):"80Ah LiFePO₄ · 4S"+(p.boards<2&&seen(bl.A.any?"B":"A")?" · Board "+(bl.A.any?"B":"A")+": no data yet":"");sub.style.color=stale?"var(--warm)":"";
- var soc=p.soc;$("soc").innerHTML=(soc===null?"--":Math.round(soc))+"<small>%</small>";$("arc").setAttribute("stroke-dasharray",(soc===null?0:soc/100*314.2).toFixed(1)+" 314.2");$("arc").style.opacity=soc===null?0:1;
+ var soc=p.soc,sc=socCol(soc);$("bcard").style.setProperty("--sc",sc[0]);$("bcard").style.setProperty("--glowc",rgba(sc[0],.15));$("rg").children[0].setAttribute("stop-color",sc[0]);$("rg").children[1].setAttribute("stop-color",sc[1]);$("soc").innerHTML=(soc===null?"--":Math.round(soc))+"<small>%</small>";$("arc").setAttribute("stroke-dasharray",(soc===null?0:soc/100*314.2).toFixed(1)+" 314.2");$("arc").style.opacity=soc===null?0:1;
  $("bv").innerHTML=p.v===null?"--":p.v.toFixed(2)+"<small>V</small>";$("bv").title="";
  var bi=$("bi");bi.className=p.i===null?"":p.i>0.05?"chg":p.i<-0.05?"dsg":"";bi.innerHTML=p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small>A</small>";
  $("brem").innerHTML=p.rem===null?"--":f1(p.rem)+"<small>/ "+Math.round(p.nom||80)+" Ah</small>";
@@ -1100,7 +1172,7 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
  var lr=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(lr&&lr.fan===1),hf=$("hfan");hf.className="hfan "+(lr?(fon?"on":"off"):"off");hf.setAttribute("aria-label",fon?"Fan on":"Fan off");
  if(i===0){var al=[],srcT=[];if(lr)srcT.push(lr.t);var b0=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(b0){srcT.push(b0.t);if(packOf(b0).prot)al.push("Battery protection")}
    var sh0=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null});if(sh0.length)srcT.push(sh0[sh0.length-1].t);
-   var bp0=X2.bp;if(bp0){srcT.push(bp0.t);var os0=(bp0.output_state||"").trim().toLowerCase();if(os0&&!/^(on|1|true)$/.test(os0))al.push("Load output off")}
+   var bp0=X2.bp;if(bp0){srcT.push(bp0.t);if(bpEff().on===false)al.push("Load output off")}
    var stale0=srcT.some(function(x){return now-x>STALE_MIN*60e3});
    if(srcT.length){var nt=Math.max.apply(null,srcT);a="Updated "+hm(nt)+" · "+ago(now-nt)}
    c="pill"+(al.length?" bad":stale0?" drv":"");t=al.length?al.join(" · "):stale0?"Some data delayed":"All systems normal"}
@@ -1111,7 +1183,7 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
  else if(i===3){var rs=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null}),r=rs[rs.length-1];if(r){upd(r.t);
    var s2=r.a===null?"":r.a>0.05?"Charging":r.a<-0.05?"Discharging":"Idle";c="pill"+(s2==="Discharging"?" drv":s2==="Charging"?"":" off");
    t="Aux "+(r.soc===null?"--":Math.round(r.soc))+"%"+(s2?" · "+s2:"")}else if(X2.shErr){a="can't read sheet"}}
- else{var b=X2.bp;if(b){upd(b.t);var os=(b.output_state||"").trim().toLowerCase(),oc=n(b.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
+ else{var b=X2.bp;if(b){upd(b.t);var on=bpEff().on;
    c="pill"+(on===null?" off":on?"":" bad");t=on===null?"Output —":on?"Output ON":"Output OFF"}else if(X2.bpErr){a="can't read sheet"}}
  var ld=i===0?!S.okAt&&!X2.sh&&S.fetchOk:i===1?!S.rows.length&&!S.okAt&&S.fetchOk:i===2?!S.bms&&!S.okAt:i===3?!X2.sh&&!X2.shErr:!X2.bp&&!X2.bpAt&&!X2.bpErr;
  $("pill").className=c+(ld?" skp":"");$("pillt").textContent=ld?"":t;if(ld)$("ago").innerHTML='<i class="skl"></i>';else $("ago").textContent=a;$("ago").parentNode.classList.toggle("old",i>1&&old)}
@@ -1122,14 +1194,14 @@ function renderPower(){var rows=(X2.sh||[]).filter(function(r){return r.v!==null
  $("pwupd").textContent="Updated "+hm(r.t)+" · "+ago(age);$("pwupd").style.color=age>STALE_MIN*60e3?"var(--warm)":"";
  var ttg=r.a!==null&&r.a>0?"Charging":r.ttg===null?"—":hmin(r.ttg);
  var st2=r.a===null?"No current reading":r.a>0.05?"Charging":r.a<-0.05?"Discharging":"Idle";
- var h='<div class="ovaux pwh"><div><div class="ovsl">Charge</div><div class="ovsoc">'+(r.soc===null?"--":Math.round(r.soc))+'<small>%</small></div><div class="pwst'+(r.a>0.05?" chg":r.a<-0.05?" dsg":"")+'">'+st2+'</div></div>'+
-  '<div class="ogrid one">'+ovTile("Voltage",r.v===null?"--":r.v.toFixed(2)+"<small> V</small>")+ovTile("Current",r.a===null?"--":(r.a>0?"+":"")+amps(r.a)+"<small> A</small>","",r.a>0.05?"chg":r.a<-0.05?"dsg":"")+"</div></div>";
- 
+ var sc=socCol(r.soc);$("pwcard").classList.add("gl");$("pwcard").style.setProperty("--glowc",rgba(sc[0],.15));
+ var h=dial({id:"pw",f:r.soc===null?null:r.soc/100,c:sc,size:250,inner:'<div class="cap">Charge</div><div class="dnum">'+(r.soc===null?"--":Math.round(r.soc))+'<span class="u">%</span></div><div class="dst" style="color:'+(flowCol(r.a)||"#8b93a7")+'">'+st2+'</div>'})+
+  strip([["Voltage",r.v===null?"--":r.v.toFixed(2)+"<small>V</small>"],["Current",r.a===null?"--":(r.a>0?"+":"")+amps(r.a)+"<small>A</small>",flowCol(r.a)]]);
  var t=[["Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+"<small>W</small>",w===null?"":Math.abs(w)<10?"":"right now"],["Used",r.ah===null?"--":f1(Math.abs(r.ah))+"<small>Ah</small>","since last full"],["Time left",ttg,ttg==="Charging"||ttg==="—"?"":"at this rate"]];
  if(r.sv!==null)t.push(["Starter battery",fx(r.sv,2)+"<small>V</small>","engine battery"]);
  if(r.mid!==null)t.push(["Mid-point",fx(r.mid,2)+"<small>V</small>",""]);
  if(r.tc!==null)t.push(["Battery temp",f1(r.tc)+"<small>°C</small>",""]);
- h+='<div class="ogrid pwg">'+t.map(function(x){return ovTile(x[0],String(x[1]).replace(/<small>/g,"<small> "),x[2])}).join("")+"</div>";
+ for(var q=0;q<t.length;q+=3)h+=strip(t.slice(q,q+3).map(function(x){return[x[0],x[1],"",x[2]]}),"sm");
  var al=bits(r.al,ALARM);if(al&&al.length)h+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
  body.innerHTML=h;powerChart(rows)}
 function powerChart(rows){var el=$("pwch"),now=Date.now(),t0=now-24*3600e3,W=340,H=180,L=26,R=28,T=8,B=20,id="pwch";
@@ -1167,7 +1239,7 @@ function prHead(r){var off=bits(r.off_reason,OFFR)||[],al=bits(r.alarm_reason,AL
 /* Commands go only through the remote relay (Apps Script receiver). The bridge (fw 1.3.5+) polls it every ~30 s.
    The passcode lives in localStorage only (never in the repo). State shown always comes from the BatteryProtect sheet. */
 var RELAY="https://script.google.com/macros/s/AKfycbzHIwxWawjE0lB5XArvzTQLM3D2PjTdP7cvNmWlvpxP1kPxq48V2W3Pvtwo55jJJmU9/exec",TOKK="bf2-bp-token";
-var BPC={want:null,st:null,msg:"",at:0,pend:null};
+var BPC={want:null,st:null,msg:"",at:0,pend:null,conf:null};
 function bpTok(){try{return localStorage.getItem(TOKK)||""}catch(e){return""}}
 var jpN=0;
 function jsonp(url){return new Promise(function(res,rej){var cb="__bfj"+(++jpN)+"_"+Date.now(),sc=document.createElement("script"),to=setTimeout(function(){done();rej(new Error("timeout"))},15000);
@@ -1189,11 +1261,11 @@ var BP_ADAPTERS={
       if(stt==="expired")return res({status:"expired"});poll()}).catch(function(){poll()})},5000)})()})})}};
 function sendBpCommand(on,prog){return BP_ADAPTERS.relay(on,prog||function(){})}
 function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
-function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now()};renderBpCmd();
- sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";renderBpCmd()})
+function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now(),conf:null};renderBpCmd();
+ sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
  .catch(function(){BPC.st="neterr";renderBpCmd()})}
 var PWR='<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>';
-function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),now=Date.now(),age=r?now-r.t:null;
+function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,E=bpEff(),on=E.on,now=Date.now(),age=r?now-r.t:null;
  var col=on===null?"#596075":on?"#34d399":"#fb7185",cls=on===null?"na":on?"on":"off";
  var h='<section class="card thero" style="--glowc:'+(on===null?"rgba(139,147,167,.08)":on?"rgba(52,211,153,.18)":"rgba(251,113,133,.12)")+'"><div class="hHead"><div class="cap"><svg viewBox="0 0 24 24" style="width:16px;height:16px;color:'+col+'">'+PWR+'</svg>Starter battery load</div><span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads off")+'</span></div>';
  var C=2*Math.PI*96;
@@ -1202,10 +1274,10 @@ function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),no
   (on?'<circle class="pulse" cx="115" cy="115" r="96" fill="none" stroke="#34d399" stroke-width="14" opacity=".35" filter="url(#bpgl)"/><circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round"/>':
    on===false?'<circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*.06).toFixed(1)+' '+(C*.94).toFixed(1)+'" transform="rotate(-100 115 115)" opacity=".8"/>':"")+
   [0,1,2,3,4,5,6,7,8,9,10,11].map(function(i){var a=i*Math.PI/6,x0=115+80*Math.sin(a),y0=115-80*Math.cos(a),x1=115+75*Math.sin(a),y1=115-75*Math.cos(a);return'<line x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="rgba(255,255,255,.18)" stroke-width="1.5" stroke-linecap="round"/>'}).join("")+
-  '</svg><div class="in"><div class="cap" style="margin:0 0 2px">Output</div><div class="w">'+(on===null?"--":on?"ON":"OFF")+'</div></div></div>';
+  '</svg><div class="in"><div class="cap" style="margin:0 0 2px">Output</div><div class="w">'+(on===null?"--":on?"ON":"OFF")+'</div>'+(E.lag?'<span class="lagt" title="Switch confirmed by the battery bridge. The 5-minute log has not caught up yet.">log catching up</span>':"")+'</div></div>';
  if(r){var iv=n(r.input_v),ov=n(r.output_v),ds=String(r.device_state||"").trim();
-  function R(k,v,c){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+v+'</span></div>'}
-  h+='<div class="duo three">'+R("Input",iv===null?"--":iv.toFixed(2)+'<span class="u">V</span>',"#eef2ff")+'<div class="sep"></div>'+R("Output",ov===null?"--":ov.toFixed(2)+'<span class="u">V</span>',col)+'<div class="sep"></div>'+R("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"),"#eef2ff")+'</div>';
+  function R(k,v,c){return'<div><span>'+k+'</span><b style="color:'+c+'">'+String(v).replace('class="u"',"")+'</b></div>'}
+  h+='<div class="strip">'+R("Input",iv===null?"--":iv.toFixed(2)+'<span class="u">V</span>',"#eef2ff")+R("Output",ov===null?"--":ov.toFixed(2)+'<span class="u">V</span>',col)+R("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"),"#eef2ff")+'</div>';
   var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=String(r.error||"").trim(),erb=er&&!/^(0|none|no error|null|-)$/i.test(er),q="";
   if(off&&off.length)q+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
   if(al&&al.length)q+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
@@ -1215,7 +1287,7 @@ function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,on=bpOn(r),no
   h+='<div class="updc"><span class="updp'+(age>STALE_MIN*60e3?" o":"")+'">Updated '+ago(age)+'</span></div>'}
  el.innerHTML=h+'</section>';renderBpCmd()}
 var GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>';
-function renderBpCmd(){var el=$("bpcmd");if(!el)return;var on=bpOn(X2.bp),tok=!!bpTok(),st=BPC.st,busy=st==="sending"||st==="waiting",W=BPC.want?"ON":"OFF";
+function renderBpCmd(){var el=$("bpcmd");if(!el)return;var on=bpEff().on,tok=!!bpTok(),st=BPC.st,busy=st==="sending"||st==="waiting",W=BPC.want?"ON":"OFF";
  var h='<div class="hHead"><div class="cap">Switch load</div>'+(busy?'<span class="sp c">'+(st==="sending"?"Sending":"Waiting")+'</span>':"")+'</div>';
  if(!tok){h+='<div class="setup"><div class="t">Set up remote control</div><div class="s">Enter the remote control passcode once to switch the starter battery load from anywhere.</div><button data-setup="1">Set up remote control</button></div>'}
  else{h+='<div class="pbtn"><button class="on'+(on===true?" cur":"")+'" data-bp="1"'+(busy?" disabled":"")+'><svg viewBox="0 0 24 24" style="width:20px;height:20px">'+PWR+'</svg>Turn ON</button><button class="off'+(on===false?" cur":"")+'" data-bp="0"'+(busy?" disabled":"")+'><svg viewBox="0 0 24 24" style="width:20px;height:20px">'+PWR+'</svg>Turn OFF</button></div>';
@@ -1354,52 +1426,68 @@ function renderHealth(){var el=$("hlbody");if(!el)return;[].forEach.call($("hlr"
   '<div class="hlg"><div><b>'+(mns.length?Math.min.apply(null,mns).toFixed(3):"--")+'<small>V</small></b><span>lowest cell</span></div><div><b>'+(mxs.length?Math.max.apply(null,mxs).toFixed(3):"--")+'<small>V</small></b><span>highest cell</span></div><div><b>'+(last.cy===null?"--":last.cy)+'</b><span>cycles</span></div><div><b>'+(tis.length?f1(Math.max.apply(null,tis)):"--")+'<small>°C</small></b><span>peak temp</span></div></div>'+
   (span<CH2.days*864e5?'<div class="hint">Building history: readings since '+dayLbl(first)+", "+hm(first)+".</div>":"");
  lineChart($("hlch"),[{pts:pts,c:"#22d3ee",w:2.2}],start,now,{unit:" mV",step:5,pad:1,min:0,ticks:tk,gap:span<2*864e5?20*60e3:bms*2.5,hlines:[{v:50,c:"#fbbf24"}]})}
+
+/* ---------- design system v2 helpers ---------- */
+function socCol(s){return s===null||s===undefined?["#8b93a7","#596075"]:s>=60?["#34d399","#22d3ee"]:s>=30?["#fbbf24","#f59e0b"]:["#fb7185","#e11d48"]}
+var DRAWN={};
+/* 270° glowing dial. o:{id,f(0..1),c:[c1,c2],cls,size,inner} */
+function dial(o){var f=o.f===null||o.f===undefined?0:Math.max(0,Math.min(1,o.f)),first=!DRAWN[o.id],g="dg"+o.id,c=o.c,ticks="";DRAWN[o.id]=1;
+ for(var i=0;i<=30;i++){var a=(135+270*i/30)*Math.PI/180,r0=84,r1=i%5?88:91;ticks+='<line x1="'+(120+r0*Math.cos(a)).toFixed(1)+'" y1="'+(120+r0*Math.sin(a)).toFixed(1)+'" x2="'+(120+r1*Math.cos(a)).toFixed(1)+'" y2="'+(120+r1*Math.sin(a)).toFixed(1)+'" stroke="'+(i/30<=f&&o.f!==null?c[0]:"rgba(255,255,255,.16)")+'" stroke-width="'+(i%5?1.2:2)+'" stroke-linecap="round" opacity="'+(i/30<=f?.75:1)+'"/>'}
+ var arc=function(extra){return'<circle cx="120" cy="120" r="102" fill="none" pathLength="100" transform="rotate(135 120 120)" stroke-linecap="round" '+extra+'/>'};
+ var ta=(135+270*f)*Math.PI/180,tx=(120+102*Math.cos(ta)).toFixed(1),ty=(120+102*Math.sin(ta)).toFixed(1);
+ var s='<div class="dial '+(o.cls||"")+'" style="--dc:'+c[0]+';width:'+o.size+'px"><svg viewBox="0 0 240 240" aria-hidden="true"><defs><linearGradient id="'+g+'" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="'+c[1]+'"/><stop offset="1" stop-color="'+c[0]+'"/></linearGradient><filter id="'+g+'f" x="-.3" y="-.3" width="1.6" height="1.6"><feGaussianBlur stdDeviation="7"/></filter></defs>'+
+  arc('stroke="rgba(255,255,255,.07)" stroke-width="14" stroke-dasharray="75 100"')+ticks;
+ if(o.f!==null&&o.f!==undefined&&f>0){var da=(75*f).toFixed(2)+" 100";
+  s+=arc('stroke="'+c[0]+'" stroke-width="16" opacity=".45" filter="url(#'+g+'f)" stroke-dasharray="'+da+'"'+(first?' class="dr"':""))+
+   arc('stroke="url(#'+g+')" stroke-width="14" stroke-dasharray="'+da+'"'+(first?' class="dr"':""))+
+   '<g class="'+(first?"tipd":"")+'"><circle cx="'+tx+'" cy="'+ty+'" r="11" fill="'+c[0]+'" opacity=".5" filter="url(#'+g+'f)"/><circle cx="'+tx+'" cy="'+ty+'" r="5.5" fill="#fff"/></g>'}
+ return s+'</svg><div class="din">'+o.inner+'</div></div>'}
+function strip(items,cls){return'<div class="strip'+(cls?" "+cls:"")+'">'+items.map(function(x){return'<div><span>'+x[0]+'</span><b'+(x[2]?' style="color:'+x[2]+'"':"")+'>'+x[1]+'</b>'+(x[3]?"<i>"+x[3]+"</i>":"")+'</div>'}).join("")+'</div>'}
+function flowCol(a){return a===null||a===undefined?"":a>0.05?"#34d399":a<-0.05?"#fde68a":""}
+/* BatteryProtect state shown in the UI: a bridge-confirmed command wins until the 5-min sheet row agrees */
+function bpEff(){var r=X2.bp,s=bpOn(r),c=BPC.conf;
+ if(c){if(s===c.on||Date.now()-c.at>20*60e3){BPC.conf=null;return{on:s,lag:false}}return{on:c.on,lag:true}}
+ return{on:s,lag:false}}
 /* ---------- Overview (home) ---------- */
 function fresh(ts,src){if(!ts)return'<span class="fr n">'+src+" · no data yet</span>";var age=Date.now()-ts,o=age>STALE_MIN*60e3;return'<span class="fr'+(o?" o":"")+'">'+(o?"":"")+ago(age).replace(/^just now$/,"just now")+"</span>"}
 function ovTile(l,v,s,cls){return'<div class="ot'+(cls?" "+cls:"")+'"><span>'+l+"</span><b>"+v+"</b>"+(s?"<i>"+s+"</i>":"")+"</div>"}
 var SKO='<div class="skel"><i style="width:45%"></i><i style="width:80%;height:40px"></i><i style="width:65%"></i></div>';
 function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h="";
- /* --- Invicta pack --- */
+ /* --- Invicta pack: hero dial --- */
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null;
- h+='<div class="card ovc" data-go="battery"><div class="chd"><div class="lbl">Invicta pack</div>'+(bl?fresh(bl.t):"")+"</div>";
+ var sc=socCol(p?p.soc:null);
+ h+='<div class="card ovc gl" data-go="battery" style="--glowc:'+rgba(sc[0],.16)+'"><div class="ovt"><div class="cap">Invicta pack</div>'+(bl?fresh(bl.t):"")+"</div>";
  if(!p)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first BMS reading.</div>');
- else{var soc=p.soc,cls=p.i===null?"":p.i>0.05?"chg":p.i<-0.05?"dsg":"",st=p.i===null?"No current reading":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";
-  h+='<div class="ovh"><div class="ring ovr"><svg viewBox="0 0 118 118"><defs><linearGradient id="org" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><circle cx="59" cy="59" r="50" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="10"/><circle cx="59" cy="59" r="50" fill="none" stroke="url(#org)" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+(soc===null?0:soc/100*314.2).toFixed(1)+' 314.2"/></svg><div class="in"><div class="pct">'+(soc===null?"--":Math.round(soc))+'<small>%</small></div><div class="rl">'+st.toUpperCase()+"</div></div></div>"+
-   '<div class="ogrid">'+ovTile("Remaining",p.rem===null?"--":f1(p.rem)+"<small> / "+Math.round(p.nom||80)+" Ah</small>")+
-   ovTile("Current",p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small> A</small>","",cls)+
-   ovTile("Voltage",p.v===null?"--":p.v.toFixed(2)+"<small> V</small>")+
-   ovTile("Power",p.power===null?"--":(Math.round(p.power)===0?"0":sgn(p.power,0))+"<small> W</small>")+"</div></div>";
-  var d=p.cdel,dw=d===null?"No cell data":d<=10?"Cells well balanced":d<=30?"Cells balanced":d<=50?"Slight drift between cells":"Cells need balancing",dc=d===null||d<=30?"":d<=50?" w":" h",pr=p.prot?" · protection active":"";
-  h+='<div class="ovf"><span class="ok'+(p.prot?" h":dc)+'">'+dw+(d===null?"":" · "+Math.round(d)+" mV")+pr+"</span></div>"}
+ else{var soc=p.soc,st=p.i===null?"No current reading":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";
+  h+=dial({id:"ovb",f:soc===null?null:soc/100,c:sc,size:270,inner:'<div class="cap">State of charge</div><div class="dnum">'+(soc===null?"--":Math.round(soc))+'<span class="u">%</span></div><div class="dst" style="color:'+(flowCol(p.i)||"#8b93a7")+'">'+st+(p.power!==null&&Math.abs(p.power)>=1?" · "+Math.round(Math.abs(p.power))+" W":"")+'</div>'});
+  h+=strip([["Remaining",p.rem===null?"--":f1(p.rem)+"<small>Ah</small>"],["Current",p.i===null?"--":(p.i>0?"+":"")+amps(p.i)+"<small>A</small>",flowCol(p.i)],["Voltage",p.v===null?"--":p.v.toFixed(2)+"<small>V</small>"]]);
+  var d=p.cdel,dw=d===null?"No cell data":d<=10?"Cells well balanced":d<=30?"Cells balanced":d<=50?"Slight drift between cells":"Cells need balancing",dc=d===null||d<=30?"g":d<=50?"w":"r";
+  h+='<div class="cent"><span class="sp '+(p.prot?"r":dc)+'">'+dw+(d===null?"":" · "+Math.round(d)+" mV")+(p.prot?" · protection active":"")+"</span></div>"}
  h+="</div>";
- /* --- Temperatures (cooling) --- */
+ /* --- Cooling: full-width arc gauge --- */
  var r=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(r&&r.fan===1);
- h+='<div class="card ovc" data-go="cooling"><div class="chd"><div class="lbl">Temperatures</div>'+(r?fresh(r.t):"")+"</div>";
+ var cs=r?coolState(S.rows,r,now):null,cell=cs?cs.cell:null,gv=cell!==null?cell:r?r.pack:null,col=tempColor(gv);
+ h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Pack cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">Fan '+(fon?"on":"off")+" · "+esc(SHORT[r.mode]||r.mode||"")+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
- else{var ti=bl?[bl.A,bl.B].filter(function(b){return b.any&&b.t_int!==null}).map(function(b){return b.t_int}):[],tb=bl?[bl.A,bl.B].filter(function(b){return b.any&&b.t_brd!==null}).map(function(b){return b.t_brd}):[];
-  var bf=bl&&now-bl.t<=STALE_MIN*60e3,cav=ti.length?ti.reduce(function(a,b){return a+b},0)/ti.length:null,cmx=ti.length?Math.max.apply(null,ti):null;
-  h+='<div class="ogrid four">'+ovTile(ti.length>1?"Cells avg":"Cells",cav===null?"--":f1(cav)+"<small> °C</small>","","cool"+(bl&&!bf?" stl":""))+
-   ovTile("Board",tb.length?f1(Math.max.apply(null,tb))+"<small> °C</small>":"--","")+
-   ovTile("Case",r.pack===null?"--":f1(r.pack)+"<small> °C</small>","","hot")+
-   ovTile("Ambient",r.amb===null?"--":f1(r.amb)+"<small> °C</small>","")+"</div>";
-  h+='<div class="ovf"><span class="ovfan'+(fon?" on":"")+'"><svg viewBox="0 0 48 48"><g>'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g></svg>Fan '+(fon?"on":"off")+"</span><span class=\"ovm\">"+esc(SHORT[r.mode]||r.mode||"")+"</span></div>"}
+ else{h+=gaugeSVG(gv,10,50,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
+  h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:15px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
  h+="</div>";
- /* --- Aux battery · Victron (separate section) --- */
+ /* --- Aux battery · Victron --- */
  h+='<div class="ovsec">Aux battery · Victron</div>';
- var rs=(X2.sh||[]).filter(function(x){return x.soc!==null||x.v!==null}),sr=rs[rs.length-1];
- h+='<div class="card ovc vic" data-go="power"><div class="chd"><div class="lbl">Aux battery</div>'+(sr?fresh(sr.t):"")+"</div>";
+ var rs=(X2.sh||[]).filter(function(x){return x.soc!==null||x.v!==null}),sr=rs[rs.length-1],asc=socCol(sr?sr.soc:null);
+ h+='<div class="card ovc vic gl" data-go="power" style="--glowc:'+rgba(asc[0],.13)+'"><div class="ovt"><div class="cap">Aux battery</div>'+(sr?fresh(sr.t):"")+"</div>";
  if(!sr)h+=(!X2.sh&&!X2.shErr?SKO:'<div class="es">'+(X2.shErr?"Can't read the shunt data right now.":"Waiting for the first shunt reading.")+"</div>");
- else{var w=sr.v!==null&&sr.a!==null?sr.v*sr.a:null,dn=drain(),acls=sr.a===null?"":sr.a>0.05?"chg":sr.a<-0.05?"dsg":"";
-  h+='<div class="ovaux"><div><div class="ovsl">Charge</div><div class="ovsoc">'+(sr.soc===null?"--":Math.round(sr.soc))+"<small>%</small></div></div>"+
-   '<div class="ogrid">'+ovTile("Voltage",sr.v===null?"--":sr.v.toFixed(2)+"<small> V</small>")+ovTile("Current",sr.a===null?"--":(sr.a>0?"+":"")+amps(sr.a)+"<small> A</small>","",acls)+
-   ovTile("Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+"<small> W</small>")+ovTile("Parked drain",dn?f1(dn.ah)+"<small> Ah</small>":"--",dn?"since "+hm(dn.t0):"")+"</div></div>"}
+ else{var w=sr.v!==null&&sr.a!==null?sr.v*sr.a:null,dn=drain(),s2=sr.a===null?"No current reading":sr.a>0.05?"Charging":sr.a<-0.05?"Discharging":"Idle";
+  h+=dial({id:"ova",f:sr.soc===null?null:sr.soc/100,c:asc,size:230,cls:"md",inner:'<div class="cap">Charge</div><div class="dnum">'+(sr.soc===null?"--":Math.round(sr.soc))+'<span class="u">%</span></div><div class="dst" style="color:'+(flowCol(sr.a)||"#8b93a7")+'">'+s2+'</div>'});
+  h+=strip([["Voltage",sr.v===null?"--":sr.v.toFixed(2)+"<small>V</small>"],["Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+"<small>W</small>",flowCol(sr.a)],["Parked drain",dn?f1(dn.ah)+"<small>Ah</small>":"--","",dn?"since "+hm(dn.t0):""]])}
  h+="</div>";
- var bp=X2.bp;
- h+='<div class="card ovc vic ovp" data-go="protect"><div class="chd"><div class="lbl">Load output</div>'+(bp?fresh(bp.t):"")+"</div>";
+ /* --- Load output (BatteryProtect) --- */
+ var bp=X2.bp,E=bpEff(),on=E.on,oc2=on===null?["#8b93a7","#596075"]:on?["#34d399","#10b981"]:["#fb7185","#e11d48"];
+ h+='<div class="card ovc vic gl ovp" data-go="protect" style="--glowc:'+rgba(oc2[0],.13)+'"><div class="ovt"><div class="cap">Starter battery load</div>'+(bp?fresh(bp.t):"")+"</div>";
  if(!bp)h+=(!X2.bpAt&&!X2.bpErr?'<div class="skel"><i style="width:70%"></i></div>':'<div class="es">Waiting for the first BatteryProtect reading.</div>');
- else{var os=(bp.output_state||"").trim().toLowerCase(),oc=n(bp.output_state_code),on=os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null;
-  var why=on?"Loads are powered":prHead(bp).replace(/^Output OFF:?\s*/,"");why=why?cap(why):"Loads are disconnected";
-  h+='<div class="ovpr"><span class="ovdot '+(on===null?"n":on?"g":"r")+'"></span><div><b>'+(on===null?"Unknown":on?"On":"Off")+"</b><i>"+esc(why)+"</i></div></div>"}
+ else{var why=on?"Loads are powered":E.lag?"Switched off remotely":prHead(bp).replace(/^Output OFF:?\s*/,"");why=why?cap(why):"Loads are disconnected";
+  h+=dial({id:"ovp",f:on===null?null:on?1:.04,c:oc2,size:170,cls:"sm",inner:'<div class="cap">Output</div><div class="dnum">'+(on===null?"--":on?"ON":"OFF")+'</div>'+(E.lag?'<span class="lagt">log catching up</span>':"")});
+  h+='<div class="whyc">'+esc(why)+"</div>"}
  h+="</div>";
  el.innerHTML=h}
 /* ---------- wiring ---------- */
