@@ -48,7 +48,7 @@ const f1=x=>x===null?"--":(x>=0?"+":"")+x.toFixed(1);
   for(let i=st.s;i<=st.e;i++){if(rows[i].mode)mode=rows[i].mode;modes.add(mode);
    if(hitAct===null&&/^(run-on|cooldown-done|early-stop)$/.test(rows[i].mode))hitAct=rows[i].t;
    const p=ctx.predictOff(rows.slice(0,i+1),P);
-   if(p.state==="ok"){const e=(p.t-actual)/60e3,lead=(actual-rows[i].t)/60e3;errs.push(Math.abs(e));pts.push({at:rows[i].t,lead,e,conf:p.conf,model:p.model})}}
+   if(p.state==="ok"){const e=(p.t-actual)/60e3,lead=(actual-rows[i].t)/60e3;errs.push(Math.abs(e));pts.push({at:rows[i].t,lead,plead:p.lead,pm:p.pm,e,conf:p.conf,model:p.model})}}
   const endWhy=modes.has("early-stop")?"early-stop":modes.has("run-on")?"stop point + run-on":modes.has("backstop")?"backstop":[...modes].pop();
   if(![...modes].some(x=>P.modes.indexOf(x)>=0))continue;      /* stretch never in a predictable mode */
   res.push({start:rows[st.s].t,actual,res5,modes:[...modes].filter(Boolean),end:endWhy,n:pts.length,
@@ -58,7 +58,23 @@ const f1=x=>x===null?"--":(x>=0?"+":"")+x.toFixed(1);
  const byConf={};res.forEach(r=>r.pts.forEach(p=>{(byConf[p.conf]=byConf[p.conf]||[]).push(Math.abs(p.e))}));
  const byLead={"<=30 min ahead":[],"30-60 min":[],">60 min":[]};
  res.forEach(r=>r.pts.forEach(p=>byLead[p.lead<=30?"<=30 min ahead":p.lead<=60?"30-60 min":">60 min"].push(Math.abs(p.e))));
- if(opt.json){console.log(JSON.stringify({version:P.version,config:P,stretches:res.map(({pts,...x})=>x),overall:{n:all.length,median:pct(all,.5),p90:pct(all,.9),meanBias:bias.length?bias.reduce((a,b)=>a+b,0)/bias.length:null}},null,1));return}
+ /* ± bands: quantile of |error| bucketed by PREDICTED lead (what the app knows at prediction time) */
+ const Q=P.bandQuantile,edges=P.bands.map(b=>b.maxLeadMin);
+ const bucket=l=>{let i=0;while(i<edges.length-1&&l>edges[i])i++;return i};
+ function bandsFrom(list){return edges.map((mx,i)=>{const a=list.filter(p=>bucket(p.plead)===i).map(p=>Math.abs(p.e));return{maxLeadMin:mx,pm:a.length?Math.max(P.minPmMin,Math.round(pct(a,Q))):null,n:a.length}})}
+ const allPts=res.flatMap((r,si)=>r.pts.map(p=>({...p,si})));
+ const rec=bandsFrom(allPts);
+ for(let i=0;i<rec.length;i++)if(rec[i].pm===null)rec[i].pm=i?rec[i-1].pm:P.minPmMin;  /* empty bucket: carry previous */
+ for(let i=1;i<rec.length;i++)rec[i].pm=Math.max(rec[i].pm,rec[i-1].pm);  /* further ahead is never shown tighter */
+ const cov=(list,pmOf)=>{const ins=list.filter(p=>Math.abs(p.e)<=pmOf(p)).length;return list.length?ins/list.length:null};
+ const covCfg=cov(allPts,p=>p.pm);
+ const covRec=cov(allPts,p=>rec[bucket(p.plead)].pm);
+ /* honest out-of-sample check: bands fitted without the stretch being scored */
+ let insLoo=0;allPts.forEach(p=>{const b=bandsFrom(allPts.filter(q=>q.si!==p.si));let pm=b[bucket(p.plead)].pm;if(pm===null)pm=rec[bucket(p.plead)].pm;if(Math.abs(p.e)<=pm)insLoo++});
+ const covLoo=allPts.length?insLoo/allPts.length:null;
+ const covByBand=rec.map((b,i)=>{const l=allPts.filter(p=>bucket(p.plead)===i);return cov(l,p=>b.pm)});
+ const bandsLine="bands:["+rec.map(b=>"{maxLeadMin:"+b.maxLeadMin+",pm:"+b.pm+"}").join(",")+"],";
+ if(opt.json){console.log(JSON.stringify({version:P.version,config:P,stretches:res.map(({pts,...x})=>x),bands:rec,coverage:{configured:covCfg,recommended:covRec,leaveOneOut:covLoo},overall:{n:all.length,median:pct(all,.5),p90:pct(all,.9),meanBias:bias.length?bias.reduce((a,b)=>a+b,0)/bias.length:null}},null,1));return}
  console.log(`Fan-off prediction backtest · PREDICT ${P.version} · model ${P.model} · window ${P.windowMin} min · fudge ${P.fudge}`);
  console.log(`Rows ${rows.length} (${dstr(rows[0].t)} → ${dstr(rows[rows.length-1].t)}); fan-off time known to ±2.5 min (5-min log)\n`);
  console.log("Fan-on stretch            ended by                actual off   preds  median|err|  p90|err|  first pred (lead, err)   last pred (lead, err)");
@@ -68,4 +84,10 @@ const f1=x=>x===null?"--":(x>=0?"+":"")+x.toFixed(1);
  console.log(`\nOverall: ${all.length} predictions over ${res.filter(r=>r.n).length} stretches · median |error| ${pct(all,.5)?.toFixed(1)} min · p90 ${pct(all,.9)?.toFixed(1)} min · mean bias ${bias.length?f1(bias.reduce((a,b)=>a+b,0)/bias.length):"--"} min (+ = predicted too late)`);
  for(const k of ["high","med","low"])if(byConf[k])console.log(`  confidence ${k.padEnd(4)}: n=${byConf[k].length} median ${pct(byConf[k],.5).toFixed(1)} p90 ${pct(byConf[k],.9).toFixed(1)} min`);
  for(const k in byLead)if(byLead[k].length)console.log(`  ${k.padEnd(15)}: n=${byLead[k].length} median ${pct(byLead[k],.5).toFixed(1)} p90 ${pct(byLead[k],.9).toFixed(1)} min`);
+
+ const pc=x=>x===null?"--":(100*x).toFixed(0)+"%";
+ console.log(`\n± range (p${Math.round(Q*100)} |error|, by predicted lead = predicted off − now, min ±${P.minPmMin}):`);
+ rec.forEach((b,i)=>console.log(`  lead ≤ ${String(b.maxLeadMin===9999?"∞":b.maxLeadMin).padEnd(4)} min : ±${String(b.pm).padStart(3)} min   (n=${b.n}, coverage ${pc(covByBand[i])})`));
+ console.log(`Coverage (actual off inside shown range): configured ${P.version} bands ${pc(covCfg)} · recommended ${pc(covRec)} (in-sample) · ${pc(covLoo)} leave-one-stretch-out`);
+ console.log(`Paste into PREDICT (bump version):\n ${bandsLine}`);
 })().catch(e=>{console.error(e.message);process.exit(1)});

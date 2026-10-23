@@ -390,6 +390,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .bign{font-size:56px;font-weight:700;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}.bign .u{font-size:22px;font-weight:500;color:#8b93a7;margin-left:2px}
 .ptag{display:inline-block;font-size:10px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;margin-bottom:6px;color:#c4b5fd;background:rgba(167,139,250,.12);box-shadow:inset 0 0 0 1px rgba(167,139,250,.28),0 0 12px -4px rgba(167,139,250,.5)}
 .ptag.high{color:#6ee7b7;background:rgba(52,211,153,.1);box-shadow:inset 0 0 0 1px rgba(52,211,153,.28),0 0 12px -4px rgba(52,211,153,.5)}.ptag.low{color:#fcd34d;background:rgba(251,191,36,.1);box-shadow:inset 0 0 0 1px rgba(251,191,36,.28)}
+.bign .pm{font-size:24px;font-weight:600;letter-spacing:-.02em;color:#a7f3d0;margin-left:8px;opacity:.85}.bign .pm .u{font-size:13px}
 .pnote{margin-top:8px;font-size:12px;color:#8b93a7;line-height:1.4}
 .bigs{font-size:13px;color:#a3abbf;text-align:right;line-height:1.45;padding-bottom:4px;max-width:52%}.bigs b{font-weight:650}
 .trk{position:relative;height:10px;margin-top:16px;border-radius:6px;background:#0b0e16;border:1px solid rgba(255,255,255,.07);overflow:hidden}
@@ -621,7 +622,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 /*PREDICT-BEGIN — shared with tools/predict-backtest.js; keep this block self-contained (no app globals) */
 /* ===== Fan-off prediction: ALL tunables live here (tune weekly; bump version when changed) ===== */
 var PREDICT={
- version:"p1",
+ version:"p2",
  model:"newton",          /* "newton" = probe decays toward Ambient (fit ln(T-Amb)); "linear" = straight-line slope */
  windowMin:25,            /* fit on the last N minutes of the current fan-on stretch */
  minDataMin:10,           /* need at least this much fan-on data in the window */
@@ -636,7 +637,12 @@ var PREDICT={
  runOnModes:["cooldown"], /* modes where reaching the stop point starts a run-on */
  modes:["cooldown","cooling","cell-restart","fan-on","plateau-band"], /* fan-on modes that stop on a probe temperature */
  earlyStopModes:["cooldown","plateau-band"], /* Boom's plateau / early-stop rule could end these sooner */
- conf:{highR2:0.9,highMin:20,highHorizonMin:60,medR2:0.7,medHorizonMin:120} /* confidence: fit R², data span, how far ahead */
+ /* ± shown with the prediction = backtest p80 |error| for predictions this far ahead (predicted off − now).
+    Update weekly from: node tools/predict-backtest.js  (prints a ready-to-paste "bands" line) */
+ bandQuantile:0.8,
+ minPmMin:3,              /* never show less than ± this (5-min logging) */
+ bands:[{maxLeadMin:30,pm:9},{maxLeadMin:60,pm:17},{maxLeadMin:120,pm:89},{maxLeadMin:9999,pm:89}],
+ conf:{highR2:0.9,highMin:20,highHorizonMin:60,medR2:0.7,medHorizonMin:120} /* internal fit-quality grade (not shown) */
 };
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
    {state:"ok"|"wait"|"flat"|"plateau"|"far"|"reached"|"na", t:off-time ms, hit:stop-time ms, conf, model, r2, note} */
@@ -669,7 +675,8 @@ function predictOff(rows,P){P=P||PREDICT;var L=rows.length-1;if(L<0)return{state
  dt=Math.max(0,dt*P.fudge);
  if(dt>P.maxHorizonMin)return out({state:"far",model:model,r2:r2});
  var span=(W[W.length-1].t-W[0].t)/60e3,C=P.conf,conf=r2>=C.highR2&&span>=C.highMin&&dt<=C.highHorizonMin?"high":r2>=C.medR2&&dt<=C.medHorizonMin?"med":"low";
- var hit=r.t+dt*60e3;return out({state:"ok",hit:hit,t:hit+runOn,conf:conf,model:model,r2:r2,amb:A,mins:dt})}
+ var hit=r.t+dt*60e3,lead=(hit+runOn-r.t)/60e3;return out({state:"ok",hit:hit,t:hit+runOn,lead:lead,pm:predPm(lead,P),conf:conf,model:model,r2:r2,amb:A,mins:dt})}
+function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)if(leadMin<=b[i].maxLeadMin)break;b=b[Math.min(i,b.length-1)];return Math.max(P.minPmMin,Math.round(b?b.pm:0))}
 /*PREDICT-END*/
 (function(){
 "use strict";
@@ -808,7 +815,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  /* header pill */
  var fan=r.fan===1,m=r.mode;
  $("pill").className="pill"+(BAD[m]?" bad":fan?"":m==="driving"?" drv":" off");
- $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):pr.state==="ok"?(SHORT[m]||"Cooling")+", off ~"+hm(pr.t):(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
+ $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):pr.state==="ok"?(SHORT[m]||"Cooling")+", off ~"+hm(pr.t).replace(/ ?[ap]m$/,"")+" ±"+pr.pm:(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
  var pk=r.pack,amb=r.amb;
  /* battery */
  battery(bl,p,bAge,r);
@@ -921,7 +928,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
      pr.state==="far"?"Probe is falling slowly toward "+d1(pr.off)+".":
      pr.state==="reached"?(pr.runOn?"Run-on starts at the next check, then "+Math.round(pr.runOn/60e3)+" min more.":"Fan stops at the next check."):"";
    if(pr.state==="ok"){var tp2=hm(pr.t).split(" ");
-    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag '+pr.conf+'" title="'+CONFW[pr.conf]+' confidence">Predicted · '+pr.conf+'</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span></div></div><div class="bigs">Probe reaches <b style="color:#6ee7b7">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+(pr.early?'<div class="pnote">Boom\'s plateau early-stop could end it sooner if the probe levels off.</div>':"")+'</section>';
+    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Range: 80% of past predictions this far ahead landed inside it">Predicted</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span><span class="pm">±'+pr.pm+'<span class="u">min</span></span></div></div><div class="bigs">Probe reaches <b style="color:#6ee7b7">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+(pr.early?'<div class="pnote">Boom\'s plateau early-stop could end it sooner if the probe levels off.</div>':"")+'</section>';
     el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';el.innerHTML=h;return}}
   else
@@ -1559,7 +1566,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  /* --- Cooling: full-width arc gauge --- */
  var r=S.rows.length?curRow(S.rows):null,fon=!!(r&&r.fan===1),roO=r?runOnEnd(S.rows,r):null,prO=r&&!roO?predNow(S.rows):{state:"na"};
  var cs=r?coolState(S.rows,r,now):null,cell=cs?cs.cell:null,gv=cell!==null?cell:r?r.pack:null,col=tempColor(gv);
- h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Pack cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">Fan '+(fon?"on":"off")+" · "+esc(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t)+" predicted":SHORT[r.mode]||r.mode||"")+"</span>":"")+"</div>";
+ h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Pack cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">Fan '+(fon?"on":"off")+" · "+esc(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
  else{h+=gaugeSVG(gv,10,50,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
   h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:15px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
