@@ -732,7 +732,7 @@ var CD_SLOW_X=1.3;   /* slow if took > 1.3x the average */
 var CD_HOT_CELLS=40; /* hot drive if cells peaked above this (°C) */
 var CD_SAME_MIN=3, CD_SAME_DEG=1; /* differences under these read as "about usual" */
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
-var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Very hot: fan forced on until it drops below 45°C.",cold:"Cold: fan never runs below 5°C.","sensor-fault":"Temperature sensor fault. Check the sensors."};
+var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Parked and probe over 45°: fan forced on until it drops below 45°. Does not apply while driving.",cold:"Cold pack — normal fan rules still apply (no 5° lockout).","sensor-fault":"Temperature sensor fault. Check the sensors."};
 var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Cooling done",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
 var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
 /* Boom v8.19 additions */
@@ -920,7 +920,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  else if(m==="cell-restart"){pill="Cells warming";pc="w";why="Cells rose 1° above where they settled, so the fan restarted."}
  else if(m==="backstop"){pill="Backstop";pc="r";tone="hot";why="Probe is more than 8° above Ambient"+(pk!==null&&pk>PROBE_HARD?" and over 40°":"")+", and the cells were rising, so the fan is on as a safety backstop."}
  else if(m==="crisis"){pill="Cells hot";pc="r";tone="hot";why="Cells are over 40°. Fan forced on, driving or parked."}
- else if(m==="panic"){pill="Very hot";pc="r";tone="hot";why="Probe is over 45°. Fan forced on."}
+ else if(m==="panic"){pill="Very hot";pc="r";tone="hot";why="Parked and probe is over 45°. Fan forced on (not while driving)."}
  else if(m==="cooldown"){pill="Cool-down";pc="c";why="After-drive cool-down: clearing heat soaked up while driving."}
  else if(m==="cooling"){pill="Cooling";pc="c";why=fan?"Fan is bringing the probe down to its stop point.":"Between the stop and start points."}
  else if(m==="fan-on"){pill="Probe rules";pc="w";why="Probe is above its start point and there is no fresh cell data, so the probe rules (v8.18) apply."}
@@ -938,7 +938,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  if(fan){
   if(m==="crisis"){nx="Fan off when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Rule: crisis off under "+CRISIS_OFF+"° · cells now "+d1(cell)}
   else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Fan off when probe drops to <b>"+d1(rel)+"</b>";nx2="Rule: Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°"+(bsv!==null?" = <b>"+d1(rel)+"</b>":"")+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
-  else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: panic on at "+PANIC+"° · off under "+PANIC+"°"}
+  else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: parked panic on at "+PANIC+"° · off under "+PANIC+"°"}
   else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
   else if(m==="cell-restart"){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: ≥10 min cell run, then probe ≤ stop "+d1(off)}
@@ -946,9 +946,9 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
   if(m==="driving"){nx="Cool-down starts at key-off";nx2="Rule: after a drive over 5 min, cool to stop"+(off!==null?" "+d1(off):"")+" at key-off"}
-  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on: panic above "+PANIC+"°. Or "+bsEq}
+  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on while parked: panic above "+PANIC+"°. Or "+bsEq}
   else if(m==="low-volt"||m==="volt-recover"){nx="Fan on when battery reaches <b>13.1 V</b>";nx2="Rule: off under 12.9 V · on again at 13.1 V"}
-  else if(m==="cold"){nx="Fan never runs below <b>5°</b>";nx2="Rule: pack under 5° keeps fan off"}
+  else if(m==="cold"){nx="Normal fan rules apply";nx2="No 5° cold lockout — boom uses the usual on/off rules"}
   else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){
    /* Pick the nearer next fan-on threshold for the card (one rule only). */
    var bsCap=bsv!==null?Math.min(bsv,PROBE_HARD):null;
