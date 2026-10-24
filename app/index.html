@@ -1307,6 +1307,22 @@ function bits(v,names){if(v===null||v===undefined)return null;var s=String(v).tr
  var x=/^0x[0-9a-f]+$/i.test(s)?parseInt(s,16):/^\d+$/.test(s)?Number(s):NaN;if(isNaN(x))return[s.replace(/_/g," ").toLowerCase()];
  var out=[];for(var i=0;i<names.length;i++)if(x&(1<<i))out.push(names[i]);return out.length?out:["code "+s]}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+/* BatteryProtect OFF classification from off_reason bitfield (OFFR). Priority: protection > power switch > device mode/remote > other. */
+function bpOffKind(r){var off=bits(r&&r.off_reason,OFFR)||[];
+ function has(s){return off.indexOf(s)>=0}
+ if(has("protection active"))return{kind:"prot",off:off,why:"protection active"};
+ if(has("switched off by power switch"))return{kind:"manual",off:off,why:"switched off by power switch"};
+ if(has("switched off by device mode")||has("remote input off")){var p=[];if(has("switched off by device mode"))p.push("device mode");if(has("remote input off"))p.push("remote");return{kind:"app",off:off,why:p.join(" \u00b7 ")}}
+ return{kind:"other",off:off,why:off.length?off.join(", "):""}}
+/* UI labels for Protect header/tab/hero/overview. E from bpEff(). */
+function bpClassify(E,r){if(E.lag)return{h:"Protect \u00b7 switching",t:"Switching\u2026",k:"cool",pill:"Switching\u2026",pc:"c",why:"Switching\u2026",tone:"cool",on:E.on};
+ if(E.on===true)return{h:"Protect \u00b7 load on",t:"Load on",k:"ok",pill:"Loads powered",pc:"g",why:"Loads are powered",tone:"on",on:true};
+ if(E.on===null)return{h:"Protect \u00b7 no reading",t:"Protect",k:"",pill:"No reading",pc:"",why:"",tone:"na",on:null};
+ var o=bpOffKind(r);
+ if(o.kind==="prot")return{h:"Protect \u00b7 protected",t:"Protected",k:"hot",pill:"Protected",pc:"r",why:"On but protected \u2014 output cut by protection",tone:"prot",on:false,iss:[{l:2,o:"Protect protected",key:"bp-prot"}]};
+ if(o.kind==="manual")return{h:"Protect \u00b7 off (manually)",t:"Off (manually)",k:"rest",pill:"Off (manually)",pc:"g",why:"Off (manually) \u2014 power switch",tone:"rest",on:false};
+ if(o.kind==="app")return{h:"Protect \u00b7 off (app)",t:"Off (app)",k:"rest",pill:"Off (app)",pc:"g",why:"Off (app)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
+ return{h:"Protect \u00b7 load off",t:"Load off",k:"rest",pill:"Loads off",pc:"g",why:o.why?cap(o.why):"Loads are disconnected",tone:"rest",on:false}}
 function waitBox(t,s){if(t==="Loading…")return '<div class="skel"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div>';return'<div class="wbox"><div class="et">'+t+'</div><div class="es">'+s+"</div></div>"}
 function renderExtra(){renderPower();renderProtect();renderPacks();renderDrain();renderHealth();renderOverview();hdr()}
 /* ---------- page-specific header (title, pill, updated) ---------- */
@@ -1353,13 +1369,11 @@ function pageStates(){var now=Date.now(),O={h:"Offline",t:"Offline",k:"off"};
   P3={h:"Aux "+(as?as+" \u00b7 ":"")+(al?"alarm":al3?"low":ac?"charging":ad?"discharging":af?"full":"idle"),t:"Aux"+(as?" "+as:""),k:(al||al3===2)?"hot":al3?"warn":ac?"cool":ad?"drive":"ok",iss:is3}}
  var bp=X2.bp,E=bpEff(),P4;
  if(!bp)P4={h:"Starter load",t:"Protect",k:""};
- else if(E.lag)P4={h:"Protect \u00b7 switching",t:"Switching\u2026",k:"cool"};
  else if(now-bp.t>STALE_MIN*60e3)P4={h:"Protect \u00b7 offline",t:"Offline",k:"off"};
- else if(E.on===null)P4={h:"Protect \u00b7 no reading",t:"Protect",k:""};
- else P4=E.on?{h:"Protect \u00b7 load on",t:"Load on",k:"ok"}:{h:"Protect \u00b7 load off",t:"Load off",k:"rest"};
+ else{var B=bpClassify(E,bp);P4={h:B.h,t:B.t,k:B.k,iss:B.iss||[]}}
  /* overview summary */
  var offs=[],P1=PS;if(S.rows.length&&PS.k==="off")offs.push("Invicta cooling");if(P2.k==="off")offs.push("Invicta BMS");if(P3.k==="off")offs.push("Aux");if(P4.k==="off")offs.push("Protect");
- var IS=[].concat(P2.k==="off"?[]:P2.iss||[],P3.k==="off"?[]:P3.iss||[]);
+ var IS=[].concat(P2.k==="off"?[]:P2.iss||[],P3.k==="off"?[]:P3.iss||[],P4.k==="off"?[]:P4.iss||[]);
  var P0;if(P1.k==="hot")P0={h:"Hot",t:"Overview",k:"hot"};
  else if(offs.length)P0={h:offs.length===1?offs[0]+" offline":"Offline",t:"Overview",k:"off"};
  else if(IS.length){var top=Math.max.apply(null,IS.map(function(x){return x.l})),nm=IS.filter(function(x){return x.l===top}).map(function(x){return x.o});
@@ -1369,7 +1383,7 @@ function pageStates(){var now=Date.now(),O={h:"Offline",t:"Offline",k:"off"};
  var P1o={h:PS.h,t:PS.t,k:PS.k};
  if(P1.k==="off"&&S.rows.length)P1o.iss=[{l:3,o:"Fan monitor offline",key:"off-fan"}];if(P1.k==="hot")P1o.iss=[];
  if(P2.k==="off")P2.iss=[{l:3,o:"Invicta BMS offline",key:"off-bms"}];if(P3.k==="off")P3.iss=[{l:3,o:"Aux shunt offline",key:"off-shunt"}];
- P4.iss=P4.k==="off"?[{l:3,o:"Protect offline",key:"off-bp"}]:[];
+ if(P4.k==="off")P4.iss=[{l:3,o:"Protect offline",key:"off-bp"}];else if(!P4.iss)P4.iss=[];
  return[P0,P1o,P2,P3,P4]}
 function applyStates(){PG=pageStates();var tb=[].slice.call(document.querySelectorAll("#tabbar button")),ids=["overview","cooling","battery","power","protect"];
  PG.forEach(function(x,i){var b=tb[i];if(b){if(b.textContent!==x.t)b.textContent=x.t;b.classList.toggle("tab-off",x.k==="off");b.classList.toggle("tab-hot",x.k==="hot");b.classList.toggle("tab-warn",x.k==="warn");b.setAttribute("aria-label",x.h)}
@@ -1389,8 +1403,9 @@ var STEPS={
  "off-fan":{t:"Fan monitor isn\u2019t reporting",s:["The car may simply be away from home Wi-Fi. It\u2019ll catch up when it\u2019s back.","If the car is home, check the Shelly has power.","Then check the Shelly scripts are running."]},
  "off-bms":{t:"Invicta battery data isn\u2019t coming in",s:["The car may be away from home Wi-Fi. It\u2019ll catch up when it\u2019s back.","If the car is home, check the BMS bridge has power and is connected."]},
  "off-shunt":{t:"Aux shunt data isn\u2019t coming in",s:["The car may be away from home Wi-Fi. It\u2019ll catch up when it\u2019s back.","If the car is home, check the shunt\u2019s connection to the bridge."]},
- "off-bp":{t:"Protect data isn\u2019t coming in",s:["The car may be away from home Wi-Fi. It\u2019ll catch up when it\u2019s back.","If the car is home, check the Protect\u2019s connection to the bridge."]}};
-var TODO_PG=["overview","cooling","battery","power","protect"],ISS_PG={"off-fan":1,"temp-warm":2,"temp-hot":2,"prot":2,"inv-low":2,"cells":2,"off-bms":2,"aux-low":3,"aux-alarm":3,"off-shunt":3,"off-bp":4};
+ "off-bp":{t:"Protect data isn\u2019t coming in",s:["The car may be away from home Wi-Fi. It\u2019ll catch up when it\u2019s back.","If the car is home, check the Protect\u2019s connection to the bridge."]},
+ "bp-prot":{t:"Starter load is protected",s:["The BatteryProtect has cut power to the loads to protect the starter battery.","Open the Protect page to see the exact off reason (for example low voltage or overload).","Once the cause clears, the load should come back on \u2014 or turn it on from here if it is safe."]}};
+var TODO_PG=["overview","cooling","battery","power","protect"],ISS_PG={"off-fan":1,"temp-warm":2,"temp-hot":2,"prot":2,"inv-low":2,"cells":2,"off-bms":2,"aux-low":3,"aux-alarm":3,"off-shunt":3,"off-bp":4,"bp-prot":4};
 function lvC(l){return l>=3?"x":l===2?"r":""}
 function stepOf(x){return STEPS[x.key+(x.l===2?"!":"")]||STEPS[x.key]}
 function renderTodo(){var all=[];
@@ -1421,8 +1436,8 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
  else if(i===3){var rs=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null}),r=rs[rs.length-1];if(r){upd(r.t);
    var s2=r.a===null?"":r.a>0.05?"Charging":r.a<-0.05?"Discharging":"Idle";c="pill"+(s2==="Discharging"?" drv":s2==="Charging"?"":" off");
    t="Aux "+(r.soc===null?"--":Math.round(r.soc))+"%"+(s2?" · "+s2:"")}else if(X2.shErr){a="can't read sheet"}}
- else{var b=X2.bp;if(b){upd(b.t);var on=bpEff().on;
-   c="pill"+(on===null?" off":on?"":" bad");t=on===null?"Output —":on?"Output ON":"Output OFF"}else if(X2.bpErr){a="can't read sheet"}}
+ else{var b=X2.bp;if(b){upd(b.t);var B=bpClassify(bpEff(),b);
+   c="pill"+(B.tone==="prot"?" bad":B.tone==="on"?"":B.tone==="cool"?"":" off");t=B.tone==="na"?"Output —":B.t}else if(X2.bpErr){a="can't read sheet"}}
  var ld=i===0?!S.okAt&&!X2.sh&&S.fetchOk:i===1?!S.rows.length&&!S.okAt&&S.fetchOk:i===2?!S.bms&&!S.okAt:i===3?!X2.sh&&!X2.shErr:!X2.bp&&!X2.bpAt&&!X2.bpErr;
  $("pill").className=c+(ld?" skp":"");$("pillt").textContent=ld?"":t;if(ld)$("ago").innerHTML='<i class="skl"></i>';else $("ago").textContent=a;$("ago").parentNode.classList.toggle("old",i>1&&old)}
 function renderPower(){var rows=(X2.sh||[]).filter(function(r){return r.v!==null||r.soc!==null}),body=$("pwbody");
@@ -1503,11 +1518,13 @@ function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now(),conf:null};ren
  sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
  .catch(function(){BPC.st="neterr";renderBpCmd()})}
 var PWR='<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>';
-function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,E=bpEff(),on=E.on,now=Date.now(),age=r?now-r.t:null;
- var col=on===null?"#596075":on?"#34d399":"#fb7185",cls=on===null?"na":on?"on":"off";
- var h='<section class="card thero" style="--glowc:'+(on===null?"rgba(139,147,167,.08)":on?"rgba(52,211,153,.18)":"rgba(251,113,133,.12)")+'"><div class="hHead"><div class="cap"><svg viewBox="0 0 24 24" style="width:16px;height:16px;color:'+col+'">'+PWR+'</svg>Starter battery load</div><span class="sp '+(on===null?"":on?"g":"r")+'">'+(on===null?(r?"No reading":X2.bpErr?"Can't read sheet":"Loading"):on?"Loads powered":"Loads off")+'</span></div>';
+function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,E=bpEff(),on=E.on,now=Date.now(),age=r?now-r.t:null,B=r?bpClassify(E,r):{tone:"na",pill:X2.bpErr?"Can't read sheet":"Loading",pc:"",why:""};
+ var tone=B.tone,col=tone==="on"||tone==="rest"?"#34d399":tone==="prot"?"#fb7185":tone==="cool"?"#22d3ee":"#596075",cls=on===null?"na":on?"on":"off";
+ var glow=tone==="on"?"rgba(52,211,153,.18)":tone==="prot"?"rgba(251,113,133,.12)":tone==="rest"?"rgba(52,211,153,.10)":tone==="cool"?"rgba(34,211,238,.14)":"rgba(139,147,167,.08)";
+ var h='<section class="card thero" style="--glowc:'+glow+'"><div class="hHead"><div class="cap"><svg viewBox="0 0 24 24" style="width:16px;height:16px;color:'+col+'">'+PWR+'</svg>Starter battery load</div><span class="sp '+(B.pc||"")+'">'+(r?B.pill:(X2.bpErr?"Can't read sheet":"Loading"))+'</span></div>';
  var C=2*Math.PI*96;
- h+='<div class="ring2 '+cls+'"><svg viewBox="0 0 230 230"><defs><linearGradient id="bprg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+(on?"#6ee7b7":"#fda4af")+'"/><stop offset="1" stop-color="'+(on?"#10b981":"#e11d48")+'"/></linearGradient><filter id="bpgl" x="-.3" y="-.3" width="1.6" height="1.6"><feGaussianBlur stdDeviation="7"/></filter></defs>'+
+ var g0=tone==="prot"?"#fda4af":tone==="cool"?"#67e8f9":"#6ee7b7",g1=tone==="prot"?"#e11d48":tone==="cool"?"#0891b2":"#10b981";
+ h+='<div class="ring2 '+cls+'"><svg viewBox="0 0 230 230"><defs><linearGradient id="bprg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+g0+'"/><stop offset="1" stop-color="'+g1+'"/></linearGradient><filter id="bpgl" x="-.3" y="-.3" width="1.6" height="1.6"><feGaussianBlur stdDeviation="7"/></filter></defs>'+
   '<circle cx="115" cy="115" r="96" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>'+
   (on?'<circle class="pulse" cx="115" cy="115" r="96" fill="none" stroke="#34d399" stroke-width="14" opacity=".35" filter="url(#bpgl)"/><circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round"/>':
    on===false?'<circle cx="115" cy="115" r="96" fill="none" stroke="url(#bprg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(C*.06).toFixed(1)+' '+(C*.94).toFixed(1)+'" transform="rotate(-100 115 115)" opacity=".8"/>':"")+
@@ -1517,7 +1534,7 @@ function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,E=bpEff(),on=
   function R(k,v,c){return'<div><span>'+k+'</span><b style="color:'+c+'">'+String(v).replace('class="u"',"")+'</b></div>'}
   h+='<div class="strip">'+R("Input",iv===null?"--":iv.toFixed(2)+'<span class="u">V</span>',"#eef2ff")+R("Output",ov===null?"--":ov.toFixed(2)+'<span class="u">V</span>',col)+R("Device",esc(ds?cap(ds.replace(/_/g," ").toLowerCase()):n(r.device_state_code)!==null?"code "+r.device_state_code:"--"),"#eef2ff")+'</div>';
   var off=bits(r.off_reason,OFFR),al=bits(r.alarm_reason,ALARM),wr=bits(r.warning_reason,ALARM),er=String(r.error||"").trim(),erb=er&&!/^(0|none|no error|null|-)$/i.test(er),q="";
-  if(off&&off.length)q+='<div class="al'+(on?" i":" w")+'">Off reason: '+esc(off.join(", "))+"</div>";
+  if(off&&off.length)q+='<div class="al'+(on?" i":tone==="prot"?"":" i")+'">Off reason: '+esc(off.join(", "))+"</div>";
   if(al&&al.length)q+='<div class="al">⚠ Alarm: '+esc(al.join(", "))+"</div>";
   if(wr&&wr.length)q+='<div class="al w">Warning: '+esc(wr.join(", "))+"</div>";
   if(erb)q+='<div class="al">⚠ Error: '+esc(/^\d+$/.test(er)?"code "+er:er.replace(/_/g," "))+"</div>";
@@ -1735,10 +1752,11 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
   h+=strip([["Voltage",sr.v===null?"--":sr.v.toFixed(2)+"<small>V</small>"],["Power",w===null?"--":(Math.round(w)===0?"0":sgn(w,0))+"<small>W</small>",flowCol(sr.a)],["Parked drain",dn?f1(dn.ah)+"<small>Ah</small>":"--","",dn?"since "+hm(dn.t0):""]])}
  h+="</div>";
  /* --- Load output (BatteryProtect) --- */
- var bp=X2.bp,E=bpEff(),on=E.on,oc2=on===null?["#8b93a7","#596075"]:on?["#34d399","#10b981"]:["#fb7185","#e11d48"];
+ var bp=X2.bp,E=bpEff(),B=bp?bpClassify(E,bp):null,on=E.on;
+ var oc2=!B||B.tone==="na"?["#8b93a7","#596075"]:B.tone==="prot"?["#fb7185","#e11d48"]:B.tone==="cool"?["#22d3ee","#0891b2"]:["#34d399","#10b981"];
  h+='<div class="card ovc vic gl ovp" data-go="protect" style="--glowc:'+rgba(oc2[0],.13)+'"><div class="ovt"><div class="cap">Starter battery load</div>'+(bp?fresh(bp.t):"")+"</div>";
  if(!bp)h+=(!X2.bpAt&&!X2.bpErr?'<div class="skel"><i style="width:70%"></i></div>':'<div class="es">Waiting for the first BatteryProtect reading.</div>');
- else{var why=on?"Loads are powered":E.lag?"Switched off remotely":prHead(bp).replace(/^Output OFF:?\s*/,"");why=why?cap(why):"Loads are disconnected";
+ else{var why=B.why||(on?"Loads are powered":"Loads are disconnected");
   h+=dial({id:"ovp",f:on===null?null:on?1:.04,c:oc2,size:170,cls:"sm",inner:'<div class="cap">Output</div><div class="dnum">'+(on===null?"--":on?"ON":"OFF")+'</div>'+(E.lag?'<span class="lagt">log catching up</span>':"")});
   h+='<div class="whyc">'+esc(why)+"</div>"}
  h+="</div>";
