@@ -944,13 +944,13 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
   if(m==="driving"){nx="Cool-down starts at key-off"}
-  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Panic still on above "+PANIC+"°. Backstop if probe reaches Ambient +8"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")+" <b>and</b> cells rise "+BS_CELL_RISE+"° (confirmed twice)"}
+  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Panic still on above "+PANIC+"°. Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(bsv)+"°</b>":"")+" and cells then rise "+BS_CELL_RISE+"°"}
   else if(m==="low-volt"||m==="volt-recover"){nx="Fan resumes when the battery reaches <b>13.1 V</b>"}
   else if(m==="cold"){nx="Fan never runs below <b>5°</b>"}
   else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){nx="Fan restarts if cells reach <b>"+d1(rst)+"</b>";
-   nx2="or probe Ambient +8"+(bsv!==null?" = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>":"")+(bsv!==null&&bsv>PROBE_HARD?" (40° hard limit)":"")+" <b>and</b> cells rise "+BS_CELL_RISE+"° twice";
+   nx2="or Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(Math.min(bsv,PROBE_HARD))+"°</b>":"")+(bsv!==null&&bsv>PROBE_HARD?" (40° hard limit)":"")+" and cells then rise "+BS_CELL_RISE+"°";
    if(cell!==null)seg={f:(cell-cs.settled)/CELL_RISE,l:"settled "+d1(cs.settled)+(cs.settledT?" · "+hm(cs.settledT):""),r:"restart "+d1(rst),c:cell>=rst-0.3?"#fbbf24":"#22d3ee"}}
-  else if(on!==null){nx="Fan starts if the probe passes <b>"+d1(on)+"</b>";nx2=cell===null?"No fresh cell data, so the probe start point applies (backstop is probe-only without cells)":"or probe Ambient +8"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")+" <b>and</b> cells rise "+BS_CELL_RISE+"° twice"}
+  else if(on!==null){nx="Fan starts if the probe passes <b>"+d1(on)+"</b>";nx2=cell===null?"No fresh cell data, so the probe start point applies (backstop is probe-only without cells)":"or Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(bsv)+"°</b>":"")+" and cells then rise "+BS_CELL_RISE+"°"}
  }
  var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
  var gv=cell!==null?cell:pk,col=tempColor(gv),mk=[];
