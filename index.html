@@ -933,24 +933,31 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
  else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
  /* next likely action + trigger value */
+ /* Rule equations: always show base · op = result for the next fan on/off */
+ var bsEq=bsv!==null?("Ambient +"+AMB_BACK+"° = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>"+(bsv>PROBE_HARD?" (40° hard limit)":"")+" and cells then rise "+BS_CELL_RISE+"°"):("Ambient +"+AMB_BACK+"° and cells then rise "+BS_CELL_RISE+"°");
  if(fan){
-  if(m==="crisis"){nx="Stops when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Cells now "+d1(cell)}
-  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Stops when the probe drops to <b>"+d1(rel)+"</b>";nx2="Ambient +"+(AMB_BACK-BACK_HYST)+"°"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
-  else if(m==="panic"){nx="Stops when the probe drops below <b>"+PANIC+"°</b>"}
-  else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2=left>0?left+" min to go":"stopping now";seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
-  else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2=off!==null?"Then fan stops if the probe is at or below "+d1(off):""}
-  else if(m==="cell-restart"){nx="Runs at least 10 min, then stops at <b>"+d1(off)+"</b>";nx2="probe stop point"}
-  else if(off!==null){nx="Stops at <b>"+d1(off)+"</b>";nx2="when the probe reaches its stop point"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
+  if(m==="crisis"){nx="Fan off when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Rule: crisis off under "+CRISIS_OFF+"° · cells now "+d1(cell)}
+  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Fan off when probe drops to <b>"+d1(rel)+"</b>";nx2="Rule: Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°"+(bsv!==null?" = <b>"+d1(rel)+"</b>":"")+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
+  else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: panic on at "+PANIC+"° · off under "+PANIC+"°"}
+  else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
+  else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
+  else if(m==="cell-restart"){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: ≥10 min cell run, then probe ≤ stop "+d1(off)}
+  else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: fan off when probe ≤ stop "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
-  if(m==="driving"){nx="Cool-down starts at key-off"}
-  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Panic still on above "+PANIC+"°. Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")+" and cells then rise "+BS_CELL_RISE+"°"}
-  else if(m==="low-volt"||m==="volt-recover"){nx="Fan resumes when the battery reaches <b>13.1 V</b>"}
-  else if(m==="cold"){nx="Fan never runs below <b>5°</b>"}
-  else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){nx="Fan restarts if cells reach <b>"+d1(rst)+"</b>";
-   nx2="or Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>":"")+(bsv!==null&&bsv>PROBE_HARD?" (40° hard limit)":"")+" and cells then rise "+BS_CELL_RISE+"°";
-   if(cell!==null)seg={f:(cell-cs.settled)/CELL_RISE,l:"settled "+d1(cs.settled)+(cs.settledT?" · "+hm(cs.settledT):""),r:"restart "+d1(rst),c:cell>=rst-0.3?"#fbbf24":"#22d3ee"}}
-  else if(on!==null){nx="Fan starts if the probe passes <b>"+d1(on)+"</b>";nx2=cell===null?"No fresh cell data, so the probe start point applies (backstop is probe-only without cells)":"or Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(bsv)+"</b>":"")+" and cells then rise "+BS_CELL_RISE+"°"}
+  if(m==="driving"){nx="Cool-down starts at key-off";nx2="Rule: after a drive over 5 min, cool to stop"+(off!==null?" "+d1(off):"")+" at key-off"}
+  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on: panic above "+PANIC+"°. Or "+bsEq}
+  else if(m==="low-volt"||m==="volt-recover"){nx="Fan on when battery reaches <b>13.1 V</b>";nx2="Rule: off under 12.9 V · on again at 13.1 V"}
+  else if(m==="cold"){nx="Fan never runs below <b>5°</b>";nx2="Rule: pack under 5° keeps fan off"}
+  else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){
+   /* Pick the nearer next fan-on threshold for the card (one rule only). */
+   var bsCap=bsv!==null?Math.min(bsv,PROBE_HARD):null;
+   var useBs=bsCap!==null&&(rst===null||bsCap<=rst);
+   if(useBs){nx="Fan on at Ambient +"+AMB_BACK+"° = <b>"+d1(bsCap)+"</b>";nx2="Rule: Ambient +"+AMB_BACK+"° = "+d1(bsCap)+" and cells then rise "+BS_CELL_RISE+"°";
+    if(pk!==null&&bsCap!==null)seg={f:Math.max(0,Math.min(1,1-(bsCap-pk)/Math.max(AMB_BACK,1))),l:"probe "+d1(pk),r:"backstop "+d1(bsCap),c:pk>=bsCap-0.5?"#fbbf24":"#22d3ee"}}
+   else{nx="Fan on if cells reach <b>"+d1(rst)+"</b>";nx2="Settled "+d1(cs.settled)+" · fan on at settled +"+(CELL_RISE%1===0?String(CELL_RISE):f1(CELL_RISE))+"° = "+d1(rst);
+    if(cell!==null)seg={f:(cell-cs.settled)/CELL_RISE,l:"settled "+d1(cs.settled)+(cs.settledT?" · "+hm(cs.settledT):""),r:"restart "+d1(rst),c:cell>=rst-0.3?"#fbbf24":"#22d3ee"}}}
+  else if(on!==null){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2=cell===null?("Rule: start point = <b>"+d1(on)+"</b> (no fresh cell data · probe rules)"):("or "+bsEq)}
  }
  var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
  var gv=cell!==null?cell:pk,col=tempColor(gv),mk=[];
@@ -980,15 +987,29 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
     el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';el.innerHTML=h;return}}
   else
-  if(!fan&&rst!==null&&/restarts/.test(nx)){big=rst;bl2="Fan restarts at"}
-  else if(fan&&/^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
+  if(!fan&&/Fan on at Ambient/.test(nx)&&bsv!==null){big=Math.min(bsv,PROBE_HARD);bl2="Fan starts at"}
+  else if(!fan&&rst!==null&&/cells reach/.test(nx)){big=rst;bl2="Fan restarts at"}
+  else if(fan&&off!==null&&/Fan off at probe stop|^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
   else if(m==="crisis"){big=CRISIS_OFF;bl2="Fan stops below";bc="#34d399"}
   else if(m==="backstop"){big=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);bl2="Fan stops at";bc="#34d399"}
-  else if(!fan&&on!==null&&/probe passes/.test(nx)){big=on;bl2="Fan starts at"}
+  else if(!fan&&on!==null&&/probe passes|Fan on if probe/.test(nx)){big=on;bl2="Fan starts at"}
   h+='<section class="card bigc"><div class="hHead"><div class="cap">'+bl2+'</div>'+(cell!==null?'<span class="sp c">Cells '+d1(cell)+' now</span>':"")+'</div>';
   if(bigT){var tp=bigT.split(" ");h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+tp[0]+'<span class="u">'+(tp[1]||"")+'</span></div><div class="bigs">Stop point reached<br>run-on'+(nx2?" · "+nx2:"")+'</div></div>'}
   else if(big!==null){var sub=nx2||nx.replace(/<[^>]+>/g,"");
-   if(bl2==="Fan restarts at")sub="if cells rise <b style=\"color:#fbbf24\">"+f1(Math.max(0,rst-(cell!==null?cell:rst)))+"°</b> more<br>"+(nx2||"");
+   if(bl2==="Fan restarts at"){var leftC=Math.max(0,rst-(cell!==null?cell:rst));
+    sub="Settled <b style=\"color:#67e8f9\">"+d1(cs.settled)+"</b> · fan on at settled +"+(CELL_RISE%1===0?String(CELL_RISE):f1(CELL_RISE))+"° = <b style=\"color:#fbbf24\">"+d1(rst)+"</b>"
+      +(leftC>0.05?"<br>"+f1(leftC)+"° to go":"<br>at restart now");}
+   else if(bl2==="Fan starts at"){
+    if(/Fan on at Ambient/.test(nx)&&bsv!==null){sub="Ambient +"+AMB_BACK+"° = <b style=\"color:#fbbf24\">"+d1(Math.min(bsv,PROBE_HARD))+"</b> · fan on when probe exceeds that and cells then rise "+BS_CELL_RISE+"°";}
+    else if(on!==null){sub="Rule: start point = <b style=\"color:#fbbf24\">"+d1(on)+"</b>"+(cell===null?" (probe rules · no fresh cells)":"");}
+    else sub=nx2||sub;}
+   else if(bl2==="Fan stops at"||bl2==="Fan stops below"){
+    if(m==="backstop"){var rel2=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);
+      sub="Rule: Ambient +"+AMB_BACK+"° − "+BACK_HYST+"° = <b style=\"color:#34d399\">"+d1(rel2)+"</b> · fan off at probe ≤ that";}
+    else if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
+    else if(off!==null){sub="Rule: fan off when probe ≤ stop <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
+    else sub=nx2||sub;
+   }
    h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+f1(big)+'<span class="u">°C</span></div><div class="bigs">'+sub+'</div></div>'}
   else h+='<div class="nxt" style="margin-top:10px;font-size:20px">'+nx+'</div>'+(nx2?'<div class="nx2">'+nx2+'</div>':"");
   if(seg){var pct=Math.max(0,Math.min(1,seg.f))*100;h+='<div class="trk'+(seg.c==="#fbbf24"?" w":"")+'"><i style="width:'+pct.toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>'}
