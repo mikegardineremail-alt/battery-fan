@@ -726,7 +726,7 @@ function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)i
    Not the next single fan-off — the last off that holds in watching until the next drive or the 8 h cap.
    Tunables updated weekly from: node tools/predict-ultimate-backtest.js */
 var PREDICT_ULTIMATE={
- version:"u1",
+ version:"u2",
  model:"blend",             /* blend of session-clock + cycle-countdown */
  typicalSessionMin:373,     /* median minutes session-start → ultimate-off (weekly) */
  typicalCycles:7,           /* median completed fan-on stretches until ultimate-off */
@@ -739,6 +739,9 @@ var PREDICT_ULTIMATE={
  gapMin:20,                 /* row gap that breaks a fan stretch / session walk */
  settleGapC:2.0,            /* probe within this of Ambient + long idle → treat as settled */
  settleIdleMin:25,          /* idle this long while settled → remaining cycles = 0 */
+ fallLookMin:10,            /* look-back window (min) after fan-off for falling temps */
+ fallMinC:0.2,              /* required drop °C (earliest − latest) to call falling */
+ fallIdleMin:3,             /* min minutes fan-off before falling → done (avoid flicker) */
  coolModes:["cooldown","cooling","cell-restart","backstop","run-on","cooldown-done","early-stop","fan-on","plateau-band","crisis","panic"],
  idleModes:["watching","cell-watch","quiet"],
  endModes:["driving","cap"],
@@ -747,7 +750,7 @@ var PREDICT_ULTIMATE={
  minPmMin:20,
  bands:[{maxLeadMin:60,pm:138},{maxLeadMin:180,pm:201},{maxLeadMin:360,pm:214},{maxLeadMin:9999,pm:214}],
 };
-/* rows oldest→newest. opt: {now(ms), nextOff(predictOff result)}. Returns
+/* rows oldest→newest. opt: {now(ms), nextOff(predictOff result), cellPts:[{t,v},…]}. Returns
    {state:"ok"|"done"|"wait"|"far"|"na", t, lead, pm, sessionStart, cyclesDone, cyclesEst, settled, note} */
 function parkSessionBounds(rows,PU){PU=PU||PREDICT_ULTIMATE;var L=rows.length-1;if(L<0)return null;
  var gap=PU.gapMin*60e3,i=L,endModes=PU.endModes,cool=PU.coolModes;
@@ -772,11 +775,22 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
  var lastOffT=null,i;for(i=b.s+1;i<=b.e;i++){if(rows[i-1].fan===1&&rows[i].fan===0&&rows[i].t-rows[i-1].t<=PU.gapMin*60e3)lastOffT=(rows[i-1].t+rows[i].t)/2}
  var idle=PU.idleModes.indexOf(mode)>=0,stillOn=r.fan===1;
  if(!stillOn&&lastOffT!==null){var more=false;for(i=b.s;i<=b.e;i++)if(rows[i].t>lastOffT&&rows[i].fan===1){more=true;break}
-  if(!more&&idle&&elapsed>=PU.settleIdleMin){/* held off — may still restart; only call done if settled or past typical */ 
-   var settled0=r.pack!==null&&r.amb!==null&&(r.pack-r.amb)<=PU.settleGapC;
+  if(!more){
    var idleMin0=0;for(i=L;i>=b.s&&rows[i].fan!==1;i--)idleMin0=(now-rows[i].t)/60e3;
-   if((settled0&&idleMin0>=PU.settleIdleMin)||(cyclesDone>=PU.typicalCycles&&idleMin0>=PU.cycleIdleMin*1.5))
-    return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:settled0,lead:0,pm:PU.minPmMin,note:"Fan stayed off — cooling cycling looks finished"}}}
+   /* falling temps after fan-off → done early (don't keep showing a ~time) */
+   if(idleMin0>=PU.fallIdleMin){
+    var win0=Math.max(lastOffT,now-PU.fallLookMin*60e3),cellsFall=false,probeFall=false,j;
+    var cp=opt&&opt.cellPts;if(cp&&cp.length){var ce=null,cl=null;for(j=0;j<cp.length;j++){var p=cp[j];if(!p||p.v===null||p.v===undefined||p.t<win0||p.t>now)continue;if(!ce||p.t<ce.t)ce=p;if(!cl||p.t>cl.t)cl=p}
+     if(ce&&cl&&ce!==cl&&(ce.v-cl.v)>=PU.fallMinC)cellsFall=true}
+    var pe=null,pl=null;for(j=b.s;j<=b.e;j++){var rr=rows[j];if(rr.fan!==0||rr.pack===null||rr.t<win0||rr.t>now)continue;if(!pe||rr.t<pe.t)pe=rr;if(!pl||rr.t>pl.t)pl=rr}
+    if(pe&&pl&&pe!==pl&&(pe.pack-pl.pack)>=PU.fallMinC)probeFall=true;
+    if(cellsFall||probeFall)return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:false,lead:0,pm:PU.minPmMin,falling:cellsFall?"cells":"probe",
+     note:cellsFall?"Cells falling after fan off — cooling looks finished":"Probe falling after fan off — cooling looks finished"}}
+   /* held off — may still restart; only call done if settled or past typical */
+   if(idle&&elapsed>=PU.settleIdleMin){
+    var settled0=r.pack!==null&&r.amb!==null&&(r.pack-r.amb)<=PU.settleGapC;
+    if((settled0&&idleMin0>=PU.settleIdleMin)||(cyclesDone>=PU.typicalCycles&&idleMin0>=PU.cycleIdleMin*1.5))
+     return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:settled0,lead:0,pm:PU.minPmMin,note:"Fan stayed off — cooling cycling looks finished"}}}}
  /* warm-up: need a little session history */
  if(elapsed<10&&cyclesDone===0&&!stillOn)return{state:"wait",sessionStart:b.startT,cyclesDone:0,note:"Waiting for the cool session to get going"};
  var avg=PU.cycleOnMin+PU.cycleIdleMin;
@@ -1010,7 +1024,8 @@ function d1(v){return v===null||v===undefined?"--":f1(v)+"°"}
 
 /* ultimate cooling-done card (second prediction; keeps next-off card as-is) */
 function ultCardHtml(rows,r,now,pr){try{
- var u=predictUltimate(rows,PREDICT_ULTIMATE,{now:now,nextOff:pr&&pr.state==="ok"?pr:null});
+ var cellPts=[];(S.bms||[]).forEach(function(x){var v=cellOf(x);if(v!==null)cellPts.push({t:x.t,v:v})});
+ var u=predictUltimate(rows,PREDICT_ULTIMATE,{now:now,nextOff:pr&&pr.state==="ok"?pr:null,cellPts:cellPts});
  if(!u||u.state==="na")return"";
  if(u.state==="done"){
   return '<section class="card bigc"><div class="hHead"><div class="cap">Cooling done</div><span class="ptag high">Ultimate</span></div>'+
@@ -1867,7 +1882,10 @@ function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
   if(tm!==null&&at!==null){var d=Math.round(tm-at);cmp.push(Math.abs(d)<CD_SAME_MIN?"about usual time":'<i>'+hmin2(Math.abs(d))+"</i> "+(d<0?"faster":"slower")+" than usual")}
   if(c.pk&&ap!==null){var dp=c.pk.v-ap;cmp.push(Math.abs(dp)<CD_SAME_DEG?"usual case peak":'case peak <i>'+f1(Math.abs(dp))+"°</i> "+(dp<0?"cooler":"hotter")+" than usual")}
   var v,k;
-  if(c.ongoing&&c.tgt===null){v="<b>Still cooling</b> · fan working on it";k="vc"}
+  if((c.ongoing||c.live)&&c.tgt===null){var cellPtsCd=[],uCd=null;(S.bms||[]).forEach(function(x){var vv=cellOf(x);if(vv!==null)cellPtsCd.push({t:x.t,v:vv})});
+   try{uCd=predictUltimate(S.rows,PREDICT_ULTIMATE,{now:Date.now(),cellPts:cellPtsCd})}catch(e){}
+   if(uCd&&uCd.state==="done"){v="<b>Cooling done</b> · predicted finished";k="vg"}
+   else{v="<b>Still cooling</b> · fan working on it";k="vc"}}
   else if(c.cp&&c.cp.v>CD_HOT_C()){v="<b>Hot drive</b> · cells hit "+Math.round(c.cp.v)+"°";k="vr"}
   else if(tm===null){v=c.off===null?"<b>Cooldown logged</b>":"<b>Didn\u2019t reach target</b>";k=c.off===null?"vg":"va"}
   else if(at!==null&&tm>at*CD_SLOW_X){v="<b>Slow cooldown</b> · took "+hmin2(tm);k="va"}
