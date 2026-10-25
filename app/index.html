@@ -738,11 +738,11 @@ var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
 /* Boom v8.19 additions */
 MODES["cell-watch"]="Watching cells. The probe is above its start point, but the cells are steady, so the fan stays off.";
 MODES["cell-restart"]="Cells warming again: fan runs at least 10 min, then stops at the probe stop point.";
-MODES.backstop="Backstop: probe more than 8° above Ambient (or over 40°), and cells rising. Fan on until the probe drops 1° below.";
+MODES.backstop="Backstop: probe more than 8° above Ambient (or over 40°), and cells rising. Fan on until the probe drops 2° below.";
 MODES.crisis="Cells over 40°: fan forced on, driving or parked, until they drop below 39°.";
 MODES.fallback="No cell data: using the probe start/stop points (v8.18 rules).";
 SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";
-var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=1,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45,BS_CELL_RISE=0.2,BS_CONFIRM_N=2;
+var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=2,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45,BS_CELL_RISE=0.2,BS_CONFIRM_N=2;
 var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
 function $(i){return document.getElementById(i)}
 function n(v){if(v===null||v===undefined)return null;if(typeof v==="number")return isFinite(v)?v:null;v=String(v).trim();if(v===""||/^(null|nan|none|undefined|-)$/i.test(v))return null;var x=Number(v.replace(/,/g,""));return isFinite(x)?x:null}
@@ -938,7 +938,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  var bsEq=bsv!==null?("Ambient +"+AMB_BACK+"° = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>"+(bsv>PROBE_HARD?" (40° hard limit)":"")+" and cells then rise "+BS_CELL_RISE+"°"):("Ambient +"+AMB_BACK+"° and cells then rise "+BS_CELL_RISE+"°");
  if(fan){
   if(m==="crisis"){nx="Fan off when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Rule: crisis off under "+CRISIS_OFF+"° · cells now "+d1(cell)}
-  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Fan off when probe drops to <b>"+d1(rel)+"</b>";nx2="Rule: Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°"+(bsv!==null?" = <b>"+d1(rel)+"</b>":"")+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at 39°)":"")}
+  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Fan off when probe drops to <b>"+d1(rel)+"</b>";nx2="Rule: "+BACK_HYST+"° under Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(rel)+"</b>":"")+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at "+(PROBE_HARD-BACK_HYST)+"°)":"")}
   else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: parked panic on at "+PANIC+"° · off under "+PANIC+"°"}
   else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
@@ -1006,7 +1006,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
     else sub=nx2||sub;}
    else if(bl2==="Fan stops at"||bl2==="Fan stops below"){
     if(m==="backstop"){var rel2=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);
-      sub="Rule: Ambient +"+AMB_BACK+"° − "+BACK_HYST+"° = <b style=\"color:#34d399\">"+d1(rel2)+"</b> · fan off at probe ≤ that";}
+      sub="Rule: "+BACK_HYST+"° under Ambient +"+AMB_BACK+"° = <b style=\"color:#34d399\">"+d1(rel2)+"</b> · fan off at probe ≤ that";}
     else if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
     else if(off!==null){sub="Rule: fan off when probe ≤ stop <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
     else sub=nx2||sub;
