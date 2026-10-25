@@ -915,7 +915,11 @@ function packOf(r){var A=r.A,B=r.B,bs=[A,B].filter(function(b){return b.any});
  return p}
 
 /* ---------- state ---------- */
-var S={rows:[],bms:null,okAt:0,fetchOk:true,bmsMode:"filtered"};
+/* live=false until the first network refresh of this open settles.
+   Cached localStorage rows are shown as last-known values in that window,
+   not as Offline / stale alarms — otherwise every cold open (and return after
+   15+ min backgrounded) flashes red Offline tabs + the pink Shelly banner. */
+var S={rows:[],bms:null,okAt:0,fetchOk:true,bmsMode:"filtered",live:false};
 var hours=Number(localStorage.getItem("bf2-hours"));if([6,12,24].indexOf(hours)<0)hours=6;
 try{var c=JSON.parse(localStorage.getItem("bf2-cache")||"null");if(c&&c.rows){S.rows=c.rows;S.bms=c.bms;S.okAt=c.at||0}}catch(e){}
 function save(){try{var from=Date.now()-KEEP_H*3600e3,ko=keyOffInfo(S.rows,Date.now());
@@ -950,7 +954,7 @@ var loading=false;
 function load(){if(loading)return;loading=true;$("app").classList.add("busy");
  Promise.all([get(MAIN_URL).then(shellyRows),loadBMS()]).then(function(res){
   S.rows=res[0];S.bms=res[1]&&res[1].length?res[1]:null;S.okAt=Date.now();S.fetchOk=true;save()
- }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;$("app").classList.remove("busy");render();renderPacks()})}
+ }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;S.live=true;$("app").classList.remove("busy");render();renderPacks()})}
 
 
 /* ---------- render (mockup layout) ---------- */
@@ -963,7 +967,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  app.classList.toggle("haserr",!S.fetchOk&&rows.length>0);app.classList.toggle("isempty",!rows.length);
  if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);renderQuietCtl();return}
  var r=curRow(rows),age=now-r.t,roE=runOnEnd(rows,r),pr=roE?{state:"na"}:predNow(rows);
- $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);app.classList.toggle("stale",age>STALE_MIN*60e3);setPS(r,age>STALE_MIN*60e3);
+ $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);var ageAlarm=S.live&&age>STALE_MIN*60e3;app.classList.toggle("stale",ageAlarm);setPS(r,ageAlarm);
  var off=lastv(rows,"off"),on=lastv(rows,"on");
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bAge=bl?now-bl.t:null,has=!!p;
  /* header pill */
@@ -1454,9 +1458,9 @@ function footer(age,bAge){var ok='<svg viewBox="0 0 24 24" fill="none" stroke="c
   wt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
   x='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>';
  function c(cls,ic,t){return'<span class="'+cls+'">'+ic+t+"</span>"}
- $("foot").innerHTML=(age===null?c("n",wt,"Shelly"):age>STALE_MIN*60e3?c("w",wt,"Shelly · "+ago(age)):c("",ok,"Shelly"))+
-  (bAge===null?c("n",wt,"BMS bridge · waiting"):bAge>BMS_STALE_MIN*60e3?c("w",wt,"BMS · "+ago(bAge)):c("",ok,"BMS bridge"))+
-  (S.fetchOk?c("",ok,"Sheet synced"):c("x",x,"Sheet offline"))}
+ $("foot").innerHTML=(age===null?c("n",wt,"Shelly"):S.live&&age>STALE_MIN*60e3?c("w",wt,"Shelly · "+ago(age)):c("",ok,S.live?"Shelly":"Shelly · updating"))+
+  (bAge===null?c("n",wt,"BMS bridge · waiting"):S.live&&bAge>BMS_STALE_MIN*60e3?c("w",wt,"BMS · "+ago(bAge)):c("",ok,S.live?"BMS bridge":"BMS · updating"))+
+  (S.fetchOk?c("",ok,S.live?"Sheet synced":"Sheet · updating"):c("x",x,"Sheet offline"))}
 /* ---------- Battery: packs A & B side by side ---------- */
 var PROT_PLAIN=["a cell is over-voltage","a cell is under-voltage","pack over-voltage","pack under-voltage","too hot to charge","too cold to charge","too hot to discharge","too cold to discharge","charge current too high","discharge current too high","short circuit","BMS chip fault","switches locked"];
 function kv(k,v,c){return'<div class="kv"><span>'+k+'</span><b'+(c?' class="'+c+'"':"")+'>'+v+"</b></div>"}
@@ -1489,14 +1493,14 @@ function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,bod
 var SHUNT_ID="11bP6_w0Wc39pC1jxkmRUfJNhOV8mRMtBefH5zRRWSnw",BP_ID=SHUNT_ID;
 function gvizUrl(id,tab,hrs){var u="https://docs.google.com/spreadsheets/d/"+id+"/gviz/tq?tqx=out:csv&headers=1&sheet="+encodeURIComponent(tab);
  return u+"&tq="+encodeURIComponent("select * where C > "+Math.floor(Date.now()/1000-hrs*3600))}
-var X2={sh:null,shErr:false,shAt:0,bp:null,bpErr:false,bpAt:0};
+var X2={sh:null,shErr:false,shAt:0,bp:null,bpErr:false,bpAt:0,live:false};
 try{var c2=JSON.parse(localStorage.getItem("bf2-x2")||"null");if(c2){X2.sh=Array.isArray(c2.sh)?c2.sh:null;X2.bp=c2.bp&&c2.bp.t?c2.bp:null}}catch(e){}
 function vrows(text,need){var tb=table(text);if(tb.h.indexOf("unix")<0||tb.h.indexOf(need)<0)throw new Error("not the expected tab");
  var out=[];tb.rows.forEach(function(o){var u=n(o.unix);if(u===null||u<1e9)return;o.t=u*1000;out.push(o)});out.sort(function(a,b){return a.t-b.t});return out}
 function loadExtra(){
  var a=get(gvizUrl(SHUNT_ID,"SmartShunt",8*24)).then(function(t){X2.sh=vrows(t,"soc").map(function(o){return{t:o.t,v:n(o.v),a:n(o.a),soc:n(o.soc),ah:n(o.consumed_ah),ttg:n(o.ttg_min),sv:n(o.starter_v),mid:n(o.mid_v),tc:n(o.temp_c),al:(o.alarm||"").trim()}});X2.shErr=false;X2.shAt=Date.now()}).catch(function(e){X2.shErr=true;console.warn("shunt",e)});
  var b=get(gvizUrl(BP_ID,"BatteryProtect",48)).then(function(t){var r=vrows(t,"output_state").filter(function(o){return String(o.output_state||"").trim()!==""||n(o.output_state_code)!==null||n(o.input_v)!==null});X2.bp=r.length?r[r.length-1]:(X2.bp||null);X2.bpErr=false;X2.bpAt=Date.now()}).catch(function(e){X2.bpErr=true;console.warn("bp",e)});
- return Promise.all([a,b]).then(function(){try{localStorage.setItem("bf2-x2",JSON.stringify({sh:X2.sh,bp:X2.bp}))}catch(e){}renderExtra()})}
+ return Promise.all([a,b]).then(function(){X2.live=true;try{localStorage.setItem("bf2-x2",JSON.stringify({sh:X2.sh,bp:X2.bp}))}catch(e){}renderExtra()})}
 function loadAll(){load();loadExtra();loadHealth()}
 function hmin(m){m=Math.round(m);if(m<60)return m+" min";var h=Math.floor(m/60);if(h<48)return h+" h "+String(m%60).padStart(2,"0")+" min";return Math.floor(h/24)+" days "+(h%24)+" h"}
 var ALARM=["low voltage","high voltage","low SOC","low starter voltage","high starter voltage","low temperature","high temperature","mid-point voltage","overload","DC ripple","low AC out voltage","high AC out voltage","short circuit","BMS lockout"];
@@ -1557,7 +1561,7 @@ var PG=[null,null,null,null,null];
 function lastSh(){var rs=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null});return rs.length?rs[rs.length-1]:null}
 function sevLvl(v,w,c,low){if(v===null||v===undefined)return 0;return low?(v<c?2:v<w?1:0):(v>c?2:v>w?1:0)}
 function pageStates(){var now=Date.now(),O={h:"Offline",t:"Offline",k:"off"};
- var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bOff=bl&&now-bl.t>BMS_STALE_MIN*60e3,P2;
+ var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bOff=S.live&&bl&&now-bl.t>BMS_STALE_MIN*60e3,P2;
  if(!p)P2={h:"Invicta battery",t:"Pack",k:""};
  else if(bOff)P2={h:"Invicta \u00b7 offline",t:"Offline",k:"off"};
  else{var sc=p.soc===null?"":Math.round(p.soc)+"%",ch=p.i!==null&&p.i>0.2,ds=p.i!==null&&p.i<-0.2,full=!ds&&p.soc!==null&&p.soc>=99;
@@ -1573,13 +1577,13 @@ function pageStates(){var now=Date.now(),O={h:"Offline",t:"Offline",k:"off"};
   P2={h:h2,t:"Pack"+(sc?" "+sc:""),k:mx===2?"hot":mx===1?"warn":k2,iss:is}}
  var sr=lastSh(),P3;
  if(!sr)P3={h:"Aux battery",t:"Aux",k:""};
- else if(now-sr.t>STALE_MIN*60e3)P3={h:"Aux \u00b7 offline",t:"Offline",k:"off"};
+ else if(X2.live&&now-sr.t>STALE_MIN*60e3)P3={h:"Aux \u00b7 offline",t:"Offline",k:"off"};
  else{var as=sr.soc===null?"":Math.round(sr.soc)+"%",ac=sr.a!==null&&sr.a>0.05,ad=sr.a!==null&&sr.a<-0.05,af=!ad&&sr.soc!==null&&sr.soc>=99,al=!!(sr.al&&!/^(0|none|no alarm|-)$/i.test(sr.al));
   var al3=sevLvl(sr.soc,AUX_SOC_WARN,AUX_SOC_CRIT,true),is3=[];if(al)is3.push({l:2,o:"Aux alarm",key:"aux-alarm"});if(al3)is3.push({l:al3,o:"Aux low",key:"aux-low"});
   P3={h:"Aux "+(as?as+" \u00b7 ":"")+(al?"alarm":al3?"low":ac?"charging":ad?"discharging":af?"full":"idle"),t:"Aux"+(as?" "+as:""),k:(al||al3===2)?"hot":al3?"warn":ac?"cool":ad?"drive":"ok",iss:is3}}
  var bp=X2.bp,E=bpEff(),P4;
  if(!bp)P4={h:"Starter load",t:"Protect",k:""};
- else if(now-bp.t>STALE_MIN*60e3)P4={h:"Protect \u00b7 offline",t:"Offline",k:"off"};
+ else if(X2.live&&now-bp.t>STALE_MIN*60e3)P4={h:"Protect \u00b7 offline",t:"Offline",k:"off"};
  else{var B=bpClassify(E,bp);P4={h:B.h,t:B.t,k:B.k,iss:B.iss||[]}}
  /* overview summary */
  var offs=[],P1=PS;if(S.rows.length&&PS.k==="off")offs.push("Invicta cooling");if(P2.k==="off")offs.push("Invicta BMS");if(P3.k==="off")offs.push("Aux");if(P4.k==="off")offs.push("Protect");
@@ -1635,12 +1639,18 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
  var lr=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(lr&&lr.fan===1),hf=$("hfan");
  if(lr){var QEh=quietEff(lr);if(QEh.lag&&QEh.quiet)fon=false}
  hf.className="hfan "+(lr?(fon?"on":"off"):"off");hf.setAttribute("aria-label",fon?"Fan on":"Fan off");
- if(i===0){var al=[],srcT=[];if(lr)srcT.push(lr.t);var b0=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(b0){srcT.push(b0.t);if(packOf(b0).prot)al.push("Battery protection")}
+ if(i===0){var al=[],srcT=[];if(lr)srcT.push(lr.t);var b0=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(b0){srcT.push(b0.t);if(S.live&&packOf(b0).prot)al.push("Battery protection")}
    var sh0=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null});if(sh0.length)srcT.push(sh0[sh0.length-1].t);
    var bp0=X2.bp;if(bp0){srcT.push(bp0.t);}
-   var stale0=srcT.some(function(x){return now-x>STALE_MIN*60e3});
+   var refreshing=!S.live||!X2.live;
+   var stale0=false;
+   if(S.live&&lr&&now-lr.t>STALE_MIN*60e3)stale0=true;
+   if(S.live&&b0&&now-b0.t>STALE_MIN*60e3)stale0=true;
+   if(X2.live&&sh0.length&&now-sh0[sh0.length-1].t>STALE_MIN*60e3)stale0=true;
+   if(X2.live&&bp0&&now-bp0.t>STALE_MIN*60e3)stale0=true;
    if(srcT.length){var nt=Math.max.apply(null,srcT);a="Updated "+hm(nt)+" · "+ago(now-nt)}
-   c="pill"+(al.length?" bad":stale0?" drv":"");t=al.length?al.join(" · "):stale0?"Some data delayed":"All systems normal"}
+   if(refreshing&&srcT.length){c="pill";t="Updating\u2026"}
+   else{c="pill"+(al.length?" bad":stale0?" drv":"");t=al.length?al.join(" · "):stale0?"Some data delayed":"All systems normal"}}
  else if(i===1){if(HC){c=HC.c;t=HC.t;a=HC.a}}
  else if(i===2){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(bl){var p=packOf(bl);upd(bl.t);
    var st=p.i===null?"":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";c="pill"+(st==="Discharging"?" drv":st==="Charging"?"":" off");
@@ -1984,14 +1994,14 @@ function quietEff(r){var c=QC.conf,m=r&&r.mode!=null&&r.mode!==""?String(r.mode)
   else{if(m&&!sheetQ){QC.conf=null;return{quiet:false,lag:false}}return{quiet:false,lag:true}}}
  return{quiet:sheetQ,lag:false}}
 /* ---------- Overview (home) ---------- */
-function fresh(ts,src){if(!ts)return'<span class="fr n">'+src+" · no data yet</span>";var age=Date.now()-ts,o=age>STALE_MIN*60e3;return'<span class="fr'+(o?" o":"")+'">'+(o?"":"")+ago(age).replace(/^just now$/,"just now")+"</span>"}
+function fresh(ts,liveGate){if(!ts)return'<span class="fr n">no data yet</span>';var age=Date.now()-ts,o=!!liveGate&&age>STALE_MIN*60e3;return'<span class="fr'+(o?" o":"")+'">'+ago(age).replace(/^just now$/,"just now")+"</span>"}
 function ovTile(l,v,s,cls){return'<div class="ot'+(cls?" "+cls:"")+'"><span>'+l+"</span><b>"+v+"</b>"+(s?"<i>"+s+"</i>":"")+"</div>"}
 var SKO='<div class="skel"><i style="width:45%"></i><i style="width:80%;height:40px"></i><i style="width:65%"></i></div>';
 function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h="";
  /* --- Invicta pack: hero dial --- */
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null;
  var sc=socCol(p?p.soc:null);
- h+='<div class="card ovc gl" data-go="battery" style="--glowc:'+rgba(sc[0],.16)+'"><div class="ovt"><div class="cap">Invicta pack</div>'+(bl?fresh(bl.t):"")+"</div>";
+ h+='<div class="card ovc gl" data-go="battery" style="--glowc:'+rgba(sc[0],.16)+'"><div class="ovt"><div class="cap">Invicta pack</div>'+(bl?fresh(bl.t,S.live):"")+"</div>";
  if(!p)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first BMS reading.</div>');
  else{var soc=p.soc,st=p.i===null?"No current reading":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";
   h+=dial({id:"ovb",f:soc===null?null:soc/100,c:sc,size:270,inner:'<div class="cap">State of charge</div><div class="dnum">'+(soc===null?"--":Math.round(soc))+'<span class="u">%</span></div><div class="dst" style="color:'+(flowCol(p.i)||"#8b93a7")+'">'+st+(p.power!==null&&Math.abs(p.power)>=1?" · "+Math.round(Math.abs(p.power))+" W":"")+'</div>'});
@@ -2012,7 +2022,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  /* --- Aux battery · Victron --- */
  h+='<div class="ovsec">Aux battery · Victron</div>';
  var rs=(X2.sh||[]).filter(function(x){return x.soc!==null||x.v!==null}),sr=rs[rs.length-1],asc=socCol(sr?sr.soc:null);
- h+='<div class="card ovc vic gl" data-go="power" style="--glowc:'+rgba(asc[0],.13)+'"><div class="ovt"><div class="cap">Aux battery</div>'+(sr?fresh(sr.t):"")+"</div>";
+ h+='<div class="card ovc vic gl" data-go="power" style="--glowc:'+rgba(asc[0],.13)+'"><div class="ovt"><div class="cap">Aux battery</div>'+(sr?fresh(sr.t,X2.live):"")+"</div>";
  if(!sr)h+=(!X2.sh&&!X2.shErr?SKO:'<div class="es">'+(X2.shErr?"Can't read the shunt data right now.":"Waiting for the first shunt reading.")+"</div>");
  else{var w=sr.v!==null&&sr.a!==null?sr.v*sr.a:null,dn=drain(),s2=sr.a===null?"No current reading":sr.a>0.05?"Charging":sr.a<-0.05?"Discharging":"Idle";
   h+=dial({id:"ova",f:sr.soc===null?null:sr.soc/100,c:asc,size:230,cls:"md",inner:'<div class="cap">Charge</div><div class="dnum">'+(sr.soc===null?"--":Math.round(sr.soc))+'<span class="u">%</span></div><div class="dst" style="color:'+(flowCol(sr.a)||"#8b93a7")+'">'+s2+'</div>'});
@@ -2021,7 +2031,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  /* --- Load output (BatteryProtect) --- */
  var bp=X2.bp,E=bpEff(),B=bp?bpClassify(E,bp):null,on=E.on;
  var oc2=!B||B.tone==="na"?["#8b93a7","#596075"]:B.tone==="prot"?["#fb7185","#e11d48"]:B.tone==="cool"?["#22d3ee","#0891b2"]:["#34d399","#10b981"];
- h+='<div class="card ovc vic gl ovp" data-go="protect" style="--glowc:'+rgba(oc2[0],.13)+'"><div class="ovt"><div class="cap">Starter battery load</div>'+(bp?fresh(bp.t):"")+"</div>";
+ h+='<div class="card ovc vic gl ovp" data-go="protect" style="--glowc:'+rgba(oc2[0],.13)+'"><div class="ovt"><div class="cap">Starter battery load</div>'+(bp?fresh(bp.t,X2.live):"")+"</div>";
  if(!bp)h+=(!X2.bpAt&&!X2.bpErr?'<div class="skel"><i style="width:70%"></i></div>':'<div class="es">Waiting for the first BatteryProtect reading.</div>');
  else{var why=B.why||(on?"Loads are powered":"Loads are disconnected");
   h+=dial({id:"ovp",f:on===null?null:on?1:.04,c:oc2,size:170,cls:"sm",inner:'<div class="cap">Output</div><div class="dnum">'+(on===null?"--":on?"ON":"OFF")+'</div>'+(E.lag?'<span class="lagt">log catching up</span>':"")});
@@ -2056,8 +2066,18 @@ var lastW=0,rzT=0;window.addEventListener("resize",function(){var w=pw();if(w!==
  requestAnimationFrame(function(){go(i,false)})})();
 window.__bfpage=function(){return cur};
 $("rf").onclick=loadAll;$("retry").onclick=load;
-document.addEventListener("visibilitychange",function(){if(!document.hidden)loadAll()});
-window.addEventListener("pageshow",function(e){if(e.persisted)loadAll()});
+/* Soft-gate age alarms again when returning to a long-backgrounded app, so the
+   first paint after foreground does not flash Offline before loadAll finishes. */
+function softIfStale(){var now=Date.now(),need=false;
+ if(S.live&&S.rows.length&&now-S.rows[S.rows.length-1].t>STALE_MIN*60e3)need=true;
+ if(S.live&&S.bms&&S.bms.length&&now-S.bms[S.bms.length-1].t>BMS_STALE_MIN*60e3)need=true;
+ if(X2.live&&X2.bp&&now-X2.bp.t>STALE_MIN*60e3)need=true;
+ var rs=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null});
+ if(X2.live&&rs.length&&now-rs[rs.length-1].t>STALE_MIN*60e3)need=true;
+ if(!need)return false;S.live=false;X2.live=false;return true}
+function refreshOnShow(){if(softIfStale()){if(S.rows.length)render();renderExtra()}loadAll()}
+document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshOnShow()});
+window.addEventListener("pageshow",function(e){if(e.persisted)refreshOnShow()});
 setInterval(function(){if(!document.hidden)loadAll()},REFRESH_MS);
 setInterval(function(){if(S.rows.length)render();renderExtra()},30000);
 (function(){var y0=null,x0=0,dy=0,p=$("ptr");document.addEventListener("touchstart",function(e){var pg=e.target.closest&&e.target.closest(".page");y0=((pg?pg.scrollTop:window.scrollY)<=0)?e.touches[0].clientY:null;x0=e.touches[0].clientX;dy=0},{passive:true});
