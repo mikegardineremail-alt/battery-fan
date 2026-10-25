@@ -1331,18 +1331,21 @@ function bits(v,names){if(v===null||v===undefined)return null;var s=String(v).tr
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
 /* BatteryProtect OFF classification from off_reason bitfield (OFFR).
    On this Smart BatteryProtect the physical switch sets device-mode (and often remote),
-   same bits as VictronConnect — power-switch bit never appears. So: Off (app) only when
-   this Battery Monitor app confirmed an off command (bf2-bp-off-src); otherwise on-device
-   reasons are Off (manually). Priority: protection > app-origin > on-device > other. */
+   same bits as VictronConnect — power-switch bit never appears. App origin is tracked in
+   bf2-bp-off-src when this Battery Monitor app confirmed an off command.
+   Priority: protection > on-device+app (combined) > on-device alone > app alone > other.
+   So both → Off (manually · app); when on-device clears but app flag remains → Off (app). */
 function bpOffSrc(){try{return localStorage.getItem("bf2-bp-off-src")}catch(e){return null}}
 function bpSetOffSrc(v){try{if(v)localStorage.setItem("bf2-bp-off-src",v);else localStorage.removeItem("bf2-bp-off-src")}catch(e){}}
 function bpOffKind(r){var off=bits(r&&r.off_reason,OFFR)||[];
  function has(s){return off.indexOf(s)>=0}
  if(has("protection active"))return{kind:"prot",off:off,why:"protection active"};
- if(bpOffSrc()==="app")return{kind:"app",off:off,why:"switched from this app"};
- if(has("switched off by power switch")||has("switched off by device mode")||has("remote input off")){
-  var p=[];if(has("switched off by power switch"))p.push("power switch");if(has("switched off by device mode"))p.push("on BatteryProtect");if(has("remote input off"))p.push("remote");
-  return{kind:"manual",off:off,why:p.join(" · ")}}
+ var onDev=has("switched off by power switch")||has("switched off by device mode")||has("remote input off");
+ var fromApp=bpOffSrc()==="app";
+ var p=[];if(has("switched off by power switch"))p.push("power switch");if(has("switched off by device mode"))p.push("device mode");if(has("remote input off"))p.push("remote");
+ if(onDev&&fromApp){p.push("app");return{kind:"both",off:off,why:p.join(" · ")}}
+ if(onDev)return{kind:"manual",off:off,why:p.join(" · ")};
+ if(fromApp)return{kind:"app",off:off,why:"switched from this app"};
  return{kind:"other",off:off,why:off.length?off.join(", "):""}}
 /* UI labels for Protect header/tab/hero/overview. E from bpEff(). */
 function bpClassify(E,r){if(E.lag)return{h:"Protect \u00b7 switching",t:"Switching\u2026",k:"cool",pill:"Switching\u2026",pc:"c",why:"Switching\u2026",tone:"cool",on:E.on};
@@ -1350,6 +1353,7 @@ function bpClassify(E,r){if(E.lag)return{h:"Protect \u00b7 switching",t:"Switchi
  if(E.on===null)return{h:"Protect \u00b7 no reading",t:"Protect",k:"",pill:"No reading",pc:"",why:"",tone:"na",on:null};
  var o=bpOffKind(r);
  if(o.kind==="prot")return{h:"Protect \u00b7 protected",t:"Protected",k:"hot",pill:"Protected",pc:"r",why:"On but protected \u2014 output cut by protection",tone:"prot",on:false,iss:[{l:2,o:"Protect protected",key:"bp-prot"}]};
+ if(o.kind==="both")return{h:"Protect \u00b7 off (manually \u00b7 app)",t:"Off (manually \u00b7 app)",k:"rest",pill:"Off (manually \u00b7 app)",pc:"g",why:"Off (manually \u00b7 app)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
  if(o.kind==="manual")return{h:"Protect \u00b7 off (manually)",t:"Off (manually)",k:"rest",pill:"Off (manually)",pc:"g",why:"Off (manually)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
  if(o.kind==="app")return{h:"Protect \u00b7 off (app)",t:"Off (app)",k:"rest",pill:"Off (app)",pc:"g",why:"Off (app)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
  return{h:"Protect \u00b7 load off",t:"Load off",k:"rest",pill:"Loads off",pc:"g",why:o.why?cap(o.why):"Loads are disconnected",tone:"rest",on:false}}
