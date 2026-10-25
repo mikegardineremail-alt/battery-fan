@@ -142,7 +142,7 @@ svg.ch text{font-family:inherit}
 .pager::-webkit-scrollbar{display:none}
 .page{flex:0 0 100%;width:100%;height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-align:start;scroll-snap-stop:always;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding:2px calc(16px + env(safe-area-inset-right)) 18px calc(16px + env(safe-area-inset-left))}
 .page>.in{max-width:520px;margin:0 auto}
-.tabs{flex:none;padding:8px 16px calc(10px + var(--sab,env(safe-area-inset-bottom)));background:linear-gradient(180deg,rgba(7,9,15,0),rgba(7,9,15,.92) 30%);}
+.tabs{flex:none;padding:6px 16px max(6px,var(--sab,env(safe-area-inset-bottom)));background:linear-gradient(180deg,rgba(7,9,15,0),rgba(7,9,15,.92) 30%);}
 .tabbar{position:relative;max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);padding:4px;border-radius:99px;background:rgba(255,255,255,.045);border:1px solid var(--line);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
 .tabbar button{position:relative;z-index:1;height:40px;border-radius:99px;font-size:15px;font-weight:600;letter-spacing:.01em;color:var(--mut);cursor:pointer;transition:color .25s}
 .tabbar button.sel{color:#a5f3fc}
@@ -235,7 +235,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .ts,.mtiles .ts{color:#8b93a7}.mtiles .dim,.dim{color:#737b90}.ft{color:#737b90}
 .foot span{border:0;background:rgba(255,255,255,.05);padding:6px 12px}
 .al{border:0;border-radius:16px;padding:12px 16px;margin-top:8px}
-.tabs{padding:8px 16px calc(8px + var(--sab,env(safe-area-inset-bottom)))}
+.tabs{padding:6px 16px max(6px,var(--sab,env(safe-area-inset-bottom)))}
 .tabbar{border:0;background:rgba(22,27,38,.72);box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .tabbar button{height:44px}.tabbar .ind{height:44px;border:0;background:rgba(34,211,238,.14)}
 .tabbar .ind:after{bottom:5px}
