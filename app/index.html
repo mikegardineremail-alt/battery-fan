@@ -992,7 +992,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  if(bsv!==null&&m!=="driving"&&m!=="cap")mk.push({v:Math.min(bsv,PROBE_HARD),c:"#fb7185",t:"backstop (cells)"});
  if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+(QE.lag&&QE.quiet?"":" · "+dur0)+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
- h+=gaugeSVG(gv,10,50,mk,col)+'';
+ var gr=gaugeRange(gv,mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>'+(qLagHtml||"");
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
@@ -1062,13 +1062,22 @@ function tempColor(t){if(t===null||t===undefined||!isFinite(t))return"#8b93a7";v
  var a=S[i],b=S[i+1],f=b[0]===a[0]?0:(t-a[0])/(b[0]-a[0]);return"#"+a[1].map(function(c,j){return Math.round(c+(b[1][j]-c)*f).toString(16).padStart(2,"0")}).join("")}
 function rgba(hex,a){return"rgba("+[1,3,5].map(function(i){return parseInt(hex.slice(i,i+2),16)}).join(",")+","+a+")"}
 /* 180° arc gauge (Invicta live view geometry: centre 150,150, r 120) */
+function gaugeRange(v,marks){var vs=[];
+ if(v!==null&&v!==undefined&&isFinite(+v))vs.push(+v);
+ (marks||[]).forEach(function(m){if(m&&m.v!==null&&m.v!==undefined&&isFinite(+m.v))vs.push(+m.v)});
+ if(!vs.length)return{lo:10,hi:50};
+ var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),pad=Math.max(2.5,(mx-mn)*0.6);
+ var lo=Math.floor(mn-pad),hi=Math.ceil(mx+pad);
+ if(hi-lo<8){var mid=(lo+hi)/2;lo=Math.floor(mid-4);hi=Math.ceil(mid+4)}
+ if(hi-lo>28){var mid2=(mn+mx)/2;lo=Math.floor(mid2-14);hi=Math.ceil(mid2+14)}
+ return{lo:lo,hi:hi}}
 function gaugeSVG(v,lo,hi,marks,col){var CX=150,CY=150,R=120;
  function P(t,r){var a=Math.PI*Math.max(0,Math.min(1,(t-lo)/(hi-lo)));return[(CX-r*Math.cos(a)),(CY-r*Math.sin(a))]}
  var seg="",st=(hi-lo)/60;for(var t=lo;t<hi;t+=st){var p0=P(t,R),p1=P(Math.min(hi,t+st*1.15),R);seg+='<path d="M'+p0[0].toFixed(2)+" "+p0[1].toFixed(2)+" A"+R+" "+R+" 0 0 1 "+p1[0].toFixed(2)+" "+p1[1].toFixed(2)+'" stroke="'+tempColor(t+st/2)+'" stroke-width="12" fill="none"/>'}
  var pct=v===null?0:Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)),id="g"+Math.random().toString(36).slice(2,7);
  var s='<div class="gauge"><svg viewBox="0 0 300 178" aria-hidden="true"><defs><mask id="'+id+'m" maskUnits="userSpaceOnUse" x="-20" y="-20" width="340" height="220"><path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="'+(100-pct).toFixed(1)+'"/></mask><filter id="'+id+'f" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter></defs>';
  s+='<g opacity=".16">'+seg+'</g><g mask="url(#'+id+'m)">'+seg+'</g>';
- [20,30,40].forEach(function(t){var a=P(t,R+10),b=P(t,R+15);s+='<line class="tk" x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" opacity=".5"/>'});
+ (function(){var span=hi-lo,step=span<=12?2:span<=20?5:10,t0=Math.ceil((lo+0.01)/step)*step;for(var t=t0;t<hi;t+=step){var a=P(t,R+10),b=P(t,R+15);s+='<line class="tk" x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" opacity=".5"/>'}})();
  s+='<text x="30" y="174" text-anchor="middle">'+lo+'°</text><text x="270" y="174" text-anchor="middle">'+hi+'°</text>';
  /* threshold markers: coloured radial ticks just outside the arc; names go in the legend below */
  marks.forEach(function(m){var a=P(m.v,R+9),b=P(m.v,R+20);s+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+m.c+'" stroke-width="3" stroke-linecap="round"/>'});
@@ -1868,7 +1877,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  var ovFan=r?(QEo.lag&&QEo.quiet?"Fan off · Quiet":QEo.lag&&!QEo.quiet?"Fan "+(fon?"on":"off")+" · Quiet clearing":"Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")):"";
  h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+(QEo.lag?' <span class="lagt" title="'+(QEo.quiet?"Quiet confirmed by the battery bridge. The 5-minute log has not caught up yet.":"Quiet cancel confirmed by the battery bridge. The 5-minute log has not caught up yet.")+'">log catching up</span>':"")+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
- else{h+=gaugeSVG(gv,10,50,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
+ else{var grO=gaugeRange(gv,[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
   h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:16.5px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
  h+="</div>";
  /* --- Aux battery · Victron --- */
