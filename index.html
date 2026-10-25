@@ -905,7 +905,8 @@ function runOnEnd(rows,r){if(!r||r.fan!==1||!/^(run-on|cooldown-done)$/.test(r.m
  return st===null?null:st+RUN_ON_MIN*60e3}
 function cellOf(x){var v=[];[x.A,x.B].forEach(function(b){if(b&&b.any){if(b.t_int!==null)v.push(b.t_int);if(b.t_brd!==null)v.push(b.t_brd)}});return v.length?Math.max.apply(null,v):null}
 function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]:null,cell=bl&&now-bl.t<=BMS_STALE_MIN*60e3?cellOf(bl):null;
- var L=rows.length-1,fs=L;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3)fs--;
+ /* Fan-off session for cell settled: same fan stretch, but a drive resets it (Boom re-arms at key-off; driving keeps fan=0). */
+ var L=rows.length-1,fs=L;while(fs>0&&rows[fs-1].fan===r.fan&&rows[fs].t-rows[fs-1].t<=20*60e3){if((rows[fs-1].mode||"").toLowerCase()==="driving")break;fs--}
  var since=rows[fs].t,settled=null,st=null;
  if(r.fan!==1){bms.forEach(function(x){if(x.t<since-60e3)return;var c=cellOf(x);if(c!==null&&(settled===null||c<settled)){settled=c;st=x.t}})}
  return{cell:cell,cellT:bl?bl.t:null,settled:settled,settledT:st,since:since}}
@@ -1328,12 +1329,20 @@ function bits(v,names){if(v===null||v===undefined)return null;var s=String(v).tr
  var x=/^0x[0-9a-f]+$/i.test(s)?parseInt(s,16):/^\d+$/.test(s)?Number(s):NaN;if(isNaN(x))return[s.replace(/_/g," ").toLowerCase()];
  var out=[];for(var i=0;i<names.length;i++)if(x&(1<<i))out.push(names[i]);return out.length?out:["code "+s]}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
-/* BatteryProtect OFF classification from off_reason bitfield (OFFR). Priority: protection > power switch > device mode/remote > other. */
+/* BatteryProtect OFF classification from off_reason bitfield (OFFR).
+   On this Smart BatteryProtect the physical switch sets device-mode (and often remote),
+   same bits as VictronConnect — power-switch bit never appears. So: Off (app) only when
+   this Battery Monitor app confirmed an off command (bf2-bp-off-src); otherwise on-device
+   reasons are Off (manually). Priority: protection > app-origin > on-device > other. */
+function bpOffSrc(){try{return localStorage.getItem("bf2-bp-off-src")}catch(e){return null}}
+function bpSetOffSrc(v){try{if(v)localStorage.setItem("bf2-bp-off-src",v);else localStorage.removeItem("bf2-bp-off-src")}catch(e){}}
 function bpOffKind(r){var off=bits(r&&r.off_reason,OFFR)||[];
  function has(s){return off.indexOf(s)>=0}
  if(has("protection active"))return{kind:"prot",off:off,why:"protection active"};
- if(has("switched off by power switch"))return{kind:"manual",off:off,why:"switched off by power switch"};
- if(has("switched off by device mode")||has("remote input off")){var p=[];if(has("switched off by device mode"))p.push("device mode");if(has("remote input off"))p.push("remote");return{kind:"app",off:off,why:p.join(" \u00b7 ")}}
+ if(bpOffSrc()==="app")return{kind:"app",off:off,why:"switched from this app"};
+ if(has("switched off by power switch")||has("switched off by device mode")||has("remote input off")){
+  var p=[];if(has("switched off by power switch"))p.push("power switch");if(has("switched off by device mode"))p.push("on BatteryProtect");if(has("remote input off"))p.push("remote");
+  return{kind:"manual",off:off,why:p.join(" · ")}}
  return{kind:"other",off:off,why:off.length?off.join(", "):""}}
 /* UI labels for Protect header/tab/hero/overview. E from bpEff(). */
 function bpClassify(E,r){if(E.lag)return{h:"Protect \u00b7 switching",t:"Switching\u2026",k:"cool",pill:"Switching\u2026",pc:"c",why:"Switching\u2026",tone:"cool",on:E.on};
@@ -1341,7 +1350,7 @@ function bpClassify(E,r){if(E.lag)return{h:"Protect \u00b7 switching",t:"Switchi
  if(E.on===null)return{h:"Protect \u00b7 no reading",t:"Protect",k:"",pill:"No reading",pc:"",why:"",tone:"na",on:null};
  var o=bpOffKind(r);
  if(o.kind==="prot")return{h:"Protect \u00b7 protected",t:"Protected",k:"hot",pill:"Protected",pc:"r",why:"On but protected \u2014 output cut by protection",tone:"prot",on:false,iss:[{l:2,o:"Protect protected",key:"bp-prot"}]};
- if(o.kind==="manual")return{h:"Protect \u00b7 off (manually)",t:"Off (manually)",k:"rest",pill:"Off (manually)",pc:"g",why:"Off (manually) \u2014 power switch",tone:"rest",on:false};
+ if(o.kind==="manual")return{h:"Protect \u00b7 off (manually)",t:"Off (manually)",k:"rest",pill:"Off (manually)",pc:"g",why:"Off (manually)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
  if(o.kind==="app")return{h:"Protect \u00b7 off (app)",t:"Off (app)",k:"rest",pill:"Off (app)",pc:"g",why:"Off (app)"+(o.why?" \u2014 "+o.why:""),tone:"rest",on:false};
  return{h:"Protect \u00b7 load off",t:"Load off",k:"rest",pill:"Loads off",pc:"g",why:o.why?cap(o.why):"Loads are disconnected",tone:"rest",on:false}}
 function waitBox(t,s){if(t==="Loading…")return '<div class="skel"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div>';return'<div class="wbox"><div class="et">'+t+'</div><div class="es">'+s+"</div></div>"}
@@ -1536,7 +1545,7 @@ var BP_ADAPTERS={
 function sendBpCommand(on,prog){return BP_ADAPTERS.relay(on,prog||function(){})}
 function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
 function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now(),conf:null};renderBpCmd();
- sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
+ sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};bpSetOffSrc(on?null:"app");renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
  .catch(function(){BPC.st="neterr";renderBpCmd()})}
 var PWR='<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>';
 function renderBpCtl(){var el=$("bpctl");if(!el)return;var r=X2.bp,E=bpEff(),on=E.on,now=Date.now(),age=r?now-r.t:null,B=r?bpClassify(E,r):{tone:"na",pill:X2.bpErr?"Can't read sheet":"Loading",pc:"",why:""};
@@ -1737,6 +1746,7 @@ function strip(items,cls){return'<div class="strip'+(cls?" "+cls:"")+'">'+items.
 function flowCol(a){return a===null||a===undefined?"":a>0.05?"#34d399":a<-0.05?"#fde68a":""}
 /* BatteryProtect state shown in the UI: a bridge-confirmed command wins until the 5-min sheet row agrees */
 function bpEff(){var r=X2.bp,s=bpOn(r),c=BPC.conf;
+ if(s===true)bpSetOffSrc(null);
  if(c){if(s===c.on||Date.now()-c.at>20*60e3){BPC.conf=null;return{on:s,lag:false}}return{on:c.on,lag:true}}
  return{on:s,lag:false}}
 /* ---------- Overview (home) ---------- */
