@@ -415,6 +415,8 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .pbtn .on{background:linear-gradient(#34d399,#10b981);color:#04140d;box-shadow:0 8px 24px rgba(52,211,153,.25)}
 .pbtn .off{background:rgba(251,113,133,.14);color:#fda4af;box-shadow:inset 0 0 0 1.5px rgba(251,113,133,.5)}
 .pbtn .cur{opacity:.38;box-shadow:none}.pbtn button.act:disabled{opacity:1}.pbtn .off.act{background:rgba(251,113,133,.22)}
+.pbtn.one{grid-template-columns:1fr}
+.pbtn .quiet{background:linear-gradient(#22d3ee,#0891b2);color:#04121a;box-shadow:0 8px 24px rgba(34,211,238,.25)}
 .rcrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
 .rcrow .v{font-size:16.5px;font-weight:650;margin-top:2px}.rcrow .v.g{color:#6ee7b7}.rcrow .v.m{color:#8b93a7}
 .rcb{height:36px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.07);color:#cfd5e6;font-size:14.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rcb svg{width:15px;height:15px}
@@ -571,13 +573,14 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 <div class="card empty"><div class="skel" id="esk"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div><div class="et" id="et"></div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
 <!-- AT-A-GLANCE HERO (Boom v8.19) -->
 <div class="live" id="chero"></div>
+<div class="card bpc live" id="qcmd"></div>
 </div>
 <div class="in csec" id="fan">
 <div class="card live" id="fancard">
  <div class="lbl">Fan details</div>
  <div class="grid" style="margin-top:8px">
-  <div class="tile"><div class="lbl">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts">probe, off target</div></div>
-  <div class="tile"><div class="lbl">Probe start point</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts" id="ons">on target</div></div>
+  <div class="tile" id="offT"><div class="lbl" id="offL">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts" id="offs">normal stop point</div></div>
+  <div class="tile" id="onT"><div class="lbl" id="onL">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts" id="ons">normal start point</div></div>
   <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
   <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
  </div>
@@ -648,6 +651,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 </div></section>
 </main>
 <div class="dlg" id="bpdlg" role="dialog" aria-modal="true" aria-labelledby="bpdt"><div class="dlgc"><div class="cap">Starter battery load</div><div class="dlgt" id="bpdt">Switch starter battery load OFF?</div><div class="dlgs" id="bpds"></div><div class="dlgb"><button class="cx" id="bpcx">Cancel</button><button class="go off" id="bpgo">Turn OFF</button></div></div></div>
+<div class="dlg" id="qdlg" role="dialog" aria-modal="true" aria-labelledby="qdt"><div class="dlgc"><div class="cap">Quiet fan</div><div class="dlgt" id="qdt">Quiet the fan for 60 minutes?</div><div class="dlgs" id="qds"></div><div class="dlgb"><button class="cx" id="qcx">Cancel</button><button class="go on" id="qgo">Quiet 60 min</button></div></div></div>
 <div class="dlg" id="bpset" role="dialog" aria-modal="true" aria-labelledby="bpst"><div class="dlgc"><div class="cap">Remote control</div><div class="dlgt" id="bpst">Set up remote control</div><div class="dlgs" id="bpss">Enter the remote control passcode once. It is saved on this phone only.</div>
 <label class="cap" for="bptok" style="display:block;margin:18px 0 8px">Passcode</label><input id="bptok" class="tok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Passcode">
 <div class="dlgb"><button class="cx" id="bpfg">Forget</button><button class="go on" id="bpsv">Save</button></div>
@@ -684,12 +688,13 @@ var PREDICT={
 };
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
    {state:"ok"|"wait"|"flat"|"plateau"|"far"|"reached"|"na", t:off-time ms, hit:stop-time ms, conf, model, r2, note} */
-function predictOff(rows,P){P=P||PREDICT;var L=rows.length-1;if(L<0)return{state:"na"};
+/* opt (optional): {off:target °C} overrides the logged stop point and allows any fan-on mode (e.g. backstop) */
+function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;if(L<0)return{state:"na"};var ov=opt&&opt.off!==null&&opt.off!==undefined;
  var r=rows[L];if(r.fan!==1)return{state:"na"};
  var mode="",i,s=L;for(i=L;i>=0;i--)if(rows[i].mode){mode=rows[i].mode;break}
- if(P.modes.indexOf(mode)<0)return{state:"na",mode:mode};
+ if(!ov&&P.modes.indexOf(mode)<0)return{state:"na",mode:mode};
  while(s>0&&rows[s-1].fan===1&&rows[s].t-rows[s-1].t<=20*60e3)s--;
- var off=null;for(i=L;i>=s;i--)if(rows[i].off!==null&&rows[i].off!==undefined){off=rows[i].off;break}
+ var off=ov?opt.off:null;if(!ov)for(i=L;i>=s;i--)if(rows[i].off!==null&&rows[i].off!==undefined){off=rows[i].off;break}
  if(off===null)return{state:"na",mode:mode};
  var runOn=P.runOnModes.indexOf(mode)>=0?P.runOnMin*60e3:0,early=P.earlyStopModes.indexOf(mode)>=0;
  var W=[];for(i=s;i<=L;i++){var x=rows[i];if(r.t-x.t<=P.windowMin*60e3&&x.pack!==null&&x.amb!==null)W.push(x)}
@@ -741,7 +746,8 @@ MODES["cell-restart"]="Cells warming again: fan runs at least 10 min, then stops
 MODES.backstop="Backstop: probe more than 8° above Ambient (or over 40°), and cells rising. Fan on until the probe drops 2° below.";
 MODES.crisis="Cells over 40°: fan forced on, driving or parked, until they drop below 39°.";
 MODES.fallback="No cell data: using the probe start/stop points (v8.18 rules).";
-SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";
+MODES.quiet="Quiet: fan held off for a timed quiet period. Panic cooling still wins if the pack gets very hot — Boom handles that.";
+SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";SHORT.quiet="Quiet";
 var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=2,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45,BS_CELL_RISE=0.2,BS_CONFIRM_N=2;
 var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
 function $(i){return document.getElementById(i)}
@@ -855,7 +861,7 @@ var ARROW_UP='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke
 var WAIT='<span class="wt">waiting for BMS</span>';
 function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  app.classList.toggle("haserr",!S.fetchOk&&rows.length>0);app.classList.toggle("isempty",!rows.length);
- if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);return}
+ if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);renderQuietCtl();return}
  var r=curRow(rows),age=now-r.t,roE=runOnEnd(rows,r),pr=roE?{state:"na"}:predNow(rows);
  $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);app.classList.toggle("stale",age>STALE_MIN*60e3);setPS(r,age>STALE_MIN*60e3);
  var off=lastv(rows,"off"),on=lastv(rows,"on");
@@ -869,8 +875,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  battery(bl,p,bAge,r);
  /* fan */
  coolHero(rows,r,now,off,on);
- $("ons").textContent=r.mode==="cell-watch"||r.mode==="watching"?"used only without cell data":"on target";
- $("off").innerHTML=off===null?"--":f1(off)+"<small>°C</small>";$("on").innerHTML=on===null?"--":f1(on)+"<small>°C</small>";
+ renderQuietCtl();
  var ko=keyOffInfo(rows,now);
  if(!ko||ko.none){$("ko").innerHTML="--";$("kos").textContent="no drive logged yet"}
  else if(ko.driving){$("ko").innerHTML='<span style="color:#fde68a">Driving</span>';$("kos").textContent="since "+hm(ko.since)+" · fan held off"}
@@ -892,7 +897,11 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
    Shelly; the Pack log does not carry why/c/cs, so we rebuild it from the BMS tab). */
 /* predicted fan-off (client-side, see PREDICT at top of script) */
 var CONFW={high:"high",med:"medium",low:"low"};
-function predNow(rows){try{return predictOff(rows,PREDICT)}catch(e){return{state:"na"}}}
+/* backstop stop point: Ambient + AMB_BACK - BACK_HYST, capped at PROBE_HARD - BACK_HYST (null if no Ambient) */
+function bsStop(amb){return amb===null||amb===undefined?null:Math.min(PROBE_HARD-BACK_HYST,Math.round((amb+AMB_BACK)*10)/10-BACK_HYST)}
+function predNow(rows){try{var r=rows.length?curRow(rows):null;
+ if(r&&r.mode==="backstop"){var b=bsStop(r.amb);return b===null?{state:"na"}:predictOff(rows,PREDICT,{off:b})}
+ return predictOff(rows,PREDICT)}catch(e){return{state:"na"}}}
 /* Boom logs extra rows with a blank mode between its 5-min rows; carry the last real mode forward */
 var RUN_ON_MIN=20;
 function curRow(rows){var r=rows[rows.length-1];if(r.mode)return r;
@@ -973,6 +982,22 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  h+='<div class="whyc">'+esc(why)+'</div>';
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
+ /* FAN DETAILS stop/start tiles: the point that actually governs the fan in this mode (same rules as NEXT) */
+ (function(){var so=null,sr="",sl="Fan stops at",st=null,sn=null,sa="",nl="Fan starts at",C="<small>°C</small>";
+  var bsC=bsv!==null?Math.min(bsv,PROBE_HARD):null,bsR=bsStop(amb);
+  if(m==="driving"){sr="held off while driving, cool-down at key-off";st="Held off"}
+  else if(m==="crisis"){so=CRISIS_OFF;sl="Fan stops below";sr="cells under "+CRISIS_OFF+"°"}
+  else if(m==="panic"){so=PANIC;sl="Fan stops below";sr="probe under "+PANIC+"°"}
+  else if(m==="backstop"){so=bsR;sr="Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°, backstop"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped)":"")}
+  else if(roE){st=hm(roE);sr="end of "+RUN_ON_MIN+" min run-on"}
+  else if(fan&&off!==null&&m!=="cap"){so=off;sr="normal stop point"}
+  if(m==="cap"){sn=PANIC;nl="Fan starts above";sa="panic "+PANIC+"° only, until next drive"}
+  else if(m==="driving"||fan){if(m!=="driving"&&on!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){sn=on;sa="normal start point"}}
+  else if(rst!==null&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m)){if(bsC!==null&&bsC<=rst){sn=bsC;sa="backstop: Ambient +"+AMB_BACK+"°, cells rising "+BS_CELL_RISE+"°"}else{sn=rst;nl="Fan restarts at";sa="cells at settled +"+f1(CELL_RISE)+"°"}}
+  else if(on!==null&&!/^(low-volt|volt-recover)$/.test(m)){sn=on;sa=cell===null?"normal start point (no cell data)":"normal start point"}
+  var ot=$("offT"),nt=$("onT");
+  if(ot){ot.style.display=so!==null||st!==null?"":"none";$("offL").textContent=sl;$("off").innerHTML=st!==null?st.replace(/ ?([ap]m)$/,"<small>$1</small>"):so!==null?f1(so)+C:"--";$("offs").textContent=sr}
+  if(nt){nt.style.display=sn!==null?"":"none";$("onL").textContent=nl;$("on").innerHTML=sn!==null?f1(sn)+C:"--";$("ons").textContent=sa}})();
  /* NEXT card */
  if(nx){var big=null,bc="#fbbf24",bl2="Next",bigT=null;
   if(roE){bigT=hm(roE);bl2="Fan stops at";bc="#34d399"}else
@@ -1534,19 +1559,20 @@ function jsonp(url){return new Promise(function(res,rej){var cb="__bfj"+(++jpN)+
  window[cb]=function(d){done();res(d)};sc.onerror=function(){done();rej(new Error("network"))};sc.src=url+"&callback="+cb;document.head.appendChild(sc)})}
 function relayGet(q){var u=RELAY+"?"+q+"&_="+Date.now();
  return fetch(u,{cache:"no-store",redirect:"follow"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).catch(function(){return jsonp(u)})}
-var BP_ADAPTERS={
- relay:function(on,prog){var tok=encodeURIComponent(bpTok());
-  return relayGet("cmd=bp_cmd&action="+(on?"on":"off")+"&token="+tok).then(function(d){
-   if(!d||d.ok===false)return{status:d&&d.error==="auth"?"auth":"failed",reason:d&&d.error||"no reply"};
-   var id=d.id,t0=Date.now();
-   return new Promise(function(res){(function poll(){if(Date.now()-t0>185e3)return res({status:"expired"});
-    setTimeout(function(){relayGet("cmd=bp_status&id="+encodeURIComponent(id)+"&token="+tok).then(function(x){
-      if(x&&x.ok===false&&x.error==="auth")return res({status:"auth"});
-      var stt=x&&x.state;if(stt==="delivered")prog("waiting");
-      if(stt==="done")return res(x.result_ok===false?{status:"failed",reason:x.status||""}:{status:"confirmed"});
-      if(stt==="failed")return res({status:"failed",reason:x.status||""});
-      if(stt==="expired")return res({status:"expired"});poll()}).catch(function(){poll()})},5000)})()})})}};
+function relayCmd(action,extra,prog){var tok=encodeURIComponent(bpTok());
+ return relayGet("cmd=bp_cmd&action="+encodeURIComponent(action)+"&token="+tok+(extra||"")).then(function(d){
+  if(!d||d.ok===false)return{status:d&&d.error==="auth"?"auth":"failed",reason:d&&d.error||"no reply",minutes:d&&d.minutes};
+  var id=d.id,mins=d.minutes,t0=Date.now();
+  return new Promise(function(res){(function poll(){if(Date.now()-t0>185e3)return res({status:"expired"});
+   setTimeout(function(){relayGet("cmd=bp_status&id="+encodeURIComponent(id)+"&token="+tok).then(function(x){
+     if(x&&x.ok===false&&x.error==="auth")return res({status:"auth"});
+     var stt=x&&x.state;if(stt==="delivered")prog("waiting");
+     if(stt==="done")return res(x.result_ok===false?{status:"failed",reason:x.status||""}:{status:"confirmed",minutes:mins});
+     if(stt==="failed")return res({status:"failed",reason:x.status||""});
+     if(stt==="expired")return res({status:"expired"});poll()}).catch(function(){poll()})},5000)})()})})}
+var BP_ADAPTERS={relay:function(on,prog){return relayCmd(on?"on":"off","",prog||function(){})}};
 function sendBpCommand(on,prog){return BP_ADAPTERS.relay(on,prog||function(){})}
+function sendQuietCommand(cancel,minutes,prog){return cancel?relayCmd("quiet_cancel","",prog||function(){}):relayCmd("quiet","&minutes="+encodeURIComponent(minutes||60),prog||function(){})}
 function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
 function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now(),conf:null};renderBpCmd();
  sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};bpSetOffSrc(on?null:"app");renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
@@ -1595,8 +1621,8 @@ function bpSetup(msg,after){bpAfterSetup=after===undefined?null:after;var t=bpTo
  $("bpfg").style.visibility=t?"":"hidden";$("bpset").classList.add("open");setTimeout(function(){$("bptok").focus()},60)}
 function bpSetClose(){$("bpset").classList.remove("open")}
 $("bpsv").addEventListener("click",function(){var v=$("bptok").value.trim();if(!v){$("bpss").innerHTML='<span class="err">Type the passcode first.</span>';return}
- try{localStorage.setItem(TOKK,v)}catch(e){}$("bptok").value="";bpSetClose();if(BPC.st==="auth")BPC.st=null;renderBpCmd();var a=bpAfterSetup;bpAfterSetup=null;if(a!==null)bpAsk(a)});
-$("bpfg").addEventListener("click",function(){try{localStorage.removeItem(TOKK)}catch(e){}$("bptok").value="";bpSetClose();BPC.st=null;renderBpCmd()});
+ try{localStorage.setItem(TOKK,v)}catch(e){}$("bptok").value="";bpSetClose();if(BPC.st==="auth")BPC.st=null;if(QC.st==="auth")QC.st=null;renderBpCmd();renderQuietCtl();var a=bpAfterSetup;bpAfterSetup=null;if(a!==null){if(typeof a==="function")a();else bpAsk(a)}});
+$("bpfg").addEventListener("click",function(){try{localStorage.removeItem(TOKK)}catch(e){}$("bptok").value="";bpSetClose();BPC.st=null;QC.st=null;renderBpCmd();renderQuietCtl()});
 $("bpsx").addEventListener("click",bpSetClose);$("bpset").addEventListener("click",function(e){if(e.target===this)bpSetClose()});
 $("bptok").addEventListener("keydown",function(e){if(e.key==="Enter")$("bpsv").click()});
 function bpAsk(on){if(!bpTok())return bpSetup(null,on);var d=$("bpdlg");$("bpdt").textContent="Switch starter battery load "+(on?"ON":"OFF")+"?";
@@ -1605,8 +1631,47 @@ function bpAsk(on){if(!bpTok())return bpSetup(null,on);var d=$("bpdlg");$("bpdt"
 function bpClose(){$("bpdlg").classList.remove("open")}
 $("bpcmd").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-bp],[data-setup]");if(!b||b.disabled)return;if(b.dataset.setup)bpSetup();else bpAsk(b.dataset.bp==="1")});
 $("bpcx").addEventListener("click",bpClose);$("bpdlg").addEventListener("click",function(e){if(e.target===this)bpClose()});
-document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();bpSetClose()}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();bpSetClose();qClose()}});
 $("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
+
+
+/* ---------- Quiet fan (same relay + token as BatteryProtect) ----------
+   Optimistic local end-time in bf2-quiet-until — Shelly logs do not yet expose quiet state. */
+var QUIET_K="bf2-quiet-until",QUIET_MIN=60;
+var QC={want:null,st:null,msg:"",at:0,mins:QUIET_MIN};
+function quietUntil(){try{var v=+localStorage.getItem(QUIET_K);return v>0?v:0}catch(e){return 0}}
+function quietSetUntil(ms){try{if(ms)localStorage.setItem(QUIET_K,String(ms));else localStorage.removeItem(QUIET_K)}catch(e){}}
+function quietLeftMin(){var u=quietUntil(),now=Date.now();if(!u||u<=now){if(u)quietSetUntil(0);return 0}return Math.max(1,Math.round((u-now)/60e3))}
+function qRun(cancel){QC={want:cancel?"cancel":"quiet",st:"sending",msg:"",at:Date.now(),mins:QUIET_MIN};renderQuietCtl();
+ sendQuietCommand(cancel,QUIET_MIN,function(p){if(QC.st==="sending"){QC.st=p;renderQuietCtl()}}).then(function(res){
+  QC.st=res.status;QC.msg=res.reason||"";
+  if(res.status==="confirmed"){if(cancel)quietSetUntil(0);else quietSetUntil(Date.now()+(res.minutes||QUIET_MIN)*60e3);QC.mins=res.minutes||QUIET_MIN}
+  renderQuietCtl()}).catch(function(){QC.st="neterr";renderQuietCtl()})}
+function renderQuietCtl(){var el=$("qcmd");if(!el)return;var left=quietLeftMin(),active=left>0,tok=!!bpTok(),st=QC.st,busy=st==="sending"||st==="waiting";
+ var h='<div class="hHead"><div class="cap">Quiet fan</div>'+(busy?'<span class="sp c">'+(st==="sending"?"Sending":"Waiting")+'</span>':active?'<span class="sp c">Quiet · '+left+' min left</span>':"")+'</div>';
+ h+='<div class="whyc">Holds the fan quiet for a while so it is less noisy. Panic cooling still wins if the pack gets very hot — Boom handles that.</div>';
+ if(!tok){h+='<div class="setup"><div class="t">Set up remote control</div><div class="s">Same passcode as starter battery load. Enter it once to quiet the fan from this phone.</div><button data-qsetup="1">Set up remote control</button></div>'}
+ else if(active){h+='<div class="pbtn one"><button class="off" data-q="cancel"'+(busy?" disabled":"")+'>Cancel quiet</button></div>'}
+ else{h+='<div class="pbtn one"><button class="quiet" data-q="quiet"'+(busy?" disabled":"")+'>Quiet '+QUIET_MIN+' min</button></div>'}
+ if(st==="sending")h+='<div class="bpres wt"><span class="spin"></span>Sending…</div>';
+ else if(st==="waiting")h+='<div class="bpres wt"><span class="spin"></span>Waiting for the battery bridge… it checks every 30 s.</div>';
+ else if(st==="confirmed")h+='<div class="bpres ok">'+(QC.want==="cancel"?"Quiet cancelled ✓":"Quiet for "+(QC.mins||QUIET_MIN)+" min ✓")+'</div>';
+ else if(st==="failed")h+='<div class="bpres bad">Didn\'t go through'+(QC.msg?": "+esc(QC.msg):".")+'</div>';
+ else if(st==="expired")h+='<div class="bpres bad">The battery bridge didn\'t respond. It may be offline.</div>';
+ else if(st==="auth")h+='<div class="bpres bad">Passcode not accepted. Check it in Remote control settings.</div>';
+ else if(st==="neterr")h+='<div class="bpres bad">Couldn\'t reach the remote control service. Check your connection and try again.</div>';
+ if(tok)h+='<div class="rcrow"><div><div class="cap" style="margin:0">Remote control</div><div class="v g">Same passcode as Protect</div></div><button class="rcb" data-qsetup="1">'+GEAR+'Settings</button></div>';
+ el.innerHTML=h}
+function qAsk(cancel){if(!bpTok())return bpSetup(null,function(){qAsk(cancel)});var d=$("qdlg");
+ if(cancel){$("qdt").textContent="Cancel quiet mode?";$("qds").textContent="The fan goes back to its normal rules. The battery bridge acts within about 30 s.";
+  var g=$("qgo");g.className="go off";g.textContent="Cancel quiet";g.dataset.v="cancel"}
+ else{$("qdt").textContent="Quiet the fan for "+QUIET_MIN+" minutes?";$("qds").textContent="The fan stays quiet for "+QUIET_MIN+" min so it is less noisy. Panic cooling still wins if the pack gets very hot — Boom handles that. The battery bridge acts within about 30 s.";
+  var g2=$("qgo");g2.className="go on";g2.textContent="Quiet "+QUIET_MIN+" min";g2.dataset.v="quiet"}
+ d.classList.add("open");setTimeout(function(){$("qcx").focus()},50)}
+function qClose(){var d=$("qdlg");if(d)d.classList.remove("open")}
+$("qcmd").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-q],[data-qsetup]");if(!b||b.disabled)return;if(b.dataset.qsetup)bpSetup();else qAsk(b.dataset.q==="cancel")});
+$("qcx").addEventListener("click",qClose);$("qdlg").addEventListener("click",function(e){if(e.target===this)qClose()});
+$("qgo").addEventListener("click",function(){var cancel=this.dataset.v==="cancel";qClose();qRun(cancel)});
 
 function renderProtect(){renderBpCtl();return;var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
