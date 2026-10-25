@@ -946,7 +946,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
   if(m==="driving"){nx="Cool-down starts at key-off";nx2="Rule: after a drive over 5 min, cool to stop"+(off!==null?" "+d1(off):"")+" at key-off"}
-  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on while parked: panic above "+PANIC+"°. Or "+bsEq}
+  else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on while parked: panic above "+PANIC+"°"}
   else if(m==="low-volt"||m==="volt-recover"){nx="Fan on when battery reaches <b>13.1 V</b>";nx2="Rule: off under 12.9 V · on again at 13.1 V"}
   else if(m==="cold"){nx="Normal fan rules apply";nx2="No 5° cold lockout — boom uses the usual on/off rules"}
   else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){
@@ -964,7 +964,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
  var watch=!fan&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m);
  if(cs.settled!==null&&watch)mk.push({v:cs.settled,c:"#67e8f9",t:"settled",in:1});
  if(rst!==null&&watch)mk.push({v:rst,c:"#fbbf24",t:"restart"});
- if(bsv!==null&&m!=="driving")mk.push({v:Math.min(bsv,PROBE_HARD),c:"#fb7185",t:"probe backstop"});
+ if(bsv!==null&&m!=="driving"&&m!=="cap")mk.push({v:Math.min(bsv,PROBE_HARD),c:"#fb7185",t:"probe backstop"});
  if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
  h+=gaugeSVG(gv,10,50,mk,col)+'';
