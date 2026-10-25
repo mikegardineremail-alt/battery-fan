@@ -749,6 +749,12 @@ MODES.fallback="No cell data: using the probe start/stop points (v8.18 rules).";
 MODES.quiet="Quiet: fan held off for a timed quiet period. Panic cooling still wins if the pack gets very hot — Boom handles that.";
 SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";SHORT.quiet="Quiet";
 var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=2,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45,BS_CELL_RISE=0.2,BS_CONFIRM_N=2;
+/* Boom cool-down stop floor (display approx from latched Ambient; match Boom seasons) */
+var DELTA_OFF=3.5;
+var SEASONS=[{name:"warm",minLatch:22,floor:28},{name:"mild",minLatch:12,floor:28},{name:"cool",minLatch:-99,floor:24}];
+function seasonOf(latch){for(var i=0;i<SEASONS.length;i++)if(latch>=SEASONS[i].minLatch)return SEASONS[i];return SEASONS[SEASONS.length-1]}
+function rawOff(latch){return latch+DELTA_OFF}
+function floorHolding(off,latch){if(typeof off!=="number"||typeof latch!=="number"||!isFinite(off)||!isFinite(latch))return false;var s=seasonOf(latch),raw=rawOff(latch);return raw<s.floor-0.05&&Math.abs(off-s.floor)<=0.05}
 var PROT=["cell over-volt","cell under-volt","pack over-volt","pack under-volt","charge over-temp","charge under-temp","discharge over-temp","discharge under-temp","charge over-current","discharge over-current","short circuit","AFE error","FET lock"];
 function $(i){return document.getElementById(i)}
 function n(v){if(v===null||v===undefined)return null;if(typeof v==="number")return isFinite(v)?v:null;v=String(v).trim();if(v===""||/^(null|nan|none|undefined|-)$/i.test(v))return null;var x=Number(v.replace(/,/g,""));return isFinite(x)?x:null}
@@ -952,7 +958,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
   else if(m==="cell-restart"){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: ≥10 min cell run, then probe ≤ stop "+d1(off)}
-  else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: fan off when probe ≤ stop "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
+  else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";var Lh2=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh2)){var sN=seasonOf(Lh2);nx2=sN.name+"-season floor "+sN.floor+"° holding (rule wanted "+f1(rawOff(Lh2))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}else nx2="Rule: fan off when probe ≤ stop "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
   if(m==="driving"){nx="Cool-down starts at key-off";nx2="Rule: after a drive over 5 min, cool to stop"+(off!==null?" "+d1(off):"")+" at key-off"}
@@ -990,7 +996,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
   else if(m==="panic"){so=PANIC;sl="Fan stops below";sr="probe under "+PANIC+"°"}
   else if(m==="backstop"){so=bsR;sr="Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°, backstop"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped)":"")}
   else if(roE){st=hm(roE);sr="end of "+RUN_ON_MIN+" min run-on"}
-  else if(fan&&off!==null&&m!=="cap"){so=off;sr="normal stop point"}
+  else if(fan&&off!==null&&m!=="cap"){so=off;var Lh=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh)){var sF=seasonOf(Lh);sr=sF.name+"-season floor "+sF.floor+"° (rule wanted "+f1(rawOff(Lh))+"°)"}else sr="normal stop point"}
   if(m==="cap"){sn=PANIC;nl="Fan starts above";sa="panic "+PANIC+"° only, until next drive"}
   else if(m==="driving"||fan){if(m!=="driving"&&on!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){sn=on;sa="normal start point"}}
   else if(rst!==null&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m)){if(bsC!==null&&bsC<=rst){sn=bsC;sa="backstop: Ambient +"+AMB_BACK+"°, cells rising "+BS_CELL_RISE+"°"}else{sn=rst;nl="Fan restarts at";sa="cells at settled +"+f1(CELL_RISE)+"°"}}
@@ -1033,7 +1039,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
     if(m==="backstop"){var rel2=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);
       sub="Rule: "+BACK_HYST+"° under Ambient +"+AMB_BACK+"° = <b style=\"color:#34d399\">"+d1(rel2)+"</b> · fan off at probe ≤ that";}
     else if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
-    else if(off!==null){sub="Rule: fan off when probe ≤ stop <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
+    else if(off!==null){var Lh3=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh3)){var sB=seasonOf(Lh3);sub=sB.name+"-season floor "+sB.floor+"° holding (rule wanted "+f1(rawOff(Lh3))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}else sub="Rule: fan off when probe ≤ stop <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
     else sub=nx2||sub;
    }
    h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+f1(big)+'<span class="u">°C</span></div><div class="bigs">'+sub+'</div></div>'}
