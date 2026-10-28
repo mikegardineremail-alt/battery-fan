@@ -1877,7 +1877,7 @@ function noteSkipsCooldown(n){if(!n)return false;n=String(n).toLowerCase();
 function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
  for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving"||R[i].t-R[i-1].t>20*60e3)continue;
   var k=i,t=R[k].t,j=k-1;while(j>0&&R[j-1].mode==="driving"&&R[j].t-R[j-1].t<=20*60e3)j--;
-  var end=k,lim=t+3*3600e3;if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
+  var end=k,lim=t+8*3600e3;/* was 3h; Boom coolings often run 4h+ and parked restarts continue until cap@8h */if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
   var win=R.slice(k,end+1),bad=win.concat([R[k-1]]).some(function(r){return noteSkipsCooldown(r.note)});
   if(bad||(t>=BUG[0]&&t<=BUG[1]))continue;
   var pk=null,tgt=null,fan=0,off=null;win.forEach(function(r,m){if(r.pack!==null&&(!pk||r.pack>pk.v))pk={v:r.pack,t:r.t};if(r.off!==null)off=off===null?r.off:off;
