@@ -415,8 +415,6 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .pbtn .on{background:linear-gradient(#34d399,#10b981);color:#04140d;box-shadow:0 8px 24px rgba(52,211,153,.25)}
 .pbtn .off{background:rgba(251,113,133,.14);color:#fda4af;box-shadow:inset 0 0 0 1.5px rgba(251,113,133,.5)}
 .pbtn .cur{opacity:.38;box-shadow:none}.pbtn button.act:disabled{opacity:1}.pbtn .off.act{background:rgba(251,113,133,.22)}
-.pbtn.one{grid-template-columns:1fr}
-.pbtn .quiet{background:linear-gradient(#22d3ee,#0891b2);color:#04121a;box-shadow:0 8px 24px rgba(34,211,238,.25)}
 .rcrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
 .rcrow .v{font-size:16.5px;font-weight:650;margin-top:2px}.rcrow .v.g{color:#6ee7b7}.rcrow .v.m{color:#8b93a7}
 .rcb{height:36px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.07);color:#cfd5e6;font-size:14.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.rcb svg{width:15px;height:15px}
@@ -573,7 +571,6 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 <div class="card empty"><div class="skel" id="esk"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div><div class="et" id="et"></div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
 <!-- AT-A-GLANCE HERO (Boom v8.33 latch band) -->
 <div class="live" id="chero"></div>
-<div class="card bpc live" id="qcmd"></div>
 </div>
 <div class="in csec" id="fan">
 <div class="card live" id="fancard">
@@ -652,7 +649,6 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 </div></section>
 </main>
 <div class="dlg" id="bpdlg" role="dialog" aria-modal="true" aria-labelledby="bpdt"><div class="dlgc"><div class="cap">Starter battery load</div><div class="dlgt" id="bpdt">Switch starter battery load OFF?</div><div class="dlgs" id="bpds"></div><div class="dlgb"><button class="cx" id="bpcx">Cancel</button><button class="go off" id="bpgo">Turn OFF</button></div></div></div>
-<div class="dlg" id="qdlg" role="dialog" aria-modal="true" aria-labelledby="qdt"><div class="dlgc"><div class="cap">Quiet fan</div><div class="dlgt" id="qdt">Quiet the fan for 60 minutes?</div><div class="dlgs" id="qds"></div><div class="dlgb"><button class="cx" id="qcx">Cancel</button><button class="go on" id="qgo">Quiet 60 min</button></div></div></div>
 <div class="dlg" id="bpset" role="dialog" aria-modal="true" aria-labelledby="bpst"><div class="dlgc"><div class="cap">Remote control</div><div class="dlgt" id="bpst">Set up remote control</div><div class="dlgs" id="bpss">Enter the remote control passcode once. It is saved on this phone only.</div>
 <label class="cap" for="bptok" style="display:block;margin:18px 0 8px">Passcode</label><input id="bptok" class="tok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Passcode">
 <div class="dlgb"><button class="cx" id="bpfg">Forget</button><button class="go on" id="bpsv">Save</button></div>
@@ -983,14 +979,13 @@ var ARROW_UP='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke
 var WAIT='<span class="wt">waiting for BMS</span>';
 function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  app.classList.toggle("haserr",!S.fetchOk&&rows.length>0);app.classList.toggle("isempty",!rows.length);
- if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);renderQuietCtl();return}
+ if(!rows.length){var ld=S.fetchOk&&!S.okAt;$("esk").style.display=ld?"":"none";$("et").textContent=ld?"":S.fetchOk?"Waiting for the first reading":"Can't reach the sheet";$("ago").textContent=S.fetchOk?"no data yet":"offline";$("pillt").textContent=S.fetchOk?"Loading":"Offline";footer(null,null);return}
  var r=curRow(rows),age=now-r.t,roE=runOnEnd(rows,r),pr=roE?{state:"na"}:predNow(rows);
  $("ago").textContent="Updated "+hm(r.t)+" · "+ago(age);var ageAlarm=S.live&&age>STALE_MIN*60e3;app.classList.toggle("stale",ageAlarm);setPS(r,ageAlarm);
  var off=lastv(rows,"off"),on=lastv(rows,"on");
  var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,p=bl?packOf(bl):null,bAge=bl?now-bl.t:null,has=!!p;
  /* header pill */
- var fan=r.fan===1,m=r.mode,QE0=quietEff(r);
- if(QE0.lag&&QE0.quiet){fan=false;m="quiet";roE=null;pr={state:"na"}}
+ var fan=r.fan===1,m=r.mode;
  $("pill").className="pill"+(BAD[m]?" bad":fan?"":m==="driving"?" drv":" off");
  $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):pr.state==="ok"?(SHORT[m]||"Cooling")+", off ~"+hm(pr.t).replace(/ ?[ap]m$/,"")+" ±"+pr.pm:(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
  var pk=r.pack,amb=r.amb;
@@ -998,7 +993,6 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  battery(bl,p,bAge,r);
  /* fan */
  coolHero(rows,r,now,off,on);
- renderQuietCtl();
  var ko=keyOffInfo(rows,now);
  if(!ko||ko.none){$("ko").innerHTML="--";$("kos").textContent="no drive logged yet"}
  else if(ko.driving){$("ko").innerHTML='<span style="color:#fde68a">Driving</span>';$("kos").textContent="since "+hm(ko.since)+" · fan held off"}
@@ -1082,8 +1076,6 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  else if(m==="early-stop")m="cooldown-done";
  var pill="",pc="",why="",nx="",nx2="",seg=null,tone="",roE=runOnEnd(rows,r),pr=roE?{state:"na"}:predNow(rows);
  var dur0=dur(now-cs.since);
- var QE=quietEff(r),qLagHtml="";
- if(QE.lag&&QE.quiet){fan=false;m="quiet";roE=null;pr={state:"na"}}
  /* status pill + why (latch band only — no Amb+8 / cell-watch / plateau as live rules) */
  if(m==="watching"){pill="Watching";pc="g";why=fan?"Cooling down.":"Temperatures are where they should be."}
  else if(m==="crisis"){pill="Cells hot";pc="r";tone="hot";why="Cells are over 40°. Fan forced on, driving or parked."}
@@ -1098,13 +1090,9 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  else if(m==="cap"){var cR=S.rows||[],ci=cR.length-1;while(ci>=0&&cR[ci].mode==="cap")ci--;var cut=ci>=0&&cR[ci].fan===1;if(cut){pill="Stopped at 8 h limit";pc="w";why="The fan was still cycling when the 8 hour parked limit ended auto cooling. It starts again after the next drive."}else{pill="Cooling done";pc="";why="Cooling finished before the 8 hour limit. Auto cooling is off until the next drive."}}
  else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
  else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
- if(QE.lag&&QE.quiet){pill="Quiet";pc="c";why=MODES.quiet||"Quiet (historical / bridge). Boom v8.33+ no longer runs a quiet window.";nx="";nx2="";seg=null;
-  qLagHtml='<span class="lagt" title="Quiet confirmed by the battery bridge. Boom v8.33+ does not publish mode quiet — local timer only.">bridge quiet</span>'}
- else if(QE.lag&&!QE.quiet){pill=m==="quiet"?"Quiet":(pill||"Quiet");pc="c";why="Quiet cancel confirmed by the bridge.";nx="";nx2="";seg=null;fan=m==="quiet"?false:fan;
-  qLagHtml='<span class="lagt" title="Quiet cancel confirmed by the battery bridge.">bridge quiet</span>'}
- else if(m==="quiet"){pill="Quiet";pc="c";why=MODES.quiet||why;nx="";nx2="";seg=null;fan=false}
+ if(m==="quiet"){pill="Quiet";pc="c";why=MODES.quiet||why;nx="";nx2="";seg=null;fan=false}
  /* NEXT: latch band only (on/off from row). No Amb+8 backstop / cell-restart as live next trigger. */
- if(m==="quiet"||(QE.lag&&QE.quiet)){nx="";nx2="";seg=null}
+ if(m==="quiet"){nx="";nx2="";seg=null}
  else if(fan){
   if(m==="crisis"){nx="Fan off when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Rule: crisis off under "+CRISIS_OFF+"° · cells now "+d1(cell)}
   else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: parked panic on at "+PANIC+"° · off under "+PANIC+"°"}
@@ -1128,14 +1116,14 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  if(off!==null&&watch)mk.push({v:off,c:"#34d399",t:"stop",in:1});
  if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
  if(fan&&on!==null)mk.push({v:on,c:"#fda4af",t:"start"});
- var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+(QE.lag&&QE.quiet?"":" · "+dur0)+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
+ var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
  var gr=gaugeRange(gv,mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
- h+='<div class="whyc">'+esc(why)+'</div>'+(qLagHtml||"");
+ h+='<div class="whyc">'+esc(why)+'</div>';
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
- if(m==="quiet"||(QE.lag&&QE.quiet)){var otQ=$("offT"),ntQ=$("onT");if(otQ)otQ.style.display="none";if(ntQ)ntQ.style.display="none"}
+ if(m==="quiet"){var otQ=$("offT"),ntQ=$("onT");if(otQ)otQ.style.display="none";if(ntQ)ntQ.style.display="none"}
  else (function(){var so=null,sr="",sl="Fan stops at",st=null,sn=null,sa="",nl="Fan starts at",C="<small>°C</small>";
   if(m==="driving"){sr="held off while driving, cool-down at key-off";st="Held off"}
   else if(m==="crisis"){so=CRISIS_OFF;sl="Fan stops below";sr="cells under "+CRISIS_OFF+"°"}
@@ -1634,7 +1622,6 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
  applyStates();var G=PG[i]||{h:TITLES[i],k:""};$("htitle").textContent=G.h;$("htitle").className=G.k?"ps-"+G.k:"";document.title=G.h+" · Battery Monitor";app.classList.toggle("notcool",i!==1);
  function upd(ts){a="Updated "+hm(ts)+" · "+ago(now-ts);old=now-ts>STALE_MIN*60e3}
  var lr=S.rows.length?S.rows[S.rows.length-1]:null,fon=!!(lr&&lr.fan===1),hf=$("hfan");
- if(lr){var QEh=quietEff(lr);if(QEh.lag&&QEh.quiet)fon=false}
  hf.className="hfan "+(lr?(fon?"on":"off"):"off");hf.setAttribute("aria-label",fon?"Fan on":"Fan off");
  if(i===0){var al=[],srcT=[];if(lr)srcT.push(lr.t);var b0=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(b0){srcT.push(b0.t);if(S.live&&packOf(b0).prot)al.push("Battery protection")}
    var sh0=(X2.sh||[]).filter(function(r){return r.soc!==null||r.v!==null});if(sh0.length)srcT.push(sh0[sh0.length-1].t);
@@ -1732,7 +1719,6 @@ function relayCmd(action,extra,prog){var tok=encodeURIComponent(bpTok());
      if(stt==="expired")return res({status:"expired"});poll()}).catch(function(){poll()})},5000)})()})})}
 var BP_ADAPTERS={relay:function(on,prog){return relayCmd(on?"on":"off","",prog||function(){})}};
 function sendBpCommand(on,prog){return BP_ADAPTERS.relay(on,prog||function(){})}
-function sendQuietCommand(cancel,minutes,prog){return cancel?relayCmd("quiet_cancel","",prog||function(){}):relayCmd("quiet","&minutes="+encodeURIComponent(minutes||60),prog||function(){})}
 function bpOn(r){if(!r)return null;var os=String(r.output_state||"").trim().toLowerCase(),oc=n(r.output_state_code);return os?/^(on|1|true)$/.test(os):oc!==null?oc===1:null}
 function bpRun(on){BPC={want:on,st:"sending",msg:"",at:Date.now(),conf:null};renderBpCmd();
  sendBpCommand(on,function(p){if(BPC.st==="sending"){BPC.st=p;renderBpCmd()}}).then(function(res){BPC.st=res.status;BPC.msg=res.reason||"";if(res.status==="confirmed"){BPC.conf={on:on,at:Date.now()};bpSetOffSrc(on?null:"app");renderBpCtl();renderOverview();hdr()}else renderBpCmd()})
@@ -1781,8 +1767,8 @@ function bpSetup(msg,after){bpAfterSetup=after===undefined?null:after;var t=bpTo
  $("bpfg").style.visibility=t?"":"hidden";$("bpset").classList.add("open");setTimeout(function(){$("bptok").focus()},60)}
 function bpSetClose(){$("bpset").classList.remove("open")}
 $("bpsv").addEventListener("click",function(){var v=$("bptok").value.trim();if(!v){$("bpss").innerHTML='<span class="err">Type the passcode first.</span>';return}
- try{localStorage.setItem(TOKK,v)}catch(e){}$("bptok").value="";bpSetClose();if(BPC.st==="auth")BPC.st=null;if(QC.st==="auth")QC.st=null;renderBpCmd();renderQuietCtl();var a=bpAfterSetup;bpAfterSetup=null;if(a!==null){if(typeof a==="function")a();else bpAsk(a)}});
-$("bpfg").addEventListener("click",function(){try{localStorage.removeItem(TOKK)}catch(e){}$("bptok").value="";bpSetClose();BPC.st=null;QC.st=null;renderBpCmd();renderQuietCtl()});
+ try{localStorage.setItem(TOKK,v)}catch(e){}$("bptok").value="";bpSetClose();if(BPC.st==="auth")BPC.st=null;renderBpCmd();var a=bpAfterSetup;bpAfterSetup=null;if(a!==null){if(typeof a==="function")a();else bpAsk(a)}});
+$("bpfg").addEventListener("click",function(){try{localStorage.removeItem(TOKK)}catch(e){}$("bptok").value="";bpSetClose();BPC.st=null;renderBpCmd()});
 $("bpsx").addEventListener("click",bpSetClose);$("bpset").addEventListener("click",function(e){if(e.target===this)bpSetClose()});
 $("bptok").addEventListener("keydown",function(e){if(e.key==="Enter")$("bpsv").click()});
 function bpAsk(on){if(!bpTok())return bpSetup(null,on);var d=$("bpdlg");$("bpdt").textContent="Switch starter battery load "+(on?"ON":"OFF")+"?";
@@ -1791,50 +1777,9 @@ function bpAsk(on){if(!bpTok())return bpSetup(null,on);var d=$("bpdlg");$("bpdt"
 function bpClose(){$("bpdlg").classList.remove("open")}
 $("bpcmd").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-bp],[data-setup]");if(!b||b.disabled)return;if(b.dataset.setup)bpSetup();else bpAsk(b.dataset.bp==="1")});
 $("bpcx").addEventListener("click",bpClose);$("bpdlg").addEventListener("click",function(e){if(e.target===this)bpClose()});
-document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();bpSetClose();qClose()}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();bpSetClose()}});
 $("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
 
-
-/* ---------- Quiet fan (bridge relay; Boom v8.33+ has no quiet window / no 0x3D quietMinutes) ----------
-   Historical pack-log mode==quiet still labelled Quiet. Bridge Quiet button kept for Invicta/bridge control;
-   do not claim Boom still runs quiet. Local QUIET_K is optimistic UI only. */
-var QUIET_K="bf2-quiet-until",QUIET_MIN=60;
-var QC={want:null,st:null,msg:"",at:0,mins:QUIET_MIN,conf:null};
-function quietUntil(){try{var v=+localStorage.getItem(QUIET_K);return v>0?v:0}catch(e){return 0}}
-function quietSetUntil(ms){try{if(ms)localStorage.setItem(QUIET_K,String(ms));else localStorage.removeItem(QUIET_K)}catch(e){}}
-function quietLeftMin(){var u=quietUntil(),now=Date.now();if(!u||u<=now){if(u)quietSetUntil(0);return 0}return Math.max(1,Math.round((u-now)/60e3))}
-function qRun(cancel){QC={want:cancel?"cancel":"quiet",st:"sending",msg:"",at:Date.now(),mins:QUIET_MIN,conf:null};renderQuietCtl();
- sendQuietCommand(cancel,QUIET_MIN,function(p){if(QC.st==="sending"){QC.st=p;renderQuietCtl()}}).then(function(res){
-  QC.st=res.status;QC.msg=res.reason||"";
-  if(res.status==="confirmed"){if(cancel)quietSetUntil(0);else quietSetUntil(Date.now()+(res.minutes||QUIET_MIN)*60e3);QC.mins=res.minutes||QUIET_MIN;QC.conf={quiet:!cancel,at:Date.now()};render()}
-  else renderQuietCtl()}).catch(function(){QC.st="neterr";renderQuietCtl()})}
-function renderQuietCtl(){var el=$("qcmd");if(!el)return;var left=quietLeftMin(),active=left>0,tok=!!bpTok(),st=QC.st,busy=st==="sending"||st==="waiting";
- var lrQ=S.rows.length?curRow(S.rows):null,QEq=quietEff(lrQ),qLag=QEq.lag;
- var h='<div class="hHead"><div class="cap">Quiet fan</div>'+(busy?'<span class="sp c">'+(st==="sending"?"Sending":"Waiting")+'</span>':active?'<span class="sp c">Quiet · '+left+' min left</span>':"")+'</div>';
- h+='<div class="whyc">Battery-bridge quiet command (Boom v8.33+ no longer has a quiet window). Panic/crisis still force the fan when those Boom rules fire.</div>';
- if(qLag&&(active||(QC.conf&&QC.conf.quiet===false)))h+='<span class="lagt" title="'+(QC.conf&&QC.conf.quiet===false?"Quiet cancel confirmed by the battery bridge. The 5-minute log has not caught up yet.":"Quiet confirmed by the battery bridge. The 5-minute log has not caught up yet.")+'">log catching up</span>';
- if(!tok){h+='<div class="setup"><div class="t">Set up remote control</div><div class="s">Same passcode as starter battery load. Enter it once to quiet the fan from this phone.</div><button data-qsetup="1">Set up remote control</button></div>'}
- else if(active){h+='<div class="pbtn one"><button class="off" data-q="cancel"'+(busy?" disabled":"")+'>Cancel quiet</button></div>'}
- else{h+='<div class="pbtn one"><button class="quiet" data-q="quiet"'+(busy?" disabled":"")+'>Quiet '+QUIET_MIN+' min</button></div>'}
- if(st==="sending")h+='<div class="bpres wt"><span class="spin"></span>Sending…</div>';
- else if(st==="waiting")h+='<div class="bpres wt"><span class="spin"></span>Waiting for the battery bridge… it checks every 30 s.</div>';
- else if(st==="confirmed")h+='<div class="bpres ok">'+(QC.want==="cancel"?"Quiet cancelled ✓":"Quiet for "+(QC.mins||QUIET_MIN)+" min ✓")+'</div>';
- else if(st==="failed")h+='<div class="bpres bad">Didn\'t go through'+(QC.msg?": "+esc(QC.msg):".")+'</div>';
- else if(st==="expired")h+='<div class="bpres bad">The battery bridge didn\'t respond. It may be offline.</div>';
- else if(st==="auth")h+='<div class="bpres bad">Passcode not accepted. Check it in Remote control settings.</div>';
- else if(st==="neterr")h+='<div class="bpres bad">Couldn\'t reach the remote control service. Check your connection and try again.</div>';
- if(tok)h+='<div class="rcrow"><div><div class="cap" style="margin:0">Remote control</div><div class="v g">Same passcode as Protect</div></div><button class="rcb" data-qsetup="1">'+GEAR+'Settings</button></div>';
- el.innerHTML=h}
-function qAsk(cancel){if(!bpTok())return bpSetup(null,function(){qAsk(cancel)});var d=$("qdlg");
- if(cancel){$("qdt").textContent="Cancel quiet mode?";$("qds").textContent="The fan goes back to its normal rules. The battery bridge acts within about 30 s.";
-  var g=$("qgo");g.className="go off";g.textContent="Cancel quiet";g.dataset.v="cancel"}
- else{$("qdt").textContent="Quiet the fan for "+QUIET_MIN+" minutes?";$("qds").textContent="Sends a quiet command via the battery bridge for "+QUIET_MIN+" min. Boom v8.33+ no longer runs a quiet window — bridge only. Panic/crisis still win when those rules fire. Bridge acts within about 30 s.";
-  var g2=$("qgo");g2.className="go on";g2.textContent="Quiet "+QUIET_MIN+" min";g2.dataset.v="quiet"}
- d.classList.add("open");setTimeout(function(){$("qcx").focus()},50)}
-function qClose(){var d=$("qdlg");if(d)d.classList.remove("open")}
-$("qcmd").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-q],[data-qsetup]");if(!b||b.disabled)return;if(b.dataset.qsetup)bpSetup();else qAsk(b.dataset.q==="cancel")});
-$("qcx").addEventListener("click",qClose);$("qdlg").addEventListener("click",function(e){if(e.target===this)qClose()});
-$("qgo").addEventListener("click",function(){var cancel=this.dataset.v==="cancel";qClose();qRun(cancel)});
 
 function renderProtect(){renderBpCtl();return;var r=X2.bp,body=$("prbody");
  if(!r){$("prupd").textContent=X2.bpErr?"can't read sheet":"";body.innerHTML=X2.bpErr&&!X2.bpAt?waitBox("Waiting for first reading","The BatteryProtect sheet isn't readable yet. Once it's logging and shared as “Anyone with the link can view”, it will show here."):waitBox(X2.bpAt?"Waiting for first reading":"Loading…","The BatteryProtect will show here once it logs its first reading.");return}
@@ -1991,14 +1936,6 @@ function bpEff(){var r=X2.bp,s=bpOn(r),c=BPC.conf;
  if(s===true)bpSetOffSrc(null);
  if(c){if(s===c.on||Date.now()-c.at>20*60e3){BPC.conf=null;return{on:s,lag:false}}return{on:c.on,lag:true}}
  return{on:s,lag:false}}
-/* Quiet UI: sheet mode==quiet = historical label only. Boom v8.33+ never publishes quiet — do not invent Boom quiet from bridge confirm. */
-function quietEff(r){var c=QC.conf,m=r&&r.mode!=null&&r.mode!==""?String(r.mode):"",sheetQ=m==="quiet";
- if(c){if(Date.now()-c.at>2*60e3){QC.conf=null;c=null}
-  else if(c.quiet){if(sheetQ){QC.conf=null;return{quiet:true,lag:false}}
-   /* bridge confirmed but Boom will not publish mode quiet — local QUIET_K only, no live Boom quiet override */
-   return{quiet:false,lag:false}}
-  else{QC.conf=null;return{quiet:sheetQ,lag:false}}}
- return{quiet:sheetQ,lag:false}}
 /* ---------- Overview (home) ---------- */
 function fresh(ts,liveGate){if(!ts)return'<span class="fr n">no data yet</span>';var age=Date.now()-ts,o=!!liveGate&&age>STALE_MIN*60e3;return'<span class="fr'+(o?" o":"")+'">'+ago(age).replace(/^just now$/,"just now")+"</span>"}
 function ovTile(l,v,s,cls){return'<div class="ot'+(cls?" "+cls:"")+'"><span>'+l+"</span><b>"+v+"</b>"+(s?"<i>"+s+"</i>":"")+"</div>"}
@@ -2016,11 +1953,10 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
   h+='<div class="cent"><span class="sp '+(p.prot?"r":dc)+'">'+dw+(d===null?"":" · "+Math.round(d)+" mV")+(p.prot?" · protection active":"")+"</span></div>"}
  h+="</div>";
  /* --- Cooling: full-width arc gauge --- */
- var r=S.rows.length?curRow(S.rows):null,fon=!!(r&&r.fan===1),roO=r?runOnEnd(S.rows,r):null,prO=r&&!roO?predNow(S.rows):{state:"na"},QEo=r?quietEff(r):{quiet:false,lag:false};
- if(QEo.lag&&QEo.quiet){fon=false;roO=null;prO={state:"na"}}
+ var r=S.rows.length?curRow(S.rows):null,fon=!!(r&&r.fan===1),roO=r?runOnEnd(S.rows,r):null,prO=r&&!roO?predNow(S.rows):{state:"na"};
  var cs=r?coolState(S.rows,r,now):null,cell=cs?cs.cell:null,gv=cell!==null?cell:r?r.pack:null,col=tempColor(gv);
- var ovFan=r?(QEo.lag&&QEo.quiet?"Fan off · Quiet":QEo.lag&&!QEo.quiet?"Fan "+(fon?"on":"off")+" · Quiet clearing":"Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")):"";
- h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+(QEo.lag?' <span class="lagt" title="'+(QEo.quiet?"Quiet confirmed by the battery bridge. The 5-minute log has not caught up yet.":"Quiet cancel confirmed by the battery bridge. The 5-minute log has not caught up yet.")+'">log catching up</span>':"")+"</span>":"")+"</div>";
+ var ovFan=r?("Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")):"";
+ h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
  else{var grO=gaugeRange(gv,[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
   h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:16.5px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
