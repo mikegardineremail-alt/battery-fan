@@ -571,7 +571,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 <section class="page" id="overview" aria-label="Overview"><div class="todo" id="todo-overview"></div><div class="in" id="ovbody"></div></section>
 <section class="page" id="cooling" aria-label="Cooling"><div class="todo" id="todo-cooling"></div><div class="in tin" id="temps">
 <div class="card empty"><div class="skel" id="esk"><i style="width:42%"></i><i style="width:68%;height:44px"></i><i style="width:90%"></i><i style="width:76%"></i></div><div class="et" id="et"></div><div class="es">The Shelly logs a reading every 5 minutes. This page updates by itself.</div></div>
-<!-- AT-A-GLANCE HERO (Boom v8.19) -->
+<!-- AT-A-GLANCE HERO (Boom v8.33 latch band) -->
 <div class="live" id="chero"></div>
 <div class="card bpc live" id="qcmd"></div>
 </div>
@@ -584,6 +584,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
   <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
   <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
  </div>
+ <div class="ts" id="wifinote" style="margin-top:12px;opacity:.72;line-height:1.4">After Wi-Fi restores, Boom may pause ~10 min (status can lag; panic still wins).</div>
 </div>
 </div>
 <div class="in csec" id="history">
@@ -675,10 +676,10 @@ var PREDICT={
  plateauMarginC:0.3,      /* stop <= Ambient + this: may never reach the stop point */
  minGapC:0.2,             /* ignore rows where probe-Ambient is below this for the log fit */
  maxHorizonMin:240,       /* further out than this: "not soon" */
- runOnMin:20,             /* Boom v8.20 fixed run-on after the stop point (cool-down only) */
+ runOnMin:20,             /* Boom fixed run-on after the stop point (cool-down only) */
  runOnModes:["cooldown"], /* modes where reaching the stop point starts a run-on */
- modes:["cooldown","cooling","cell-restart","fan-on","plateau-band"], /* fan-on modes that stop on a probe temperature */
- earlyStopModes:["cooldown","plateau-band"], /* Boom's plateau / early-stop rule could end these sooner */
+ modes:["cooldown","cooling","fan-on"], /* live Boom v8.33 latch-band fan-on modes (use logged off) */
+ earlyStopModes:[], /* plateau / early-stop removed since Boom v8.31 — do not invent */
  /* ± shown with the prediction = backtest p80 |error| for predictions this far ahead (predicted off − now).
     Update weekly from: node tools/predict-backtest.js  (prints a ready-to-paste "bands" line) */
  bandQuantile:0.8,
@@ -688,7 +689,7 @@ var PREDICT={
 };
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
    {state:"ok"|"wait"|"flat"|"plateau"|"far"|"reached"|"na", t:off-time ms, hit:stop-time ms, conf, model, r2, note} */
-/* opt (optional): {off:target °C} overrides the logged stop point and allows any fan-on mode (e.g. backstop) */
+/* opt (optional): {off:target °C} overrides the logged stop point and allows any fan-on mode */
 function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;if(L<0)return{state:"na"};var ov=opt&&opt.off!==null&&opt.off!==undefined;
  var r=rows[L];if(r.fan!==1)return{state:"na"};
  var mode="",i,s=L;for(i=L;i>=0;i--)if(rows[i].mode){mode=rows[i].mode;break}
@@ -724,16 +725,22 @@ function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)i
 /*PREDICT_ULTIMATE-BEGIN — shared with tools/predict-ultimate-backtest.js; keep self-contained (no app globals) */
 /* ===== Ultimate cooling-done prediction: when parked cool *cycling* is finished for good =====
    Not the next single fan-off — the last off that holds in watching until the next drive or the 8 h cap.
+   Heat-aware: session-clock scales with pack−Ambient gap at key-off (hotter park → longer typical session).
    Tunables updated weekly from: node tools/predict-ultimate-backtest.js */
 var PREDICT_ULTIMATE={
- version:"u2",
- model:"blend",             /* blend of session-clock + cycle-countdown */
- typicalSessionMin:373,     /* median minutes session-start → ultimate-off (weekly) */
+ version:"u4",
+ model:"heat-blend",        /* session-clock (heat-adjusted) blended with cycle-countdown */
+ typicalSessionMin:373,     /* median minutes session-start → ultimate-off at heatGapRef (weekly) */
  typicalCycles:7,           /* median completed fan-on stretches until ultimate-off */
  cycleOnMin:18,             /* median fan-on stretch length (min) */
  cycleIdleMin:20,           /* median idle gap between stretches (min) */
+ /* heat load at key-off: sessionEst = clamp(typicalSessionMin + heatMinPerC*(gap−heatGapRef), floor, capMin)
+    gap = pack−Ambient on the first session row. Weekly from Pack cool-session scatter. */
+ heatGapRef:6,              /* °C pack−Ambient where typicalSessionMin applies */
+ heatMinPerC:40,            /* minutes added to session estimate per °C above heatGapRef (negative below) */
+ heatSessionFloor:150,      /* never expect a cool session shorter than this from heat alone */
  fudge:1.0,                 /* >1 = predict later (longer cycling) */
- blend:0.55,                /* 0=session-clock only, 1=cycle-countdown only */
+ blend:0.35,                /* 0=heat-adjusted session-clock only, 1=cycle-countdown only */
  minRemainMin:20,           /* never show "done" sooner than this while still cycling */
  capMin:480,                /* Boom 8 h parked cap from session start */
  gapMin:20,                 /* row gap that breaks a fan stretch / session walk */
@@ -742,13 +749,14 @@ var PREDICT_ULTIMATE={
  fallLookMin:10,            /* look-back window (min) after fan-off for falling temps */
  fallMinC:0.2,              /* required drop °C (earliest − latest) to call falling */
  fallIdleMin:3,             /* min minutes fan-off before falling → done (avoid flicker) */
+ /* coolModes/idleModes still recognize pre-8.33 modes so old park sessions don't break */
  coolModes:["cooldown","cooling","cell-restart","backstop","run-on","cooldown-done","early-stop","fan-on","plateau-band","crisis","panic"],
  idleModes:["watching","cell-watch","quiet"],
  endModes:["driving","cap"],
  /* ± = backtest p80 |error| by predicted lead (ultimate − now). Weekly paste from backtest. */
  bandQuantile:0.8,
  minPmMin:20,
- bands:[{maxLeadMin:60,pm:138},{maxLeadMin:180,pm:201},{maxLeadMin:360,pm:214},{maxLeadMin:9999,pm:214}],
+ bands:[{maxLeadMin:60,pm:118},{maxLeadMin:180,pm:118},{maxLeadMin:360,pm:140},{maxLeadMin:9999,pm:193}],
 };
 /* rows oldest→newest. opt: {now(ms), nextOff(predictOff result), cellPts:[{t,v},…]}. Returns
    {state:"ok"|"done"|"wait"|"far"|"na", t, lead, pm, sessionStart, cyclesDone, cyclesEst, settled, note} */
@@ -764,6 +772,14 @@ function fanStretches(rows,s,e,PU){PU=PU||PREDICT_ULTIMATE;var gap=PU.gapMin*60e
  for(i=s;i<=e;i++){var r=rows[i];if(r.fan===1){if(!cur||r.t-rows[i-1].t>gap||rows[i-1].fan!==1){cur={s:i,e:i,t0:r.t};S.push(cur)}cur.e=i;cur.t1=r.t}else cur=null}
  return S}
 function predUltPm(leadMin,PU){PU=PU||PREDICT_ULTIMATE;var b=PU.bands,i;for(i=0;i<b.length;i++)if(leadMin<=b[i].maxLeadMin)break;b=b[Math.min(i,b.length-1)];return Math.max(PU.minPmMin,Math.round(b?b.pm:0))}
+/* session-clock length from pack−Ambient at key-off; falls back to typicalSessionMin if temps missing */
+function ultSessionEst(rows,b,PU){PU=PU||PREDICT_ULTIMATE;var g=null,sr=rows[b.s];
+ if(sr&&sr.pack!==null&&sr.amb!==null)g=sr.pack-sr.amb;
+ var est=PU.typicalSessionMin;
+ if(g!==null&&PU.heatMinPerC){est=PU.typicalSessionMin+PU.heatMinPerC*(g-(PU.heatGapRef||0));
+  if(PU.heatSessionFloor!=null&&est<PU.heatSessionFloor)est=PU.heatSessionFloor;
+  if(est>PU.capMin)est=PU.capMin}
+ return{sessionEst:est,heatGap:g}}
 function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-1;if(L<0)return{state:"na"};
  var now=(opt&&opt.now)||rows[L].t,r=rows[L],mode=r.mode||"";
  if(PU.endModes.indexOf(mode)>=0&&mode==="driving")return{state:"na",mode:mode};
@@ -771,6 +787,7 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
  var b=parkSessionBounds(rows,PU);if(!b)return{state:"na"};
  var St=fanStretches(rows,b.s,b.e,PU),cyclesDone=St.length;if(r.fan===1&&St.length)cyclesDone=St.length-1;
  var elapsed=(now-b.startT)/60e3;
+ var HE=ultSessionEst(rows,b,PU),sessionEst=HE.sessionEst,heatGap=HE.heatGap,cyclesEst=PU.typicalCycles;
  /* already past ultimate? idle with no fan left in session after last off */
  var lastOffT=null,i;for(i=b.s+1;i<=b.e;i++){if(rows[i-1].fan===1&&rows[i].fan===0&&rows[i].t-rows[i-1].t<=PU.gapMin*60e3)lastOffT=(rows[i-1].t+rows[i].t)/2}
  var idle=PU.idleModes.indexOf(mode)>=0,stillOn=r.fan===1;
@@ -784,24 +801,24 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
      if(ce&&cl&&ce!==cl&&(ce.v-cl.v)>=PU.fallMinC)cellsFall=true}
     var pe=null,pl=null;for(j=b.s;j<=b.e;j++){var rr=rows[j];if(rr.fan!==0||rr.pack===null||rr.t<win0||rr.t>now)continue;if(!pe||rr.t<pe.t)pe=rr;if(!pl||rr.t>pl.t)pl=rr}
     if(pe&&pl&&pe!==pl&&(pe.pack-pl.pack)>=PU.fallMinC)probeFall=true;
-    if(cellsFall||probeFall)return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:false,lead:0,pm:PU.minPmMin,falling:cellsFall?"cells":"probe",
+    if(cellsFall||probeFall)return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,settled:false,lead:0,pm:PU.minPmMin,falling:cellsFall?"cells":"probe",
      note:cellsFall?"Cells falling after fan off — cooling looks finished":"Probe falling after fan off — cooling looks finished"}}
    /* held off — may still restart; only call done if settled or past typical */
    if(idle&&elapsed>=PU.settleIdleMin){
     var settled0=r.pack!==null&&r.amb!==null&&(r.pack-r.amb)<=PU.settleGapC;
-    if((settled0&&idleMin0>=PU.settleIdleMin)||(cyclesDone>=PU.typicalCycles&&idleMin0>=PU.cycleIdleMin*1.5))
-     return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:settled0,lead:0,pm:PU.minPmMin,note:"Fan stayed off — cooling cycling looks finished"}}}}
+    if((settled0&&idleMin0>=PU.settleIdleMin)||(cyclesDone>=cyclesEst&&idleMin0>=PU.cycleIdleMin*1.5))
+     return{state:"done",t:lastOffT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,settled:settled0,lead:0,pm:PU.minPmMin,note:"Fan stayed off — cooling cycling looks finished"}}}}
  /* warm-up: need a little session history */
- if(elapsed<10&&cyclesDone===0&&!stillOn)return{state:"wait",sessionStart:b.startT,cyclesDone:0,note:"Waiting for the cool session to get going"};
+ if(elapsed<10&&cyclesDone===0&&!stillOn)return{state:"wait",sessionStart:b.startT,cyclesDone:0,sessionEst:sessionEst,heatGap:heatGap,note:"Waiting for the cool session to get going"};
  var avg=PU.cycleOnMin+PU.cycleIdleMin;
  var idleMin=0;if(!stillOn){for(i=L;i>=b.s&&rows[i].fan!==1;i--)idleMin=(now-rows[i].t)/60e3}
  var settled=r.pack!==null&&r.amb!==null&&(r.pack-r.amb)<=PU.settleGapC&&idleMin>=PU.settleIdleMin;
- var remCyc=Math.max(0,PU.typicalCycles-cyclesDone);if(settled)remCyc=0;
+ var remCyc=Math.max(0,cyclesEst-cyclesDone);if(settled)remCyc=0;
  var cycleRemain;
  if(stillOn){var onSoFar=St.length?(now-St[St.length-1].t0)/60e3:0;cycleRemain=Math.max(5,PU.cycleOnMin-onSoFar)+remCyc*avg}
  else if(remCyc<=0)cycleRemain=0;
  else cycleRemain=Math.max(0,PU.cycleIdleMin-idleMin)+remCyc*PU.cycleOnMin+(remCyc-1)*PU.cycleIdleMin;
- var clockRemain=PU.typicalSessionMin*PU.fudge-elapsed;
+ var clockRemain=sessionEst*PU.fudge-elapsed;
  var remain=PU.blend*cycleRemain+(1-PU.blend)*clockRemain;
  /* floor by next single off when fan is on and predictOff has a time */
  var nx=opt&&opt.nextOff;if(nx&&nx.state==="ok"&&nx.t){var nLead=(nx.t-now)/60e3;if(nLead>0)remain=Math.max(remain,nLead)}
@@ -810,9 +827,10 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
  var capT=b.startT+PU.capMin*60e3,t=Math.min(now+remain*60e3,capT);
  if(t<=now)t=now+PU.minRemainMin*60e3;
  var lead=(t-now)/60e3;
- if(lead>PU.capMin)return{state:"far",sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,note:"Past the usual cool window"};
- return{state:"ok",t:t,lead:lead,pm:predUltPm(lead,PU),sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:PU.typicalCycles,settled:settled,elapsed:elapsed,remain:remain,mode:mode,
-  note:(cyclesDone+" of ~"+PU.typicalCycles+" fan runs · session "+Math.round(elapsed)+" min")}}
+ if(lead>PU.capMin)return{state:"far",sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,note:"Past the usual cool window"};
+ var gapNote=heatGap===null?"":(" · key-off "+(heatGap>=0?"+":"")+heatGap.toFixed(1)+"° vs Ambient");
+ return{state:"ok",t:t,lead:lead,pm:predUltPm(lead,PU),sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,settled:settled,elapsed:elapsed,remain:remain,mode:mode,
+  note:(cyclesDone+" of ~"+cyclesEst+" fan runs · session "+Math.round(elapsed)+" min"+gapNote)}}
 /*PREDICT_ULTIMATE-END*/
 
 (function(){
@@ -831,20 +849,20 @@ var CD_SLOW_X=1.3;   /* slow if took > 1.3x the average */
 var CD_HOT_CELLS=40; /* hot drive if cells peaked above this (°C) */
 var CD_SAME_MIN=3, CD_SAME_DEG=1; /* differences under these read as "about usual" */
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
-var MODES={watching:"Watching. Fan starts if the case probe warms past the start point.",cooling:"Cooling down toward the stop point.","fan-on":"Case probe is warm, fan is cooling it.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","early-stop":"Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Parked and probe over 45°: fan forced on until it drops below 45°. Does not apply while driving.",cold:"Cold pack — normal fan rules still apply (no 5° lockout).","sensor-fault":"Temperature sensor fault. Check the sensors."};
-var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Cooling done",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
+var MODES={watching:"Watching. Fan starts if the case probe warms past the latch start point (Ambient +5°).",cooling:"Cooling down toward the latch stop point.","fan-on":"Case probe is above the latch start point; fan is cooling toward the stop point.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","cooldown-skip":"Cool-down skipped — probe already at the stop point. Back to watching.","early-stop":"(Historical) Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"(Historical) Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Parked and probe over 45°: fan forced on until it drops below 45°. Does not apply while driving.",cold:"Cold pack — normal fan rules still apply (no 5° lockout).","sensor-fault":"Temperature sensor fault. Check the sensors."};
+var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","cooldown-skip":"Cool-down skipped","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Cooling done",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
 var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
-/* Boom v8.19 additions */
-MODES["cell-watch"]="Watching cells. The probe is above its start point, but the cells are steady, so the fan stays off.";
-MODES["cell-restart"]="Cells warming again: fan runs at least 10 min, then stops at the probe stop point.";
-MODES.backstop="Backstop: cells rising while the case probe is more than 8° above Ambient (or over 40°). Fan on until the probe drops 2° under that line.";
+/* Labels for pre-8.33 pack-log rows (cell-watch / backstop / plateau / quiet) — not live Boom rules */
+MODES["cell-watch"]="(Historical) Watching cells. The probe was above its start point, but the cells were steady, so the fan stayed off.";
+MODES["cell-restart"]="(Historical) Cells warming again: fan ran at least 10 min, then stopped at the probe stop point.";
+MODES.backstop="(Historical) Soft Ambient+8 backstop — removed in Boom v8.32.";
 MODES.crisis="Cells over 40°: fan forced on, driving or parked, until they drop below 39°.";
-MODES.fallback="No cell data: using the probe start/stop points (v8.18 rules).";
-MODES.quiet="Quiet: fan held off for a timed quiet period. Panic cooling still wins if the pack gets very hot — Boom handles that.";
+MODES.fallback="(Historical) No cell data: using the probe start/stop points.";
+MODES.quiet="(Historical) Quiet: fan held off for a timed quiet period. Boom v8.33+ no longer runs a quiet window.";
 SHORT["cell-watch"]="Watching cells";SHORT["cell-restart"]="Cells warming";SHORT.backstop="Backstop";SHORT.crisis="Cells hot";SHORT.fallback="Probe rules";SHORT.quiet="Quiet";
 var CELL_RISE=1.0,AMB_BACK=8,PROBE_HARD=40,BACK_HYST=2,CRISIS_ON=40,CRISIS_OFF=39,PANIC=45,BS_CELL_RISE=0.2,BS_CONFIRM_N=2;
-/* Boom cool-down stop floor (display approx from latched Ambient; match Boom seasons) */
-var DELTA_OFF=3.5;
+/* Boom latch band + cool-down stop floor (display approx from latched Ambient; match Boom seasons) */
+var DELTA_OFF=3.5,DELTA_ON=5;
 var SEASONS=[{name:"warm",minLatch:22,floor:28},{name:"mild",minLatch:12,floor:28},{name:"cool",minLatch:-99,floor:24}];
 function seasonOf(latch){for(var i=0;i<SEASONS.length;i++)if(latch>=SEASONS[i].minLatch)return SEASONS[i];return SEASONS[SEASONS.length-1]}
 function rawOff(latch){return latch+DELTA_OFF}
@@ -996,17 +1014,16 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  note(rows,mt,now,ko);footer(age,bAge);
  $("ft").textContent="Refreshes every minute · last reading "+new Date(r.t).toLocaleString([],{weekday:"short",hour:"numeric",minute:"2-digit"}).toLowerCase();
 }
-/* ---------- Cooling hero (Boom v8.19) ----------
-   Cells = the higher of t_int / t_brd on the latest fresh BMS row (Boom v8.19 uses the advert's higher temp, which in
-   practice tracks t_int). Settled cell = lowest of that value since the fan last went off (Boom records the same on the
-   Shelly; the Pack log does not carry why/c/cs, so we rebuild it from the BMS tab). */
+/* ---------- Cooling hero (Boom v8.33 latch Δon=5 Δoff=3.5) ----------
+   Live why / NEXT / stop-start tiles use the latch band only. Pre-8.33 modes (cell-watch, backstop,
+   plateau-band, early-stop) keep SHORT/MODES labels for old pack-log rows, but fall through to
+   watching/cooling/fan-on latch copy for live cards — do not recommend removed Boom rules.
+   Cells = higher of t_int / t_brd on latest fresh BMS (crisis display); Pack log has no why/c/cs. */
 /* predicted fan-off (client-side, see PREDICT at top of script) */
 var CONFW={high:"high",med:"medium",low:"low"};
-/* backstop stop point: Ambient + AMB_BACK - BACK_HYST, capped at PROBE_HARD - BACK_HYST (null if no Ambient) */
+/* historical helper only — soft Amb+8 backstop removed in Boom v8.32; not used for live NEXT */
 function bsStop(amb){return amb===null||amb===undefined?null:Math.min(PROBE_HARD-BACK_HYST,Math.round((amb+AMB_BACK)*10)/10-BACK_HYST)}
-function predNow(rows){try{var r=rows.length?curRow(rows):null;
- if(r&&r.mode==="backstop"){var b=bsStop(r.amb);return b===null?{state:"na"}:predictOff(rows,PREDICT,{off:b})}
- return predictOff(rows,PREDICT)}catch(e){return{state:"na"}}}
+function predNow(rows){try{return predictOff(rows,PREDICT)}catch(e){return{state:"na"}}}
 /* Boom logs extra rows with a blank mode between its 5-min rows; carry the last real mode forward */
 var RUN_ON_MIN=20;
 function curRow(rows){var r=rows[rows.length-1];if(r.mode)return r;
@@ -1046,100 +1063,89 @@ function ultCardHtml(rows,r,now,pr){try{
  }
  if(u.state!=="ok")return"";
  var tp=hm(u.t).split(" ");
+ var heatHint="";if(u.heatGap!==null&&u.heatGap!==undefined){if(u.heatGap>=(PREDICT_ULTIMATE.heatGapRef||0)+3)heatHint=" · hot park";else if(u.heatGap<=(PREDICT_ULTIMATE.heatGapRef||0)-2)heatHint=" · mild park"}
  var sub="Whole parked cool — not just the next stop"+
-  (u.cyclesEst?("<br>"+u.cyclesDone+" of ~"+u.cyclesEst+" fan runs so far"):"")+
+  (u.cyclesEst?("<br>"+u.cyclesDone+" of ~"+u.cyclesEst+" fan runs so far"):"")+heatHint+
   (u.settled?" · probe near Ambient":"");
  return '<section class="card bigc"><div class="hHead"><div class="cap">Cooling done</div><span class="sp c">until next drive / 8 h cap</span></div>'+
   '<div class="bigm"><div><span class="ptag" title="Range: 80% of past ultimate predictions this far ahead landed inside it">Ultimate</span>'+
   '<div class="bign" style="color:#a78bfa"><span style="opacity:.55;font-weight:500">~</span>'+tp[0]+'<span class="u">'+(tp[1]||"")+'</span>'+
   '<span class="pm">±'+(u.pm>=60?(u.pm/60).toFixed(u.pm%60===0?0:1)+'<span class="u">h</span>':u.pm+'<span class="u">min</span>')+'</span></div></div>'+
   '<div class="bigs">'+sub+'</div></div>'+
-  '<div class="pnote">When the fan stops restarting for cell rise / backstop. Next single off is above.</div></section>';
+  '<div class="pnote">When latch-band cycling finishes (watching until next drive / 8 h cap). Next single off is above.</div></section>';
 }catch(e){return""}}
-function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mode||"",fan=r.fan===1,pk=r.pack,amb=r.amb,cs=coolState(rows,r,now),cell=cs.cell;
- var rst=cs.settled!==null?Math.round((cs.settled+CELL_RISE)*10)/10:null,bsv=amb!==null?Math.round((amb+AMB_BACK)*10)/10:null;
+function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.mode||"",fan=r.fan===1,pk=r.pack,amb=r.amb,cs=coolState(rows,r,now),cell=cs.cell;
+ /* Boom v8.33: obsolete modes → latch-band watching/cooling/fan-on for live why/NEXT/tiles */
+ var m=mRaw;
+ if(m==="cell-watch"||m==="plateau-band")m=fan?"cooling":"watching";
+ else if(m==="cell-restart"||m==="backstop")m=fan?"fan-on":"watching";
+ else if(m==="early-stop")m="cooldown-done";
  var pill="",pc="",why="",nx="",nx2="",seg=null,tone="",roE=runOnEnd(rows,r),pr=roE?{state:"na"}:predNow(rows);
  var dur0=dur(now-cs.since);
  var QE=quietEff(r),qLagHtml="";
  if(QE.lag&&QE.quiet){fan=false;m="quiet";roE=null;pr={state:"na"}}
- /* status pill + why */
- if(m==="cell-watch"){pill="Watching cells";pc="c";why="Probe is above its start point ("+d1(on)+"), but the cells are steady"+(cell!==null?" at "+d1(cell):"")+", so the fan stays off."}
- else if(m==="watching"){pill="Watching";pc="g";why=fan?"Cooling down.":"Temperatures are where they should be."}
- else if(m==="cell-restart"){pill="Cells warming";pc="w";why="Cells rose 1° above where they settled, so the fan restarted."}
- else if(m==="backstop"){pill="Backstop";pc="r";tone="hot";why="Cells were rising"+(cell!==null?" (now "+d1(cell)+")":"")+" while the probe sat more than 8° above Ambient"+(pk!==null&&pk>PROBE_HARD?" and over 40°":"")+", so the fan is on as a safety backstop."}
+ /* status pill + why (latch band only — no Amb+8 / cell-watch / plateau as live rules) */
+ if(m==="watching"){pill="Watching";pc="g";why=fan?"Cooling down.":"Temperatures are where they should be."}
  else if(m==="crisis"){pill="Cells hot";pc="r";tone="hot";why="Cells are over 40°. Fan forced on, driving or parked."}
  else if(m==="panic"){pill="Very hot";pc="r";tone="hot";why="Parked and probe is over 45°. Fan forced on (not while driving)."}
  else if(m==="cooldown"){pill="Cool-down";pc="c";why="After-drive cool-down: clearing heat soaked up while driving."}
  else if(m==="cooling"){pill="Cooling";pc="c";why=fan?"Fan is bringing the probe down to its stop point.":"Between the stop and start points."}
- else if(m==="fan-on"){pill="Probe rules";pc="w";why="Probe is above its start point and there is no fresh cell data, so the probe rules (v8.18) apply."}
- else if(m==="plateau-band"){pill="Plateau hold";pc="c";why=MODES[m]}
+ else if(m==="fan-on"){pill="Too warm";pc="w";why="Case probe is above the latch start point — fan cooling toward the stop point."}
  else if(roE){pill="Run-on · off "+hm(roE).replace(/ ?[ap]m$/,"");pc="c";why="Cool-down finished. The fan keeps running "+RUN_ON_MIN+" min more to clear soaked heat, then stops at "+hm(roE)+"."}
  else if(m==="run-on"){pill="Run-on";pc="c";why="Cool-down finished. A few more minutes to clear soaked heat."}
- else if(m==="cooldown-done"||m==="early-stop"){pill=SHORT[m];pc="c";why=MODES[m]}
+ else if(m==="cooldown-done"||m==="cooldown-skip"){pill=SHORT[m]||m;pc="c";why=MODES[m]||""}
  else if(m==="driving"){pill="Driving";pc="w";why="Engine running: fan held off. Cool-down starts at key-off."}
  else if(m==="cap"){var cR=S.rows||[],ci=cR.length-1;while(ci>=0&&cR[ci].mode==="cap")ci--;var cut=ci>=0&&cR[ci].fan===1;if(cut){pill="Stopped at 8 h limit";pc="w";why="The fan was still cycling when the 8 hour parked limit ended auto cooling. It starts again after the next drive."}else{pill="Cooling done";pc="";why="Cooling finished before the 8 hour limit. Auto cooling is off until the next drive."}}
  else if(BAD[m]){pill=SHORT[m]||m;pc="r";why=MODES[m]||""}
  else{pill=SHORT[m]||(m?cap(m):"Running");pc="";why=MODES[m]||""}
- if(QE.lag&&QE.quiet){pill="Quiet";pc="c";why=MODES.quiet||"Quiet: fan held off for a timed quiet period. Panic cooling still wins if the pack gets very hot — Boom handles that.";nx="";nx2="";seg=null;
-  qLagHtml='<span class="lagt" title="Quiet confirmed by the battery bridge. The 5-minute log has not caught up yet.">log catching up</span>'}
- else if(QE.lag&&!QE.quiet){pill=m==="quiet"?"Quiet":(pill||"Quiet");pc="c";why="Quiet is clearing. Waiting for the log to catch up.";nx="";nx2="";seg=null;fan=m==="quiet"?false:fan;
-  qLagHtml='<span class="lagt" title="Quiet cancel confirmed by the battery bridge. The 5-minute log has not caught up yet.">log catching up</span>'}
+ if(QE.lag&&QE.quiet){pill="Quiet";pc="c";why=MODES.quiet||"Quiet (historical / bridge). Boom v8.33+ no longer runs a quiet window.";nx="";nx2="";seg=null;
+  qLagHtml='<span class="lagt" title="Quiet confirmed by the battery bridge. Boom v8.33+ does not publish mode quiet — local timer only.">bridge quiet</span>'}
+ else if(QE.lag&&!QE.quiet){pill=m==="quiet"?"Quiet":(pill||"Quiet");pc="c";why="Quiet cancel confirmed by the bridge.";nx="";nx2="";seg=null;fan=m==="quiet"?false:fan;
+  qLagHtml='<span class="lagt" title="Quiet cancel confirmed by the battery bridge.">bridge quiet</span>'}
  else if(m==="quiet"){pill="Quiet";pc="c";why=MODES.quiet||why;nx="";nx2="";seg=null;fan=false}
- /* next likely action + trigger value */
- /* Rule equations: always show base · op = result for the next fan on/off */
- var bsEq=bsv!==null?("cells rise "+BS_CELL_RISE+"° after probe > Ambient +"+AMB_BACK+"° = <b>"+d1(Math.min(bsv,PROBE_HARD))+"</b>"+(bsv>PROBE_HARD?" (40° hard limit)":"")):("cells rise "+BS_CELL_RISE+"° after probe > Ambient +"+AMB_BACK+"°");
- if(m==="quiet"||QE.lag){nx="";nx2="";seg=null}
+ /* NEXT: latch band only (on/off from row). No Amb+8 backstop / cell-restart as live next trigger. */
+ if(m==="quiet"||(QE.lag&&QE.quiet)){nx="";nx2="";seg=null}
  else if(fan){
   if(m==="crisis"){nx="Fan off when cells drop below <b>"+CRISIS_OFF+"°</b>";nx2="Rule: crisis off under "+CRISIS_OFF+"° · cells now "+d1(cell)}
-  else if(m==="backstop"){var rel=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);nx="Fan off when probe drops to <b>"+d1(rel)+"</b>";nx2="Triggered by rising cell temps · off at probe "+BACK_HYST+"° under Ambient +"+AMB_BACK+"°"+(bsv!==null?" = <b>"+d1(rel)+"</b>":"")+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped at "+(PROBE_HARD-BACK_HYST)+"°)":"")}
   else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: parked panic on at "+PANIC+"° · off under "+PANIC+"°"}
   else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
-  else if(m==="cell-restart"){nx="Fan off at probe stop <b>"+d1(off)+"</b>";nx2="Rule: ≥10 min cell run, then probe ≤ stop "+d1(off)}
-  else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";var Lh2=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh2)){var sN=seasonOf(Lh2);nx2=sN.name+"-season floor "+sN.floor+"° holding (rule wanted "+f1(rawOff(Lh2))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}else nx2="Rule: fan off when probe ≤ stop "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
-  if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
+  else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";var Lh2=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh2)){var sN=seasonOf(Lh2);nx2=sN.name+"-season floor "+sN.floor+"° holding (rule wanted "+f1(rawOff(Lh2))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}else nx2="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when probe ≤ "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
+  if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
   if(m==="driving"){nx="Cool-down starts at key-off";nx2="Rule: after a drive over 5 min, cool to stop"+(off!==null?" "+d1(off):"")+" at key-off"}
   else if(m==="cap"){nx="Auto cooling resumes after the next drive";nx2="Still on while parked: panic above "+PANIC+"°"}
   else if(m==="low-volt"||m==="volt-recover"){nx="Fan on when battery reaches <b>13.1 V</b>";nx2="Rule: off under 12.9 V · on again at 13.1 V"}
   else if(m==="cold"){nx="Normal fan rules apply";nx2="No 5° cold lockout — boom uses the usual on/off rules"}
-  else if(rst!==null&&(m==="cell-watch"||m==="watching"||m==="cooling"||m==="plateau-band")){
-   /* Pick the nearer next fan-on threshold for the card (one rule only). */
-   var bsCap=bsv!==null?Math.min(bsv,PROBE_HARD):null;
-   var useBs=bsCap!==null&&(rst===null||bsCap<=rst);
-   if(useBs){nx="Fan on when cells rise after probe hits <b>"+d1(bsCap)+"</b>";nx2="Rule: cells rise "+BS_CELL_RISE+"° once probe > Ambient +"+AMB_BACK+"° = "+d1(bsCap);
-    if(pk!==null&&bsCap!==null)seg={f:Math.max(0,Math.min(1,1-(bsCap-pk)/Math.max(AMB_BACK,1))),l:"probe "+d1(pk),r:"backstop "+d1(bsCap),c:pk>=bsCap-0.5?"#fbbf24":"#22d3ee"}}
-   else{nx="Fan on if cells reach <b>"+d1(rst)+"</b>";nx2="Settled "+d1(cs.settled)+" · fan on at settled +"+(CELL_RISE%1===0?String(CELL_RISE):f1(CELL_RISE))+"° = "+d1(rst);
-    if(cell!==null)seg={f:(cell-cs.settled)/CELL_RISE,l:"settled "+d1(cs.settled)+(cs.settledT?" · "+hm(cs.settledT):""),r:"restart "+d1(rst),c:cell>=rst-0.3?"#fbbf24":"#22d3ee"}}}
-  else if(on!==null){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2=cell===null?("Rule: start point = <b>"+d1(on)+"</b> (no fresh cell data · probe rules)"):("or "+bsEq)}
+  else if(on!==null&&/^(watching|cooling)$/.test(m)){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2="Rule: latch start (Ambient +"+DELTA_ON+"°) = <b>"+d1(on)+"</b>";
+   if(pk!==null&&off!==null){var span=Math.max(on-off,0.5);seg={f:Math.max(0,Math.min(1,(pk-off)/span)),l:"stop "+d1(off),r:"start "+d1(on),c:pk>=on-0.3?"#fbbf24":"#22d3ee"}}}
+  else if(on!==null){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2="Rule: latch start = <b>"+d1(on)+"</b>"}
  }
  var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
  var gv=cell!==null?cell:pk,col=tempColor(gv),mk=[];
- var watch=!fan&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m);
- if(cs.settled!==null&&watch)mk.push({v:cs.settled,c:"#67e8f9",t:"settled",in:1});
- if(rst!==null&&watch)mk.push({v:rst,c:"#fbbf24",t:"restart"});
- if(bsv!==null&&m!=="driving"&&m!=="cap")mk.push({v:Math.min(bsv,PROBE_HARD),c:"#fb7185",t:"backstop (cells)"});
+ var watch=!fan&&/^(watching|cooling)$/.test(m);
+ if(on!==null&&watch)mk.push({v:on,c:"#fbbf24",t:"start"});
+ if(off!==null&&watch)mk.push({v:off,c:"#34d399",t:"stop",in:1});
  if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
+ if(fan&&on!==null)mk.push({v:on,c:"#fda4af",t:"start"});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+(QE.lag&&QE.quiet?"":" · "+dur0)+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
  var gr=gaugeRange(gv,mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>'+(qLagHtml||"");
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
- /* FAN DETAILS stop/start tiles: the point that actually governs the fan in this mode (same rules as NEXT) */
+ /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
  if(m==="quiet"||(QE.lag&&QE.quiet)){var otQ=$("offT"),ntQ=$("onT");if(otQ)otQ.style.display="none";if(ntQ)ntQ.style.display="none"}
  else (function(){var so=null,sr="",sl="Fan stops at",st=null,sn=null,sa="",nl="Fan starts at",C="<small>°C</small>";
-  var bsC=bsv!==null?Math.min(bsv,PROBE_HARD):null,bsR=bsStop(amb);
   if(m==="driving"){sr="held off while driving, cool-down at key-off";st="Held off"}
   else if(m==="crisis"){so=CRISIS_OFF;sl="Fan stops below";sr="cells under "+CRISIS_OFF+"°"}
   else if(m==="panic"){so=PANIC;sl="Fan stops below";sr="probe under "+PANIC+"°"}
-  else if(m==="backstop"){so=bsR;sr="cells rising · probe Ambient +"+AMB_BACK+"° − "+BACK_HYST+"°"+(bsv!==null&&bsv-BACK_HYST>PROBE_HARD-BACK_HYST?" (capped)":"")}
   else if(roE){st=hm(roE);sr="end of "+RUN_ON_MIN+" min run-on"}
-  else if(fan&&off!==null&&m!=="cap"){so=off;var Lh=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh)){var sF=seasonOf(Lh);sr=sF.name+"-season floor "+sF.floor+"° (rule wanted "+f1(rawOff(Lh))+"°)"}else sr="normal stop point"}
+  else if(fan&&off!==null&&m!=="cap"){so=off;var Lh=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh)){var sF=seasonOf(Lh);sr=sF.name+"-season floor "+sF.floor+"° (rule wanted "+f1(rawOff(Lh))+"°)"}else sr="latch stop (Ambient +"+DELTA_OFF+"°)"}
   if(m==="cap"){sn=PANIC;nl="Fan starts above";sa="panic "+PANIC+"° only, until next drive"}
-  else if(m==="driving"||fan){if(m!=="driving"&&on!==null&&/^(cooldown|cooling|fan-on|cell-restart|plateau-band)$/.test(m)){sn=on;sa="normal start point"}}
-  else if(rst!==null&&/^(cell-watch|watching|cooling|plateau-band)$/.test(m)){if(bsC!==null&&bsC<=rst){sn=bsC;sa="backstop: cells rise "+BS_CELL_RISE+"° after probe > Ambient +"+AMB_BACK+"°"}else{sn=rst;nl="Fan restarts at";sa="cells at settled +"+f1(CELL_RISE)+"°"}}
-  else if(on!==null&&!/^(low-volt|volt-recover)$/.test(m)){sn=on;sa=cell===null?"normal start point (no cell data)":"normal start point"}
+  else if(m==="driving"||fan){if(m!=="driving"&&on!==null&&/^(cooldown|cooling|fan-on)$/.test(m)){sn=on;sa="latch start (Ambient +"+DELTA_ON+"°)"}}
+  else if(on!==null&&/^(watching|cooling)$/.test(m)){sn=on;sa="latch start (Ambient +"+DELTA_ON+"°)"}
+  else if(on!==null&&!/^(low-volt|volt-recover)$/.test(m)){sn=on;sa="latch start (Ambient +"+DELTA_ON+"°)"}
   var ot=$("offT"),nt=$("onT");
   if(ot){ot.style.display=so!==null||st!==null?"":"none";$("offL").textContent=sl;$("off").innerHTML=st!==null?st.replace(/ ?([ap]m)$/,"<small>$1</small>"):so!==null?f1(so)+C:"--";$("offs").textContent=sr}
   if(nt){nt.style.display=sn!==null?"":"none";$("onL").textContent=nl;$("on").innerHTML=sn!==null?f1(sn)+C:"--";$("ons").textContent=sa}})();
@@ -1150,35 +1156,26 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var m=r.mod
    var ptxt=pr.state==="ok"?null:pr.state==="wait"?"Predicting…":pr.state==="flat"?"Can't predict: not cooling":pr.state==="plateau"?"May not reach the stop point":pr.state==="far"?"Not within "+Math.round(PREDICT.maxHorizonMin/60)+" h":pr.state==="reached"?"Stop point reached":"";
    var psub=pr.state==="wait"?"Needs "+PREDICT.minDataMin+" min of falling probe readings. Stop point "+d1(pr.off)+ro+".":
      pr.state==="flat"?"Probe isn't falling yet. Fan stops when it reaches "+d1(pr.off)+ro+".":
-     pr.state==="plateau"?"Stop point "+d1(pr.off)+" is within "+PREDICT.plateauMarginC+"° of Ambient "+d1(pr.amb)+", so the probe may level off first"+(pr.early?". Boom's plateau early-stop will end it instead.":"."):
+     pr.state==="plateau"?"Stop point "+d1(pr.off)+" is within "+PREDICT.plateauMarginC+"° of Ambient "+d1(pr.amb)+", so the probe may level off first.":
      pr.state==="far"?"Probe is falling slowly toward "+d1(pr.off)+".":
      pr.state==="reached"?(pr.runOn?"Run-on starts at the next check, then "+Math.round(pr.runOn/60e3)+" min more.":"Fan stops at the next check."):"";
    if(pr.state==="ok"){var tp2=hm(pr.t).split(" ");
-    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Range: 80% of past predictions this far ahead landed inside it">Predicted</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span><span class="pm">±'+pr.pm+'<span class="u">min</span></span></div></div><div class="bigs">Probe reaches <b style="color:#6ee7b7">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+(pr.early?'<div class="pnote">Boom\'s plateau early-stop could end it sooner if the probe levels off.</div>':"")+'</section>';
+    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Range: 80% of past predictions this far ahead landed inside it">Predicted</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span><span class="pm">±'+pr.pm+'<span class="u">min</span></span></div></div><div class="bigs">Probe reaches <b style="color:#6ee7b7">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+'</section>';
     h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}}
   else
-  if(!fan&&/Fan on when cells rise after probe/.test(nx)&&bsv!==null){big=Math.min(bsv,PROBE_HARD);bl2="Fan starts at"}
-  else if(!fan&&rst!==null&&/cells reach/.test(nx)){big=rst;bl2="Fan restarts at"}
-  else if(fan&&off!==null&&/Fan off at probe stop|^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
+  if(fan&&off!==null&&/Fan off at probe stop|^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
   else if(m==="crisis"){big=CRISIS_OFF;bl2="Fan stops below";bc="#34d399"}
-  else if(m==="backstop"){big=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);bl2="Fan stops at";bc="#34d399"}
   else if(!fan&&on!==null&&/probe passes|Fan on if probe/.test(nx)){big=on;bl2="Fan starts at"}
   h+='<section class="card bigc"><div class="hHead"><div class="cap">'+bl2+'</div>'+(cell!==null?'<span class="sp c">Cells '+d1(cell)+' now</span>':"")+'</div>';
   if(bigT){var tp=bigT.split(" ");h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+tp[0]+'<span class="u">'+(tp[1]||"")+'</span></div><div class="bigs">Stop point reached<br>run-on'+(nx2?" · "+nx2:"")+'</div></div>'}
   else if(big!==null){var sub=nx2||nx.replace(/<[^>]+>/g,"");
-   if(bl2==="Fan restarts at"){var leftC=Math.max(0,rst-(cell!==null?cell:rst));
-    sub="Settled <b style=\"color:#67e8f9\">"+d1(cs.settled)+"</b> · fan on at settled +"+(CELL_RISE%1===0?String(CELL_RISE):f1(CELL_RISE))+"° = <b style=\"color:#fbbf24\">"+d1(rst)+"</b>"
-      +(leftC>0.05?"<br>"+f1(leftC)+"° to go":"<br>at restart now");}
-   else if(bl2==="Fan starts at"){
-    if(/Fan on when cells rise after probe/.test(nx)&&bsv!==null){sub="Cells rise "+BS_CELL_RISE+"° after probe > Ambient +"+AMB_BACK+"° = <b style=\"color:#fbbf24\">"+d1(Math.min(bsv,PROBE_HARD))+"</b>";}
-    else if(on!==null){sub="Rule: start point = <b style=\"color:#fbbf24\">"+d1(on)+"</b>"+(cell===null?" (probe rules · no fresh cells)":"");}
+   if(bl2==="Fan starts at"){
+    if(on!==null){sub="Rule: latch start (Ambient +"+DELTA_ON+"°) = <b style=\"color:#fbbf24\">"+d1(on)+"</b>";}
     else sub=nx2||sub;}
    else if(bl2==="Fan stops at"||bl2==="Fan stops below"){
-    if(m==="backstop"){var rel2=Math.min(PROBE_HARD-BACK_HYST,bsv!==null?bsv-BACK_HYST:99);
-      sub="Triggered by rising cell temps · off when probe ≤ <b style=\"color:#34d399\">"+d1(rel2)+"</b> ("+BACK_HYST+"° under Ambient +"+AMB_BACK+"°)";}
-    else if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
-    else if(off!==null){var Lh3=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh3)){var sB=seasonOf(Lh3);sub=sB.name+"-season floor "+sB.floor+"° holding (rule wanted "+f1(rawOff(Lh3))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}else sub="Rule: fan off when probe ≤ stop <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
+    if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
+    else if(off!==null){var Lh3=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh3)){var sB=seasonOf(Lh3);sub=sB.name+"-season floor "+sB.floor+"° holding (rule wanted "+f1(rawOff(Lh3))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}else sub="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when probe ≤ <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
     else sub=nx2||sub;
    }
    h+='<div class="bigm"><div class="bign" style="color:'+bc+'">'+f1(big)+'<span class="u">°C</span></div><div class="bigs">'+sub+'</div></div>'}
@@ -1798,9 +1795,9 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"){bpClose();b
 $("bpgo").addEventListener("click",function(){var on=this.dataset.v==="1";bpClose();bpRun(on)});
 
 
-/* ---------- Quiet fan (same relay + token as BatteryProtect) ----------
-   Optimistic local end-time in bf2-quiet-until — Shelly logs do not yet expose quiet state well; Boom does log mode quiet when quiet is active.
-   Bridge-confirmed Quiet/Cancel sets QC.conf until the Pack log mode catches up (same lag pattern as BatteryProtect). */
+/* ---------- Quiet fan (bridge relay; Boom v8.33+ has no quiet window / no 0x3D quietMinutes) ----------
+   Historical pack-log mode==quiet still labelled Quiet. Bridge Quiet button kept for Invicta/bridge control;
+   do not claim Boom still runs quiet. Local QUIET_K is optimistic UI only. */
 var QUIET_K="bf2-quiet-until",QUIET_MIN=60;
 var QC={want:null,st:null,msg:"",at:0,mins:QUIET_MIN,conf:null};
 function quietUntil(){try{var v=+localStorage.getItem(QUIET_K);return v>0?v:0}catch(e){return 0}}
@@ -1814,7 +1811,7 @@ function qRun(cancel){QC={want:cancel?"cancel":"quiet",st:"sending",msg:"",at:Da
 function renderQuietCtl(){var el=$("qcmd");if(!el)return;var left=quietLeftMin(),active=left>0,tok=!!bpTok(),st=QC.st,busy=st==="sending"||st==="waiting";
  var lrQ=S.rows.length?curRow(S.rows):null,QEq=quietEff(lrQ),qLag=QEq.lag;
  var h='<div class="hHead"><div class="cap">Quiet fan</div>'+(busy?'<span class="sp c">'+(st==="sending"?"Sending":"Waiting")+'</span>':active?'<span class="sp c">Quiet · '+left+' min left</span>':"")+'</div>';
- h+='<div class="whyc">Holds the fan quiet for a while so it is less noisy. Panic cooling still wins if the pack gets very hot — Boom handles that.</div>';
+ h+='<div class="whyc">Battery-bridge quiet command (Boom v8.33+ no longer has a quiet window). Panic/crisis still force the fan when those Boom rules fire.</div>';
  if(qLag&&(active||(QC.conf&&QC.conf.quiet===false)))h+='<span class="lagt" title="'+(QC.conf&&QC.conf.quiet===false?"Quiet cancel confirmed by the battery bridge. The 5-minute log has not caught up yet.":"Quiet confirmed by the battery bridge. The 5-minute log has not caught up yet.")+'">log catching up</span>';
  if(!tok){h+='<div class="setup"><div class="t">Set up remote control</div><div class="s">Same passcode as starter battery load. Enter it once to quiet the fan from this phone.</div><button data-qsetup="1">Set up remote control</button></div>'}
  else if(active){h+='<div class="pbtn one"><button class="off" data-q="cancel"'+(busy?" disabled":"")+'>Cancel quiet</button></div>'}
@@ -1831,7 +1828,7 @@ function renderQuietCtl(){var el=$("qcmd");if(!el)return;var left=quietLeftMin()
 function qAsk(cancel){if(!bpTok())return bpSetup(null,function(){qAsk(cancel)});var d=$("qdlg");
  if(cancel){$("qdt").textContent="Cancel quiet mode?";$("qds").textContent="The fan goes back to its normal rules. The battery bridge acts within about 30 s.";
   var g=$("qgo");g.className="go off";g.textContent="Cancel quiet";g.dataset.v="cancel"}
- else{$("qdt").textContent="Quiet the fan for "+QUIET_MIN+" minutes?";$("qds").textContent="The fan stays quiet for "+QUIET_MIN+" min so it is less noisy. Panic cooling still wins if the pack gets very hot — Boom handles that. The battery bridge acts within about 30 s.";
+ else{$("qdt").textContent="Quiet the fan for "+QUIET_MIN+" minutes?";$("qds").textContent="Sends a quiet command via the battery bridge for "+QUIET_MIN+" min. Boom v8.33+ no longer runs a quiet window — bridge only. Panic/crisis still win when those rules fire. Bridge acts within about 30 s.";
   var g2=$("qgo");g2.className="go on";g2.textContent="Quiet "+QUIET_MIN+" min";g2.dataset.v="quiet"}
  d.classList.add("open");setTimeout(function(){$("qcx").focus()},50)}
 function qClose(){var d=$("qdlg");if(d)d.classList.remove("open")}
@@ -1870,11 +1867,18 @@ function hmin2(m){m=Math.round(m);return m<60?m+" min":Math.floor(m/60)+" h "+St
 
 /* ---------- (A) Recent cooldowns (Shelly pack log; BMS cell temp when available) ---------- */
 var BUG=[Date.parse("2026-10-20T18:14:00+08:00"),Date.parse("2026-10-20T23:14:00+08:00")],openCd=null;
+/* Skip tiles only for notes that mark invalid test / no-fan / charger sessions.
+   Advisory notes (e.g. brief manual fan off→on caveat) must still show key-offs. */
+function noteSkipsCooldown(n){if(!n)return false;n=String(n).toLowerCase();
+ if(/no-fan test|bonnet up|car at service|external charger/.test(n))return true;
+ if(/corrected to 0/.test(n))return true;
+ if(/manual fan off/.test(n)&&!/off\s*[→\-–]+>?\s*on|off\s*->\s*on/.test(n))return true;
+ return false}
 function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
  for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving"||R[i].t-R[i-1].t>20*60e3)continue;
   var k=i,t=R[k].t,j=k-1;while(j>0&&R[j-1].mode==="driving"&&R[j].t-R[j-1].t<=20*60e3)j--;
   var end=k,lim=t+3*3600e3;if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
-  var win=R.slice(k,end+1),bad=win.some(function(r){return r.note})||R[k-1].note;
+  var win=R.slice(k,end+1),bad=win.concat([R[k-1]]).some(function(r){return noteSkipsCooldown(r.note)});
   if(bad||(t>=BUG[0]&&t<=BUG[1]))continue;
   var pk=null,tgt=null,fan=0,off=null;win.forEach(function(r,m){if(r.pack!==null&&(!pk||r.pack>pk.v))pk={v:r.pack,t:r.t};if(r.off!==null)off=off===null?r.off:off;
    if(tgt===null&&r.off!==null&&r.pack!==null&&r.pack<=r.off&&m>0)tgt=r.t;if(r.fan===1)fan+=Math.min(300e3,(m<win.length-1?win[m+1].t:r.t+300e3)-r.t)});
@@ -1987,11 +1991,13 @@ function bpEff(){var r=X2.bp,s=bpOn(r),c=BPC.conf;
  if(s===true)bpSetOffSrc(null);
  if(c){if(s===c.on||Date.now()-c.at>20*60e3){BPC.conf=null;return{on:s,lag:false}}return{on:c.on,lag:true}}
  return{on:s,lag:false}}
-/* Quiet fan UI state: bridge-confirmed Quiet/Cancel wins until Pack log mode agrees (or 20 min) */
+/* Quiet UI: sheet mode==quiet = historical label only. Boom v8.33+ never publishes quiet — do not invent Boom quiet from bridge confirm. */
 function quietEff(r){var c=QC.conf,m=r&&r.mode!=null&&r.mode!==""?String(r.mode):"",sheetQ=m==="quiet";
- if(c){if(Date.now()-c.at>20*60e3){QC.conf=null;c=null}
-  else if(c.quiet){if(sheetQ){QC.conf=null;return{quiet:true,lag:false}}return{quiet:true,lag:true}}
-  else{if(m&&!sheetQ){QC.conf=null;return{quiet:false,lag:false}}return{quiet:false,lag:true}}}
+ if(c){if(Date.now()-c.at>2*60e3){QC.conf=null;c=null}
+  else if(c.quiet){if(sheetQ){QC.conf=null;return{quiet:true,lag:false}}
+   /* bridge confirmed but Boom will not publish mode quiet — local QUIET_K only, no live Boom quiet override */
+   return{quiet:false,lag:false}}
+  else{QC.conf=null;return{quiet:sheetQ,lag:false}}}
  return{quiet:sheetQ,lag:false}}
 /* ---------- Overview (home) ---------- */
 function fresh(ts,liveGate){if(!ts)return'<span class="fr n">no data yet</span>';var age=Date.now()-ts,o=!!liveGate&&age>STALE_MIN*60e3;return'<span class="fr'+(o?" o":"")+'">'+ago(age).replace(/^just now$/,"just now")+"</span>"}
