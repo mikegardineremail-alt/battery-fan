@@ -1826,7 +1826,7 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   var win=R.slice(k,end+1),bad=win.concat([R[k-1]]).some(function(r){return noteSkipsCooldown(r.note)});
   if(bad||(t>=BUG[0]&&t<=BUG[1]))continue;
   var pk=null,tgt=null,fan=0,off=null;win.forEach(function(r,m){if(r.pack!==null&&(!pk||r.pack>pk.v))pk={v:r.pack,t:r.t};if(r.off!==null)off=off===null?r.off:off;
-   if(tgt===null&&r.off!==null&&r.pack!==null&&r.pack<=r.off&&m>0)tgt=r.t;if(r.fan===1)fan+=Math.min(300e3,(m<win.length-1?win[m+1].t:r.t+300e3)-r.t)});
+   if(tgt===null&&m>0&&((r.off!==null&&r.pack!==null&&r.pack<=r.off)||(r.fan===0&&win[m-1].fan===1&&r.t-t<8*3600e3-10*60e3)))tgt=r.t;/* Boom stops at off between 5-min rows, so logged pack often sits 0.1-0.2 above off: count first Boom fan stop as target */if(r.fan===1)fan+=Math.min(300e3,(m<win.length-1?win[m+1].t:r.t+300e3)-r.t)});
   var cp=null;(S.bms||[]).forEach(function(x){if(x.t<t-60e3||x.t>R[end].t+60e3)return;var v=x.A&&x.A.any?x.A.t_int:null;if(v!==null&&(!cp||v>cp.v))cp={v:v,t:x.t}});
   var lf=-1;win.forEach(function(r,m){if(r.fan===1)lf=m});var ec=null,ecl=null,live=false,et=null;
   if(lf>=0){if(lf===win.length-1&&end===R.length-1&&Date.now()-R[end].t<20*60e3)live=true;else{var er=lf+1<win.length?win[lf+1]:win[lf];et=er.t;ec=er.pack;var bb=null;(S.bms||[]).forEach(function(x){var d=Math.abs(x.t-et);if(d<=6*60e3&&x.A&&x.A.any&&x.A.t_int!==null&&(!bb||d<bb.d))bb={d:d,v:x.A.t_int}});ecl=bb?bb.v:null}}
