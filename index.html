@@ -681,6 +681,9 @@ var PREDICT={
  bandQuantile:0.8,
  minPmMin:3,              /* never show less than ± this (5-min logging) */
  bands:[{maxLeadMin:30,pm:9},{maxLeadMin:60,pm:17},{maxLeadMin:120,pm:89},{maxLeadMin:9999,pm:89}],
+ /* norm-based fallback (typicalOff) while the slope fit is not ready */
+ est:{cycleGapC:2.5,firstMinMin:60,lookbackDays:7,nearN:8,minRuns:3,minAheadMin:3,
+  norm:{cycle:{min:13,pm:5},first:{min:245,pm:30}}}, /* Pack log 25–30 Oct 2026 medians / p80 |dev| */
  conf:{highR2:0.9,highMin:20,highHorizonMin:60,medR2:0.7,medHorizonMin:120} /* internal fit-quality grade (not shown) */
 };
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
@@ -698,7 +701,7 @@ function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;if(L<0)return{s
  var base={mode:mode,off:off,runOn:runOn,early:early};
  function out(o){for(var k in base)if(!(k in o))o[k]=base[k];return o}
  if(r.pack!==null&&r.pack<=off)return out({state:"reached",hit:r.t,t:r.t+runOn,conf:"high"});
- if(W.length<P.minPoints||W[W.length-1].t-W[0].t<P.minDataMin*60e3)return out({state:"wait"});
+ if(W.length<P.minPoints||W[W.length-1].t-W[0].t<P.minDataMin*60e3)return out(typicalOff(rows,s,L,off,runOn,P,"wait"));
  var A=0;W.forEach(function(x){A+=x.amb});A/=W.length;
  if(off<=A+P.plateauMarginC)return out({state:"plateau",amb:A});
  function fit(xs,ys){var n=xs.length,mx=0,my=0,sxx=0,sxy=0,syy=0,j;for(j=0;j<n;j++){mx+=xs[j];my+=ys[j]}mx/=n;my/=n;
@@ -706,7 +709,7 @@ function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;if(L<0)return{s
   var b=sxx?sxy/sxx:0;return{b:b,a:my-b*mx,r2:sxx&&syy?sxy*sxy/(sxx*syy):0}}
  var t0=W[0].t,X=W.map(function(x){return(x.t-t0)/60e3}),T=W.map(function(x){return x.pack});
  var lin=fit(X,T),tl=X[X.length-1],Tn=lin.a+lin.b*tl;  /* smoothed "now" value */
- if(T[0]-T[T.length-1]<P.minDropC||-lin.b*60<P.minRateCph)return out({state:"flat",rate:lin.b*60});
+ if(T[0]-T[T.length-1]<P.minDropC||-lin.b*60<P.minRateCph)return out(typicalOff(rows,s,L,off,runOn,P,"flat",{rate:lin.b*60}));
  var dt=null,model="linear",r2=lin.r2;
  if(P.model==="newton"){var XN=[],YN=[];W.forEach(function(x,j){if(x.pack-A>P.minGapC){XN.push(X[j]);YN.push(Math.log(x.pack-A))}});
   if(XN.length>=P.minPoints){var nf=fit(XN,YN),k=-nf.b;
@@ -717,6 +720,27 @@ function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;if(L<0)return{s
  var span=(W[W.length-1].t-W[0].t)/60e3,C=P.conf,conf=r2>=C.highR2&&span>=C.highMin&&dt<=C.highHorizonMin?"high":r2>=C.medR2&&dt<=C.medHorizonMin?"med":"low";
  var hit=r.t+dt*60e3,lead=(hit+runOn-r.t)/60e3;return out({state:"ok",hit:hit,t:hit+runOn,lead:lead,pm:predPm(lead,P),conf:conf,model:model,r2:r2,amb:A,mins:dt})}
 function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)if(leadMin<=b[i].maxLeadMin)break;b=b[Math.min(i,b.length-1)];return Math.max(P.minPmMin,Math.round(b?b.pm:0))}
+/* Fallback when the slope fit isn't ready (state wait/flat): estimate from TYPICAL past fan runs in the Pack log.
+   Run type by probe gap above the stop point at fan start: <= P.est.cycleGapC = latch-band "cycle" run, else "first" (long
+   cool-down after key-off). Uses completed past runs of the same type that lasted longer than this one has so far
+   (cycle runs: nearest start gap first); est. off = start + median duration, ± = p80 |duration − median|.
+   Too little history: hard-coded norms (P.est.norm, from the Pack log 25–30 Oct 2026). Returns state:"est" (or the
+   original state if nothing usable). Slope prediction takes over automatically once ready. */
+function typicalOff(rows,s,L,off,runOn,P,why,extra){var E=P.est,r=rows[L],st=rows[s],o={state:why};if(extra)for(var k in extra)o[k]=extra[k];
+ if(!E||st.pack===null||st.pack===undefined)return o;
+ var g0=st.pack-off,type=g0<=E.cycleGapC?"cycle":"first",el=(r.t-st.t)/60e3,H=[],i=0,a,z,n,j,lo=r.t-E.lookbackDays*864e5;
+ while(i<s){if(rows[i].fan!==1){i++;continue}a=i;while(i+1<s&&rows[i+1].fan===1&&rows[i+1].t-rows[i].t<=20*60e3)i++;z=i;n=rows[z+1];i++;
+  if(!n||n.fan!==0||n.t-rows[z].t>20*60e3||rows[a].t<lo||rows[a].pack===null)continue;
+  var of=null,md="";for(j=a;j<=z;j++){if(rows[j].off!==null&&rows[j].off!==undefined)of=rows[j].off;if(rows[j].mode)md=rows[j].mode}
+  if(of===null||P.modes.concat(["run-on"]).indexOf(md)<0)continue;
+  var g=rows[a].pack-of,d=((rows[z].t+n.t)/2-rows[a].t)/60e3;if((g<=E.cycleGapC?"cycle":"first")===type&&d>el&&(type==="cycle"||d>=E.firstMinMin))H.push({d:d,g:g,t:rows[a].t})}
+ if(type==="cycle"&&H.length>E.nearN)H.sort(function(x,y){return Math.round(Math.abs(x.g-g0)*10)-Math.round(Math.abs(y.g-g0)*10)||y.t-x.t}),H=H.slice(0,E.nearN);
+ var D=H.map(function(x){return x.d}).sort(function(x,y){return x-y}),q=function(A,p){return A[Math.min(A.length-1,Math.ceil(p*A.length)-1)]},med,pm,src;
+ if(D.length>=E.minRuns){med=q(D,.5);pm=q(D.map(function(x){return Math.abs(x-med)}).sort(function(x,y){return x-y}),.8);src="history"}
+ else{var N=E.norm[type];med=Math.max(N.min,el+E.minAheadMin);pm=N.pm;src="norm"}
+ var t=Math.max(r.t+E.minAheadMin*60e3,st.t+med*60e3);
+ o.state="est";o.why=why;o.type=type;o.src=src;o.n=D.length;o.medMin=Math.round(med);o.hit=t;o.t=t; /* past durations already include any run-on */
+ o.pm=Math.max(P.minPmMin,Math.round(pm));o.lead=(o.t-r.t)/60e3;return o}
 /*PREDICT-END*/
 /*PREDICT_ULTIMATE-BEGIN — shared with tools/predict-ultimate-backtest.js; keep self-contained (no app globals) */
 /* ===== Ultimate cooling-done prediction: when parked cool *cycling* is finished for good =====
@@ -987,7 +1011,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  /* header pill */
  var fan=r.fan===1,m=r.mode;
  $("pill").className="pill"+(BAD[m]?" bad":fan?"":m==="driving"?" drv":" off");
- $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):pr.state==="ok"?(SHORT[m]||"Cooling")+", off ~"+hm(pr.t).replace(/ ?[ap]m$/,"")+" ±"+pr.pm:(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
+ $("pillt").textContent=roE?"Run-on, fan off at "+hm(roE):pr.state==="ok"||pr.state==="est"?(SHORT[m]||"Cooling")+", off ~"+hm(pr.t).replace(/ ?[ap]m$/,"")+" ±"+pr.pm:(SHORT[m]||(m?cap(m):"Updating"))+", fan "+(fan?"ON":"OFF");
  var pk=r.pack,amb=r.amb;
  /* battery */
  battery(bl,p,bAge,r);
@@ -1149,6 +1173,9 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
      pr.state==="reached"?(pr.runOn?"Run-on starts at the next check, then "+Math.round(pr.runOn/60e3)+" min more.":"Fan stops at the next check."):"";
    if(pr.state==="ok"){var tp2=hm(pr.t).split(" ");
     h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Range: 80% of past predictions this far ahead landed inside it">Predicted</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span><span class="pm">±'+pr.pm+'<span class="u">min</span></span></div></div><div class="bigs">Probe reaches <b style="color:#6ee7b7">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+'</section>';
+    h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
+   else if(pr.state==="est"){var tp3=hm(pr.t).split(" "),tyL=pr.type==="cycle"?"latch-band cycle runs":"first runs after key-off";
+    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Not a live slope fit yet: median length of past '+tyL+' ('+(pr.src==="history"?pr.n+" runs in the Pack log":"built-in norm")+'); ± = 80% of those runs. Switches to the live prediction after '+PREDICT.minDataMin+' min of falling readings.">Estimate</span><div class="bign" style="color:'+bc+';opacity:.85"><span style="opacity:.55;font-weight:500">~</span>'+tp3[0]+'<span class="u">'+(tp3[1]||"")+'</span><span class="pm">±'+pr.pm+'<span class="u">min</span></span></div></div><div class="bigs">Estimate from typical runs<br>'+tyL+' · ~'+pr.medMin+' min'+(pr.src==="norm"?" (norm)":"")+'<br>Stop point <b style="color:#6ee7b7">'+d1(pr.off)+'</b></div></div></section>';
     h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}}
   else
@@ -1955,7 +1982,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  /* --- Cooling: full-width arc gauge --- */
  var r=S.rows.length?curRow(S.rows):null,fon=!!(r&&r.fan===1),roO=r?runOnEnd(S.rows,r):null,prO=r&&!roO?predNow(S.rows):{state:"na"};
  var cs=r?coolState(S.rows,r,now):null,cell=cs?cs.cell:null,gv=cell!==null?cell:r?r.pack:null,col=tempColor(gv);
- var ovFan=r?("Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")):"";
+ var ovFan=r?("Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"||prO.state==="est"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+" ±"+prO.pm:SHORT[r.mode]||r.mode||"")):"";
  h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
  else{var grO=gaugeRange(gv,[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
