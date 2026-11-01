@@ -690,7 +690,7 @@ var PREDICT={
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
    {state:"ok"|"wait"|"flat"|"plateau"|"far"|"reached"|"na", t:off-time ms, hit:stop-time ms, conf, model, r2, note} */
 /* opt (optional): {off:target °C} overrides the logged stop point and allows any fan-on mode */
-function predictOff(rows,P,opt){P=P||PREDICT;return capClamp(predictOff0(rows,P,opt),parkKeyOff(rows),P.capMin)}
+function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;return nowClamp(capClamp(predictOff0(rows,P,opt),parkKeyOff(rows),P.capMin),L>=0?rows[L].t:null)}
 function predictOff0(rows,P,opt){var L=rows.length-1;if(L<0)return{state:"na"};var ov=opt&&opt.off!==null&&opt.off!==undefined;
  var r=rows[L];if(r.fan!==1)return{state:"na"};
  var mode="",i,s=L;for(i=L;i>=0;i--)if(rows[i].mode){mode=rows[i].mode;break}
@@ -755,6 +755,9 @@ function capClamp(o,keyOff,capMin){if(!o||o.t===undefined||o.t===null||o.pm===un
  if(keyOff===null||keyOff===undefined)return o;var c=keyOff+(capMin||480)*60e3;o.capT=c;
  if(o.t>c){if(typeof o.lead==="number")o.lead-=(o.t-c)/60e3;o.t=c;if(o.hit>c)o.hit=c;o.capped=true}
  var room=Math.floor((c-o.t)/60e3);if(o.pmHi>room){o.pmHi=Math.max(0,room);o.capped=true}return o}
+/* − side never before now: lower end (t−pmLo) ≥ now; centre already ≤ now → pmLo=0. Sets pmLo (and pmHi if missing), nowCut. */
+function nowClamp(o,now){if(!o||o.t===undefined||o.t===null||o.pm===undefined||now===null||now===undefined)return o;
+ if(o.pmLo==null)o.pmLo=o.pm;if(o.pmHi==null)o.pmHi=o.pm;var room=Math.max(0,Math.floor((o.t-now)/60e3));if(o.pmLo>room){o.pmLo=room;o.nowCut=true}return o}
 /*PREDICT-END*/
 /*PREDICT_ULTIMATE-BEGIN — shared with tools/predict-ultimate-backtest.js; keep self-contained (no app globals) */
 /* ===== Ultimate cooling-done prediction: when parked cool *cycling* is finished for good =====
@@ -864,8 +867,8 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
  var lead=(t-now)/60e3;
  if(lead>PU.capMin)return{state:"far",sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,note:"Past the usual cool window"};
  var gapNote=heatGap===null?"":(" · key-off "+(heatGap>=0?"+":"")+heatGap.toFixed(1)+"° vs Ambient");
- var upm=predUltPm(lead,PU),uHi=Math.min(upm,Math.max(0,Math.floor((capT-t)/60e3)));
- return{state:"ok",t:t,lead:lead,pm:upm,pmLo:upm,pmHi:uHi,capT:capT,capped:uHi<upm||t>=capT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,settled:settled,elapsed:elapsed,remain:remain,mode:mode,
+ var upm=predUltPm(lead,PU),uHi=Math.min(upm,Math.max(0,Math.floor((capT-t)/60e3))),uLo=Math.min(upm,Math.max(0,Math.floor((t-now)/60e3))); /* − side never before now */
+ return{state:"ok",t:t,lead:lead,pm:upm,pmLo:uLo,pmHi:uHi,nowCut:uLo<upm,capT:capT,capped:uHi<upm||t>=capT,sessionStart:b.startT,cyclesDone:cyclesDone,cyclesEst:cyclesEst,sessionEst:sessionEst,heatGap:heatGap,settled:settled,elapsed:elapsed,remain:remain,mode:mode,
   note:(cyclesDone+" of ~"+cyclesEst+" fan runs · session "+Math.round(elapsed)+" min"+gapNote)}}
 /*PREDICT_ULTIMATE-END*/
 
@@ -1057,10 +1060,13 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
 var CONFW={high:"high",med:"medium",low:"low"};
 /* historical helper only — soft Amb+8 backstop removed in Boom v8.32; not used for live NEXT */
 function bsStop(amb){return amb===null||amb===undefined?null:Math.min(PROBE_HARD-BACK_HYST,Math.round((amb+AMB_BACK)*10)/10-BACK_HYST)}
-/* ± display with Boom 8 h cap: symmetric "±9" normally; asymmetric "−54 / +12" when the + side is cut at the cap */
+/* ± display: symmetric "±9" normally; asymmetric "−54 / +12" when the + side is cut at the Boom 8 h cap and/or the
+   − side is cut so the lower end is never before now (re-checked against the clock at display time; centre past → −0) */
 function pmU(m){return m>=60?(m/60).toFixed(m%60===0?0:1)+'<span class="u">h</span>':m+'<span class="u">min</span>'}
-function pmHtml(o){var lo=o.pmLo!=null?o.pmLo:o.pm,hi=o.pmHi!=null?o.pmHi:o.pm;return hi<lo?'<span class="pm">−'+pmU(lo)+' / +'+pmU(hi)+'</span>':'<span class="pm">±'+pmU(lo)+'</span>'}
-function pmTxt(o){var lo=o.pmLo!=null?o.pmLo:o.pm,hi=o.pmHi!=null?o.pmHi:o.pm;return hi<lo?" −"+lo+"/+"+hi+" (8 h cap)":" ±"+lo}
+function pmLH(o,now){var lo=o.pmLo!=null?o.pmLo:o.pm,hi=o.pmHi!=null?o.pmHi:o.pm;if(now==null)now=Date.now();
+ if(o.t!=null&&now!=null){var room=Math.max(0,Math.floor((o.t-now)/60e3));if(lo>room)lo=room}return[lo,hi]}
+function pmHtml(o,now){var a=pmLH(o,now),lo=a[0],hi=a[1];return hi!==lo?'<span class="pm">−'+pmU(lo)+' / +'+pmU(hi)+'</span>':'<span class="pm">±'+pmU(lo)+'</span>'}
+function pmTxt(o,now){var a=pmLH(o,now),lo=a[0],hi=a[1];return hi!==lo?" −"+lo+"/+"+hi+(o.pm!=null&&hi<o.pm?" (8 h cap)":""):" ±"+lo}
 function capNote(o){return o&&o.capped?'<br><b style="color:#fbbf24">8 h cap</b> · Boom stops by '+hm(o.capT):""}
 function predNow(rows){try{return predictOff(rows,PREDICT)}catch(e){return{state:"na"}}}
 /* Boom logs extra rows with a blank mode between its 5-min rows; carry the last real mode forward */
