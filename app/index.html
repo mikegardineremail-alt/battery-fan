@@ -743,12 +743,23 @@ function typicalOff(rows,s,L,off,runOn,P,why,extra){var E=P.est,r=rows[L],st=row
  var t=Math.max(r.t+E.minAheadMin*60e3,st.t+med*60e3);
  o.state="est";o.why=why;o.type=type;o.src=src;o.n=D.length;o.medMin=Math.round(med);o.hit=t;o.t=t; /* past durations already include any run-on */
  o.pm=Math.max(P.minPmMin,Math.round(pm));o.lead=(o.t-r.t)/60e3;return o}
+/* Data gap ≥15 min that hid a drive (Pack Logger restart etc.): best key-off evidence inside the gap.
+   i = first row after the gap. Order: last BMS charge row (≥5 A) or SmartShunt starter_v ≥13.3 V inside the gap
+   (+2.5 min, mid-sample), else the last driving row before the gap, else the first row after the gap. null if no gap-drive. */
+var GAP_KO_MIN=15;
+function gapKeyOff(rows,i){if(i<=0||i>=rows.length)return null;var a=rows[i-1],b=rows[i];if(b.t-a.t<GAP_KO_MIN*60e3)return null;
+ if(a.mode!=="driving"&&b.mode!=="cooldown")return null;var ev=null,src="";
+ var bm=(typeof S!=="undefined"&&S.bms)||[];for(var k=0;k<bm.length;k++){var q=bm[k];if(q.t<=a.t||q.t>b.t)continue;var pq=packOf(q);if(pq&&pq.i!==null&&pq.i>=5&&(ev===null||q.t>ev)){ev=q.t;src="BMS charging"}}
+ var sh=(typeof X2!=="undefined"&&X2.sh)||[];for(k=0;k<sh.length;k++){var h=sh[k];if(h.t<=a.t||h.t>b.t||h.sv===null||h.sv<13.3)continue;if(ev===null||h.t>ev){ev=h.t;src="starter alternator"}}
+ if(ev!==null)return{t:Math.min(b.t,ev+150e3),approx:true,src:src};
+ if(a.mode==="driving")return{t:a.t,approx:true,src:"last driving row"};
+ return{t:b.t,approx:true,src:"first row after gap"}}
 /* key-off = first row after the most recent "driving" row, or the start of the most recent "cooldown" run (Boom only
    enters cooldown at key-off; catches drives too short to log a driving row). null if unknown. */
 function parkKeyOff(rows){var pm="";for(var i=rows.length-1;i>=0;i--){var m=rows[i].mode||"";if(!m)continue;
- if(m==="driving")return i<rows.length-1?rows[i+1].t:null;
+ if(m==="driving"){if(i>=rows.length-1)return null;var gk=gapKeyOff(rows,i+1);return gk?gk.t:rows[i+1].t}
  if(m==="cap")return null; /* already past a cap: any later fan run is a new session whose key-off was not logged */
- if(m==="cooldown"){var j=i-1;while(j>=0&&!rows[j].mode)j--;if(j<0||rows[j].mode!=="cooldown"){if(j>=0&&rows[j].mode!=="driving"){var q=j;while(q>=0&&rows[i].t-rows[q].t<=30*60e3&&rows[q].mode!=="driving")q--;return q>=0&&rows[q].mode==="driving"&&rows[i].t-rows[q].t<=30*60e3?rows[q+1].t:rows[i].t}}}}
+ if(m==="cooldown"){var j=i-1;while(j>=0&&!rows[j].mode)j--;if(j<0||rows[j].mode!=="cooldown"){var gk2=gapKeyOff(rows,i);if(gk2)return gk2.t;if(j>=0&&rows[j].mode!=="driving"){var q=j;while(q>=0&&rows[i].t-rows[q].t<=30*60e3&&rows[q].mode!=="driving")q--;return q>=0&&rows[q].mode==="driving"&&rows[i].t-rows[q].t<=30*60e3?rows[q+1].t:rows[i].t}}}}
  return null}
 /* Boom 8 h cap: centre ≤ cap, upper end (t+pmHi) ≤ cap. Adds pmLo/pmHi (min), capT, capped. Key-off unknown → unchanged (pmLo=pmHi=pm). */
 function capClamp(o,keyOff,capMin){if(!o||o.t===undefined||o.t===null||o.pm===undefined)return o;o.pmLo=o.pm;o.pmHi=o.pm;
@@ -861,7 +872,7 @@ function predictUltimate(rows,PU,opt){PU=PU||PREDICT_ULTIMATE;var L=rows.length-
  var nx=opt&&opt.nextOff;if(nx&&nx.state==="ok"&&nx.t){var nLead=(nx.t-now)/60e3;if(nLead>0)remain=Math.max(remain,nLead)}
  if(settled)remain=Math.min(remain,PU.minRemainMin);
  remain=Math.max(PU.minRemainMin,remain);
- var capT=b.startT+PU.capMin*60e3,t=Math.min(now+remain*60e3,capT);
+ var kOff=parkKeyOff(rows),capT=(kOff!==null&&kOff<b.startT?kOff:b.startT)+PU.capMin*60e3,t=Math.min(now+remain*60e3,capT); /* gap-aware key-off when earlier */
  if(t<=now)t=now+PU.minRemainMin*60e3;
  if(t>capT)t=Math.max(capT,now); /* never past the Boom 8 h cap (key-off + capMin) */
  var lead=(t-now)/60e3;
@@ -991,10 +1002,14 @@ function save(){try{var from=Date.now()-KEEP_H*3600e3,ko=keyOffInfo(S.rows,Date.
 function keyOffInfo(rows,now){var L=rows.length-1;if(L<0)return null;
  if(rows[L].mode==="driving"){var j=L;while(j>0&&rows[j-1].mode==="driving"&&rows[j].t-rows[j-1].t<=20*60e3)j--;return{driving:true,since:rows[j].t,idx:j}}
  var k=-1;for(var i=L;i>=0;i--)if(rows[i].mode==="driving"){k=i;break}
- if(k<0)return{none:true};
- var f=k+1,gap=rows[f].t-rows[k].t,t=gap<=10*60e3?rows[k].t+gap/2:rows[f].t,fr=0;
+ /* a later cooldown start after a ≥15 min gap = a drive whose driving rows were lost */
+ var g=-1;for(i=L;i>k&&i>0;i--)if(rows[i].mode==="cooldown"&&rows[i-1].mode!=="cooldown"&&gapKeyOff(rows,i)){g=i;break}
+ if(k<0&&g<0)return{none:true};
+ var f,t,gk=null,fr=0,gap;
+ if(g>=0){f=g;gk=gapKeyOff(rows,g);t=gk.t}
+ else{f=k+1;gap=rows[f].t-rows[k].t;gk=gapKeyOff(rows,f);t=gk?gk.t:gap<=10*60e3?rows[k].t+gap/2:rows[f].t}
  for(i=f;i<=L;i++)if(rows[i].fan===1)fr+=Math.max(0,Math.min(300e3,(i<L?rows[i+1].t:now)-rows[i].t));
- return{t:t,fanMin:Math.round(fr/60e3),parked:now-t,idx:f,lastDrive:rows[k].t}}
+ return{t:t,fanMin:Math.round(fr/60e3),parked:now-t,idx:f,lastDrive:g>=0?rows[g-1].t:rows[k].t,approx:!!gk,src:gk?gk.src:""}}
 
 function match(rows,bms){var out=rows.map(function(){return null});if(!bms||!bms.length)return out;var j=0;
  for(var i=0;i<rows.length;i++){var u=rows[i].u;while(j<bms.length-1&&bms[j+1].u<=u)j++;var best=null,bd=1e9;
@@ -1041,7 +1056,7 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  var ko=keyOffInfo(rows,now);
  if(!ko||ko.none){$("ko").innerHTML="--";$("kos").textContent="no drive logged yet"}
  else if(ko.driving){$("ko").innerHTML='<span style="color:#fde68a">Driving</span>';$("kos").textContent="since "+hm(ko.since)+" · fan held off"}
- else{var k=ko.fanMin;$("ko").innerHTML=k<60?k+"<small>min fan</small>":Math.floor(k/60)+"<small>h</small> "+String(k%60).padStart(2,"0")+"<small>min fan</small>";$("kos").textContent="parked "+dur(ko.parked)}
+ else{var k=ko.fanMin;$("ko").innerHTML=k<60?k+"<small>min fan</small>":Math.floor(k/60)+"<small>h</small> "+String(k%60).padStart(2,"0")+"<small>min fan</small>";$("kos").textContent="parked "+(ko.approx?"≈":"")+dur(ko.parked)+(ko.approx?" · key-off ≈"+hm(ko.t)+" (data gap)":"")}
  var dr=$("draw");
  if(has&&p.i!==null){var cl=curLbl(p.i);$("drawL").textContent=cl.l;dr.className="tv"+(cl.c?" "+cl.c:"");dr.innerHTML=amps(Math.abs(p.i))+"<small>A</small>";$("draws").textContent="reported by BMS"+(p.iParts<2?" (1 board)":"")}
  else{$("drawL").textContent="Draw";dr.className="tv na";dr.innerHTML="--";$("draws").textContent=has?"no current reading":"waiting for BMS"}
@@ -1486,7 +1501,7 @@ function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
  var parts=[];
  if(ko&&ko.driving)parts.push("Driving since <b>"+hm(ko.since)+"</b>. The fan is held off until key-off, then the cool-down starts.");
  else if(ko&&!ko.none&&ko.t>=t0){var pk=null,fanAt=null;for(i=ko.idx;i<rows.length;i++){var v=rows[i].pack;if(v!==null&&(!pk||v>pk.v))pk={v:v,t:rows[i].t};if(fanAt===null&&rows[i].fan===1)fanAt=rows[i].t}
-  var st=rows[ko.idx].pack,cur=rows[rows.length-1].pack;parts.push("Engine off at <b>"+hm(ko.t)+"</b>.");
+  var st=rows[ko.idx].pack,cur=rows[rows.length-1].pack;parts.push("Engine off at <b>"+(ko.approx?"≈":"")+hm(ko.t)+"</b>"+(ko.approx?" (data gap, from "+ko.src+")":"")+".");
   if(pk&&st!==null&&pk.v-st>=0.5&&pk.t>ko.t)parts.push("Then a <b>"+Math.round((pk.t-ko.t)/60000)+"-min heat-soak climb</b> to "+f1(pk.v)+"°.");
   if(fanAt!==null){var drop=pk&&cur!==null?pk.v-cur:0;parts.push("Fan kicked in at "+hm(fanAt)+(drop>=0.5?" and pulled the case down <b>"+f1(drop)+"° in "+Math.round((now-Math.max(fanAt,pk.t))/60000)+" min</b>.":"."))}
   else parts.push("Fan hasn't needed to run.")}
