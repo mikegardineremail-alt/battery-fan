@@ -579,7 +579,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
   <div class="tile" id="offT"><div class="lbl" id="offL">Fan stops at</div><div class="tv" id="off" style="color:#6ee7b7">--</div><div class="ts" id="offs">normal stop point</div></div>
   <div class="tile" id="onT"><div class="lbl" id="onL">Fan starts at</div><div class="tv" id="on" style="color:#fda4af">--</div><div class="ts" id="ons">normal start point</div></div>
   <div class="tile"><div class="lbl">Since key-off</div><div class="tv" id="ko">--</div><div class="ts" id="kos">--</div></div>
-  <div class="tile"><div class="lbl">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
+  <div class="tile"><div class="lbl" id="drawL">Draw</div><div class="tv" id="draw">--</div><div class="ts" id="draws">reported by BMS</div></div>
  </div>
  <div class="ts" id="wifinote" style="margin-top:12px;opacity:.72;line-height:1.4">After Wi-Fi restores, Boom may pause ~10 min (status can lag; panic still wins).</div>
 </div>
@@ -913,6 +913,8 @@ function mask(v){if(v===null||v===undefined)return null;v=String(v).trim();if(!v
 function bool(v){if(v===null||v===undefined)return null;v=String(v).trim().toLowerCase();if(v===""||v==="null")return null;return v==="1"||v==="true"||v==="on"||v==="yes"}
 function f1(v){return v===null||isNaN(v)?"--":(Math.round(v*10)/10).toFixed(1)}
 function sgn(v,d){var s=(Math.abs(v)).toFixed(d);return (v<0&&Number(s)!==0?"−":v>0&&Number(s)!==0?"+":"")+s}
+/* BMS a_a: positive = into pack (charging), negative = out (draw) */
+function curLbl(a){return Math.abs(a)<0.1?{l:"Idle",c:""}:a>0?{l:"Charging",c:"chg"}:{l:"Draw",c:"dsg"}}
 function amps(v){var r=Math.round(v*100)/100;var s=Math.abs(r).toString();if(s.indexOf(".")<0)s+=".0";return (r<0?"−":"")+s}
 function deg(v){return f1(v)+"<sup>°C</sup>"}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -1041,8 +1043,8 @@ function render(){var app=$("app"),now=Date.now(),rows=S.rows;
  else if(ko.driving){$("ko").innerHTML='<span style="color:#fde68a">Driving</span>';$("kos").textContent="since "+hm(ko.since)+" · fan held off"}
  else{var k=ko.fanMin;$("ko").innerHTML=k<60?k+"<small>min fan</small>":Math.floor(k/60)+"<small>h</small> "+String(k%60).padStart(2,"0")+"<small>min fan</small>";$("kos").textContent="parked "+dur(ko.parked)}
  var dr=$("draw");
- if(has&&p.i!==null){dr.className="tv";dr.innerHTML=amps(p.i)+"<small>A</small>";$("draws").textContent="reported by BMS"+(p.iParts<2?" (1 board)":"")}
- else{dr.className="tv na";dr.innerHTML="--";$("draws").textContent=has?"no current reading":"waiting for BMS"}
+ if(has&&p.i!==null){var cl=curLbl(p.i);$("drawL").textContent=cl.l;dr.className="tv"+(cl.c?" "+cl.c:"");dr.innerHTML=amps(Math.abs(p.i))+"<small>A</small>";$("draws").textContent="reported by BMS"+(p.iParts<2?" (1 board)":"")}
+ else{$("drawL").textContent="Draw";dr.className="tv na";dr.innerHTML="--";$("draws").textContent=has?"no current reading":"waiting for BMS"}
  /* chart + note + footer */
  var mt=match(rows,S.bms);
  tempChart($("ch"),hours,{H:196},rows,mt,now,off,on,ko);
