@@ -548,6 +548,14 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 #tabbar button.tab-off{color:#f87171;text-shadow:0 0 12px rgba(248,113,113,.5)}
 #htitle.ps-ok{color:#ecfdf5;text-shadow:0 0 22px rgba(52,211,153,.32)}
 #tabbar button.tab-hot{color:#fda4af;text-shadow:0 0 12px rgba(251,113,133,.5)}
+/* slim probe bar under the cells dial (Option A) */
+.pbar{margin-top:16px}.pbar .pl{text-align:center;font-size:13.5px;color:#cfd5e6;margin-bottom:28px}
+.ptrk{position:relative;height:10px;border-radius:6px;background:#0b0e16;border:1px solid rgba(255,255,255,.07)}
+.ptrk .z{position:absolute;top:0;bottom:0;border-radius:5px;background:linear-gradient(90deg,#34d399,#fbbf24,#fb7185);opacity:.85}
+.ptrk .ov{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 4px,transparent 4px 8px)}
+.ptrk .d{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:2.6px solid #fda4af;box-sizing:border-box}
+.ptrk .dv{position:absolute;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fda4af;white-space:nowrap}
+.ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1182,15 +1190,22 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  var watch=!fan&&/^(watching|cooling)$/.test(m);
  /* Boom v8.33 compares latch on/off against the PACK PROBE, not cells: label ticks as probe points and,
     when cells are the big number, show the probe as its own dot so the ticks read against the probe. */
- var pfx=cell!==null?"probe ":"",pdot=cell!==null&&pk!==null?{v:pk,c:"#fda4af",t:"probe"}:null;
+ /* Option A: cells dial is cells-only; probe thresholds live in the slim probe bar below. With no cell data
+    the probe is the big number, so its stop/start ticks stay on the arc. */
+ var pfx="",pdot=null;
  if(on!==null&&watch)mk.push({v:on,c:"#fbbf24",t:pfx+"start"});
  if(off!==null&&watch)mk.push({v:off,c:"#34d399",t:pfx+"stop",in:1});
  if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:pfx+"stop",in:1});
  if(fan&&on!==null)mk.push({v:on,c:"#fda4af",t:pfx+"start"});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
+ if(cell!==null)mk=[];
  var gr=gaugeRange(gv,pdot?mk.concat([pdot]):mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col,pdot)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
+ if(cell!==null&&pk!==null&&on!==null&&off!==null&&on>off){var pbPad=Math.max(0.5,(on-off)*0.4),pbLo=off-pbPad,pbHi=on+pbPad,
+  pbX=function(t){return((Math.max(pbLo,Math.min(pbHi,t))-pbLo)/(pbHi-pbLo)*100).toFixed(1)+"%"};
+  var pbLab=fan?'Probe — fan on above '+d1(on)+', <b style="color:#34d399">off at '+d1(off)+'</b>':'Probe — fan off, <b style="color:#fbbf24">on above '+d1(on)+'</b>';
+  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk"><div class="ov" style="left:0;width:'+pbX(off)+'"></div><div class="ov" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbX(pk)+'">'+d1(pk)+'</span><span class="d" style="left:'+pbX(pk)+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
