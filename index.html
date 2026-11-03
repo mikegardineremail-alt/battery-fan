@@ -1203,9 +1203,11 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
  if(cell!==null&&pk!==null&&on!==null&&off!==null&&on>off){var pbPad=Math.max(0.5,(on-off)*0.4),pbLo=off-pbPad,pbHi=on+pbPad,
-  pbX=function(t){return((Math.max(pbLo,Math.min(pbHi,t))-pbLo)/(pbHi-pbLo)*100).toFixed(1)+"%"};
+  pbX=function(t){return"calc(7px + (100% - 14px) * "+((Math.max(pbLo,Math.min(pbHi,t))-pbLo)/(pbHi-pbLo)).toFixed(3)+")"};
+  /* dot clamped inside the track (never hangs past the end); value label shows the true probe and is anchored so it stays on the card */
+  var pbF=(Math.max(pbLo,Math.min(pbHi,pk))-pbLo)/(pbHi-pbLo),pbD=pbX(pk);
   var pbLab=fan?'Probe — fan on above '+d1(on)+', <b style="color:#34d399">off at '+d1(off)+'</b>':'Probe — fan off, <b style="color:#fbbf24">on above '+d1(on)+'</b>';
-  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk"><div class="ov" style="left:0;width:'+pbX(off)+'"></div><div class="ov" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbX(pk)+'">'+d1(pk)+'</span><span class="d" style="left:'+pbX(pk)+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
+  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk"><div class="ov" style="left:0;width:'+pbX(off)+'"></div><div class="ov" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
