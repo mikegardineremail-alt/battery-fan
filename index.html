@@ -551,10 +551,10 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 /* slim probe bar under the cells dial (Option A) */
 .pbar{margin-top:16px}.pbar .pl{text-align:center;font-size:13.5px;color:#cfd5e6;margin-bottom:28px}
 .ptrk{position:relative;height:10px;border-radius:6px;background:transparent;border:1px solid transparent}
-.ptrk .z{position:absolute;top:0;bottom:0;border-radius:5px;background:linear-gradient(90deg,#34d399,#fbbf24,#fb7185);opacity:.85}
-.ptrk .ov{position:absolute;top:0;bottom:0;border-radius:5px;background:transparent}
-.ptrk .d{position:absolute;z-index:2;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:2.6px solid #fda4af;box-sizing:border-box}
-.ptrk .dv{position:absolute;z-index:2;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fda4af;white-space:nowrap}
+.ptrk .z{position:absolute;z-index:1;top:0;bottom:0;border-radius:0;background:linear-gradient(90deg,#34d399,#fbbf24,#fb7185);opacity:.85}
+.ptrk .ov{position:absolute;top:0;bottom:0;border-radius:5px;opacity:.55}.ptrk .ov.lo{background:#34d399;border-radius:5px 0 0 5px}.ptrk .ov.hi{background:#fb7185;border-radius:0 5px 5px 0}
+.ptrk .d{position:absolute;z-index:2;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:3px solid var(--pc,#8b93a7);box-shadow:0 0 0 2.5px #0b0e16,0 0 10px rgba(0,0,0,.5);box-sizing:border-box}
+.ptrk .dv{position:absolute;z-index:2;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:var(--pc,#8b93a7);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 </style>
 </head>
@@ -1112,6 +1112,11 @@ function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]
  if(r.fan!==1){bms.forEach(function(x){if(x.t<since-60e3)return;var c=cellOf(x);if(c!==null&&(settled===null||c<settled)){settled=c;st=x.t}})}
  return{cell:cell,cellT:bl?bl.t:null,settled:settled,settledT:st,since:since}}
 function d1(v){return v===null||v===undefined?"--":f1(v)+"°"}
+/* probe colour on the stop→start scale (same stops as the probe bar band): green ≤ stop, amber mid, red ≥ start */
+var PB_STOPS=[[52,211,153],[251,191,36],[251,113,133]];
+function probeCol(pk,off,on){if(pk===null||pk===undefined||!isFinite(pk))return"#8b93a7";if(off===null||on===null||off===undefined||on===undefined||!(on>off))return tempColor(pk);
+ var f=Math.max(0,Math.min(1,(pk-off)/(on-off)))*2,i=f>=1?1:0,g=f-i,a=PB_STOPS[i],b=PB_STOPS[i+1];
+ return"#"+a.map(function(c,j){return Math.round(c+(b[j]-c)*g).toString(16).padStart(2,"0")}).join("")}
 
 /* ultimate cooling-done card (second prediction; keeps next-off card as-is) */
 function ultCardHtml(rows,r,now,pr){try{
@@ -1207,9 +1212,9 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   /* dot clamped inside the track (never hangs past the end); value label shows the true probe and is anchored so it stays on the card */
   var pbF=(Math.max(pbLo,Math.min(pbHi,pk))-pbLo)/(pbHi-pbLo),pbD=pbX(pk);
   var pbLab=fan?'Probe — fan on above '+d1(on)+', <b style="color:#34d399">off at '+d1(off)+'</b>':'Probe — fan off, <b style="color:#fbbf24">on above '+d1(on)+'</b>';
-  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk"><div class="ov" style="left:0;width:'+pbX(off)+'"></div><div class="ov" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
+  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'"><div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
- h+='<div class="duo">'+R("Probe",pk,"#fda4af",on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
+ h+='<div class="duo">'+R("Probe",pk,probeCol(pk,off,on),on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
  if(m==="quiet"){var otQ=$("offT"),ntQ=$("onT");if(otQ)otQ.style.display="none";if(ntQ)ntQ.style.display="none"}
  else (function(){var so=null,sr="",sl="Fan stops at",st=null,sn=null,sa="",nl="Fan starts at",C="<small>°C</small>";
@@ -2052,7 +2057,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
  else{var grO=gaugeRange(gv,[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
-  h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>","#fda4af"],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:16.5px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
+  h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>",probeCol(r.pack,lastv(S.rows,"off"),lastv(S.rows,"on"))],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:16.5px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
  h+="</div>";
  /* --- Aux battery · Victron --- */
  h+='<div class="ovsec">Aux battery · Victron</div>';
