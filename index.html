@@ -1174,18 +1174,21 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   else if(m==="low-volt"||m==="volt-recover"){nx="Fan on when battery reaches <b>13.1 V</b>";nx2="Rule: off under 12.9 V · on again at 13.1 V"}
   else if(m==="cold"){nx="Normal fan rules apply";nx2="No 5° cold lockout — boom uses the usual on/off rules"}
   else if(on!==null&&/^(watching|cooling)$/.test(m)){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2="Rule: latch start (Ambient +"+DELTA_ON+"°) = <b>"+d1(on)+"</b>";
-   if(pk!==null&&off!==null){var span=Math.max(on-off,0.5);seg={f:Math.max(0,Math.min(1,(pk-off)/span)),l:"stop "+d1(off),r:"start "+d1(on),c:pk>=on-0.3?"#fbbf24":"#22d3ee"}}}
+   if(pk!==null&&off!==null){var span=Math.max(on-off,0.5);seg={f:Math.max(0,Math.min(1,(pk-off)/span)),l:"probe stop "+d1(off),r:"probe start "+d1(on),c:pk>=on-0.3?"#fbbf24":"#22d3ee"}}}
   else if(on!==null){nx="Fan on if probe passes <b>"+d1(on)+"</b>";nx2="Rule: latch start = <b>"+d1(on)+"</b>"}
  }
  var fanSvg='<svg viewBox="0 0 48 48"><g class="bl">'+[0,120,240].map(function(a){return'<path d="M24 24C21.6 17.5 21.8 9.6 27.6 7.4c4.6-1.7 8.6 2.7 6.6 7.1-1.9 4.2-6 6.9-10.2 9.5Z" transform="rotate('+a+' 24 24)"/>'}).join("")+'</g><circle cx="24" cy="24" r="3.4" class="hub"/></svg>';
  var gv=cell!==null?cell:pk,col=tempColor(gv),mk=[];
  var watch=!fan&&/^(watching|cooling)$/.test(m);
- if(on!==null&&watch)mk.push({v:on,c:"#fbbf24",t:"start"});
- if(off!==null&&watch)mk.push({v:off,c:"#34d399",t:"stop",in:1});
- if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:"stop",in:1});
- if(fan&&on!==null)mk.push({v:on,c:"#fda4af",t:"start"});
+ /* Boom v8.33 compares latch on/off against the PACK PROBE, not cells: label ticks as probe points and,
+    when cells are the big number, show the probe as its own dot so the ticks read against the probe. */
+ var pfx=cell!==null?"probe ":"",pdot=cell!==null&&pk!==null?{v:pk,c:"#fda4af",t:"probe"}:null;
+ if(on!==null&&watch)mk.push({v:on,c:"#fbbf24",t:pfx+"start"});
+ if(off!==null&&watch)mk.push({v:off,c:"#34d399",t:pfx+"stop",in:1});
+ if(fan&&off!==null)mk.push({v:off,c:"#34d399",t:pfx+"stop",in:1});
+ if(fan&&on!==null)mk.push({v:on,c:"#fda4af",t:pfx+"start"});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
- var gr=gaugeRange(gv,mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col)+'';
+ var gr=gaugeRange(gv,pdot?mk.concat([pdot]):mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col,pdot)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
@@ -1257,7 +1260,7 @@ function gaugeRange(v,marks){var vs=[];
  if(hi-lo<8){var mid=(lo+hi)/2;lo=Math.floor(mid-4);hi=Math.ceil(mid+4)}
  if(hi-lo>28){var mid2=(mn+mx)/2;lo=Math.floor(mid2-14);hi=Math.ceil(mid2+14)}
  return{lo:lo,hi:hi}}
-function gaugeSVG(v,lo,hi,marks,col){var CX=150,CY=150,R=120;
+function gaugeSVG(v,lo,hi,marks,col,pdot){var CX=150,CY=150,R=120;
  function P(t,r){var a=Math.PI*Math.max(0,Math.min(1,(t-lo)/(hi-lo)));return[(CX-r*Math.cos(a)),(CY-r*Math.sin(a))]}
  var seg="",st=(hi-lo)/60;for(var t=lo;t<hi;t+=st){var p0=P(t,R),p1=P(Math.min(hi,t+st*1.15),R);seg+='<path d="M'+p0[0].toFixed(2)+" "+p0[1].toFixed(2)+" A"+R+" "+R+" 0 0 1 "+p1[0].toFixed(2)+" "+p1[1].toFixed(2)+'" stroke="'+tempColor(t+st/2)+'" stroke-width="12" fill="none"/>'}
  var pct=v===null?0:Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)),id="g"+Math.random().toString(36).slice(2,7);
@@ -1267,8 +1270,10 @@ function gaugeSVG(v,lo,hi,marks,col){var CX=150,CY=150,R=120;
  s+='<text x="30" y="174" text-anchor="middle">'+lo+'°</text><text x="270" y="174" text-anchor="middle">'+hi+'°</text>';
  /* threshold markers: coloured radial ticks just outside the arc; names go in the legend below */
  marks.forEach(function(m){var a=P(m.v,R+9),b=P(m.v,R+20);s+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+m.c+'" stroke-width="3" stroke-linecap="round"/>'});
+ /* secondary probe dot (start/stop ticks are probe thresholds) */
+ if(pdot&&pdot.v!==null&&isFinite(pdot.v)){var q=P(pdot.v,R);s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="5" fill="#0b0e16" stroke="'+pdot.c+'" stroke-width="2.6"><title>Probe '+f1(pdot.v)+'°</title></circle>'}
  if(v!==null){var k=P(v,R);s+='<circle class="mkh" cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="13" fill="'+col+'" filter="url(#'+id+'f)"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="8.5" fill="#0b0e16" stroke="'+col+'" stroke-width="3.2"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="2.6" fill="#eef2ff"/>'}
- return s+'</svg><!--GIN--></div>'+(marks.length?'<div class="glg">'+marks.map(function(m){return'<span><i style="background:'+m.c+'"></i>'+m.t+' <b>'+f1(m.v)+'°</b></span>'}).join("")+'</div>':"")}
+ return s+'</svg><!--GIN--></div>'+(marks.length?'<div class="glg">'+marks.map(function(m){return'<span><i style="background:'+m.c+'"></i>'+m.t+' <b>'+f1(m.v)+'°</b></span>'}).join("")+(pdot&&pdot.v!==null?'<span><i style="background:'+pdot.c+';border-radius:50%"></i>probe <b>'+f1(pdot.v)+'°</b></span>':"")+'</div>':"")}
 function ladder(amb,cells,pk){var vs=[amb,cells,pk].filter(function(v){return v!==null});
  if(!vs.length){$("ka").style.display=$("kp").style.display=$("kc").style.display=$("brk").style.display=$("brke").style.display="none";$("scale").innerHTML="";return}
  var lo=Math.min(20,Math.floor((Math.min.apply(null,vs)-3)/5)*5),hi=Math.max(50,Math.ceil((Math.max.apply(null,vs)+3)/5)*5); /* mockup scale is 20..50 */
