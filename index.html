@@ -550,11 +550,11 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 #tabbar button.tab-hot{color:#fda4af;text-shadow:0 0 12px rgba(251,113,133,.5)}
 /* slim probe bar under the cells dial (Option A) */
 .pbar{margin-top:16px}.pbar .pl{text-align:center;font-size:13.5px;color:#cfd5e6;margin-bottom:28px}
-.ptrk{position:relative;height:10px;border-radius:6px;background:#0b0e16;border:1px solid rgba(255,255,255,.07)}
+.ptrk{position:relative;height:10px;border-radius:6px;background:transparent;border:1px solid transparent}
 .ptrk .z{position:absolute;top:0;bottom:0;border-radius:5px;background:linear-gradient(90deg,#34d399,#fbbf24,#fb7185);opacity:.85}
-.ptrk .ov{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 4px,transparent 4px 8px)}
-.ptrk .d{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:2.6px solid #fda4af;box-sizing:border-box}
-.ptrk .dv{position:absolute;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fda4af;white-space:nowrap}
+.ptrk .ov{position:absolute;top:0;bottom:0;border-radius:5px;background:transparent}
+.ptrk .d{position:absolute;z-index:2;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:2.6px solid #fda4af;box-sizing:border-box}
+.ptrk .dv{position:absolute;z-index:2;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fda4af;white-space:nowrap}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 </style>
 </head>
