@@ -558,7 +558,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 .pcr{position:relative;height:20px;margin-top:5px;font-size:11.5px;color:var(--cc,#cfd5e6);font-variant-numeric:tabular-nums}.pcr .br{position:absolute;top:0;height:5px;min-width:2px;border:1.5px solid var(--cc,#cfd5e6);border-top:0;border-radius:0 0 3px 3px;opacity:.75;box-sizing:border-box;margin-left:-.75px}.pcr span{position:absolute;top:9px;white-space:nowrap;opacity:.9;line-height:1}.pcr+.ptrl{margin-top:2px}
 .ptrk .cz{background:linear-gradient(90deg,var(--cc),var(--cc));opacity:.35;border-radius:5px}.ptrk .tk{position:absolute;z-index:1;top:-4px;bottom:-4px;width:2.5px;margin-left:-1.25px;border-radius:2px}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-.pcap{display:flex;justify-content:space-between;gap:8px;margin-top:4px;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}.pcap span{white-space:nowrap;padding:3px 7px;border-radius:999px}.pcap .lo{color:#34d399;background:rgba(52,211,153,.12)}.pcap .hi{color:#fb7185;background:rgba(251,113,133,.12);margin-left:auto}.pcap em{font-style:normal;font-weight:400;opacity:.75}
+.pbar.ar .ptrk,.pbar.ar .ptrl{margin-left:44px;margin-right:44px}.ptrk .ea{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:500;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}.ptrk .ea.hi{left:calc(100% + 7px);color:#fb7185}.ptrk .ea.lo{right:calc(100% + 7px);color:#34d399}.ptrk .ea i{font-style:normal;font-size:10px;opacity:.9}
 </style>
 </head>
 <body>
@@ -669,7 +669,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 </div></nav>
 </div>
 <script>
-/* probe bar (pack_C): stop→start scale; park peak / low-since-peak shown as end-cap pills (?pb=old hides them) */
+/* probe bar (pack_C): stop→start scale; park peak / low-since-peak shown as end arrows (?pb=old hides them) */
 var PROBE_BAR=/[?&]pb=old/i.test(location.search)?"old":"peak";
 /*PREDICT-BEGIN — shared with tools/predict-backtest.js; keep this block self-contained (no app globals) */
 /* ===== Fan-off prediction: ALL tunables live here (tune weekly; bump version when changed) ===== */
@@ -1228,9 +1228,10 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   var crF=function(v){return(Math.round(v*10)/10).toFixed(1)},capL=PROBE_BAR!=="old"&&plo&&plo.v<off,capR=PROBE_BAR!=="old"&&ppk&&ppk.v>on,crH="";
   var trkIn='<div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div>';
   var trl='<span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span>';
-  /* end-caps: own row under the stop/start labels, pinned to the bar ends (no overlap) */
-  if(capL||capR)crH='<div class="pcap">'+(capL?'<span class="lo" title="probe low since the peak">low '+crF(plo.v)+'° <em>· '+hm(plo.t)+'</em></span>':'<span></span>')+(capR?'<span class="hi" title="probe peak since key-off">peak '+crF(ppk.v)+'° <em>· '+hm(ppk.t)+'</em></span>':'')+'</div>';
-  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl">'+trl+'</div>'+crH+'</div>'}
+  /* end arrows: park peak (▸, right) / low since peak (◂, left), just past the bar ends, value only */
+  if(capR)trkIn+='<span class="ea hi" title="probe peak since key-off"><i>&#9656;</i>'+crF(ppk.v)+'°</span>';
+  if(capL)trkIn+='<span class="ea lo" title="probe low since the peak">'+crF(plo.v)+'°<i>&#9666;</i></span>';
+  h+='<div class="pbar'+(capL||capR?' ar':'')+'"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl">'+trl+'</div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,probeCol(pk,off,on),on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
