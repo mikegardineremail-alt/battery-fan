@@ -555,6 +555,8 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 .ptrk .ov{position:absolute;top:0;bottom:0;border-radius:5px;opacity:.55}.ptrk .ov.lo{background:#34d399;border-radius:5px 0 0 5px}.ptrk .ov.hi{background:#fb7185;border-radius:0 5px 5px 0}
 .ptrk .d{position:absolute;z-index:2;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#0b0e16;border:3px solid var(--pc,#8b93a7);box-shadow:0 0 0 2.5px #0b0e16,0 0 10px rgba(0,0,0,.5);box-sizing:border-box}
 .ptrk .dv{position:absolute;z-index:2;top:-22px;transform:translateX(-50%);font-size:13px;font-weight:700;color:var(--pc,#8b93a7);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pcr{position:relative;height:20px;margin-top:5px;font-size:11.5px;color:var(--cc,#cfd5e6);font-variant-numeric:tabular-nums}.pcr .br{position:absolute;top:0;height:5px;min-width:2px;border:1.5px solid var(--cc,#cfd5e6);border-top:0;border-radius:0 0 3px 3px;opacity:.75;box-sizing:border-box;margin-left:-.75px}.pcr span{position:absolute;top:9px;white-space:nowrap;opacity:.9;line-height:1}.pcr+.ptrl{margin-top:2px}
+.ptrk .cz{background:linear-gradient(90deg,var(--cc),var(--cc));opacity:.35;border-radius:5px}.ptrk .tk{position:absolute;z-index:1;top:-4px;bottom:-4px;width:2.5px;margin-left:-1.25px;border-radius:2px}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 </style>
 </head>
@@ -666,6 +668,8 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 </div></nav>
 </div>
 <script>
+/* probe bar under the cells dial: "A" = stop→start scale with a cells min–peak bracket; "B" = bar runs cell min → peak (mock: ?pb=b) */
+var PROBE_BAR=/[?&]pb=b/i.test(location.search)?"B":"A";
 /*PREDICT-BEGIN — shared with tools/predict-backtest.js; keep this block self-contained (no app globals) */
 /* ===== Fan-off prediction: ALL tunables live here (tune weekly; bump version when changed) ===== */
 var PREDICT={
@@ -679,7 +683,7 @@ var PREDICT={
  fudge:1.0,               /* >1 = predict later (slower cooling), <1 = earlier */
  plateauMarginC:0.3,      /* stop <= Ambient + this: may never reach the stop point */
  minGapC:0.2,             /* ignore rows where probe-Ambient is below this for the log fit */
- maxHorizonMin:240,       /* further out than this: "not soon" */
+ maxHorizonMin:240,       /* slope fit trusted up to this; further out -> typical-run estimate (was: "not soon" blank = 4 h tap-out) */
  runOnMin:20,             /* Boom fixed run-on after the stop point (cool-down only) */
  runOnModes:["cooldown"], /* modes where reaching the stop point starts a run-on */
  modes:["cooldown","cooling","fan-on"], /* live Boom v8.33 latch-band fan-on modes (use logged off) */
@@ -726,7 +730,7 @@ function predictOff0(rows,P,opt){var L=rows.length-1;if(L<0)return{state:"na"};v
    if(k>0){var yn=nf.a+nf.b*tl;dt=(yn-Math.log(off-A))/k;model="newton";r2=nf.r2}}}
  if(dt===null)dt=(Tn-off)/(-lin.b);
  dt=Math.max(0,dt*P.fudge);
- if(dt>P.maxHorizonMin)return out({state:"far",model:model,r2:r2});
+ if(dt>P.maxHorizonMin)return out(typicalOff(rows,s,L,off,runOn,P,"far",{model:model,r2:r2,slopeMin:dt})); /* slope too far out to trust: fall back to typical past runs (no 4 h limit; 8 h cap + now clamp still apply) */
  var span=(W[W.length-1].t-W[0].t)/60e3,C=P.conf,conf=r2>=C.highR2&&span>=C.highMin&&dt<=C.highHorizonMin?"high":r2>=C.medR2&&dt<=C.medHorizonMin?"med":"low";
  var hit=r.t+dt*60e3,lead=(hit+runOn-r.t)/60e3;return out({state:"ok",hit:hit,t:hit+runOn,lead:lead,pm:predPm(lead,P),conf:conf,model:model,r2:r2,amb:A,mins:dt})}
 function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)if(leadMin<=b[i].maxLeadMin)break;b=b[Math.min(i,b.length-1)];return Math.max(P.minPmMin,Math.round(b?b.pm:0))}
@@ -1104,6 +1108,7 @@ function runOnEnd(rows,r){if(!r||r.fan!==1||!/^(run-on|cooldown-done)$/.test(r.m
  var mm=/(\d+)\s*more\s*min/i.exec(r.note||"");if(mm)return r.t+(+mm[1])*60e3;
  var st=null;for(var i=rows.length-1;i>=0;i--){var x=rows[i];if(x.mode&&!/^(run-on|cooldown-done)$/.test(x.mode))break;if(i<rows.length-1&&rows[i+1].t-x.t>20*60e3)break;if(x.mode)st=x.t}
  return st===null?null:st+RUN_ON_MIN*60e3}
+function cellRangeOf(x){var v=[];if(!x)return null;[x.A,x.B].forEach(function(b){if(b&&b.any){if(b.t_int!==null)v.push(b.t_int);if(b.t_brd!==null)v.push(b.t_brd)}});return v.length?{lo:Math.min.apply(null,v),hi:Math.max.apply(null,v)}:null}
 function cellOf(x){var v=[];[x.A,x.B].forEach(function(b){if(b&&b.any){if(b.t_int!==null)v.push(b.t_int);if(b.t_brd!==null)v.push(b.t_brd)}});return v.length?Math.max.apply(null,v):null}
 function coolState(rows,r,now){var bms=S.bms||[],bl=bms.length?bms[bms.length-1]:null,cell=bl&&now-bl.t<=BMS_STALE_MIN*60e3?cellOf(bl):null;
  /* Fan-off session for cell settled: same fan stretch, but a drive resets it (Boom re-arms at key-off; driving keeps fan=0). */
@@ -1207,12 +1212,22 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  var gr=gaugeRange(gv,pdot?mk.concat([pdot]):mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col,pdot)+'';
  h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div></div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
- if(cell!==null&&pk!==null&&on!==null&&off!==null&&on>off){var pbPad=Math.max(0.5,(on-off)*0.4),pbLo=off-pbPad,pbHi=on+pbPad,
+ if(cell!==null&&pk!==null&&on!==null&&off!==null&&on>off){var bmsL=(S.bms||[]).length?S.bms[S.bms.length-1]:null,cr=bmsL&&now-bmsL.t<=BMS_STALE_MIN*60e3?cellRangeOf(bmsL):null,
+  pbB=cr&&PROBE_BAR==="B"&&cr.hi-cr.lo>=0.1,pbPad=Math.max(0.5,(on-off)*0.4),pbLo=pbB?cr.lo:Math.min(off-pbPad,cr?cr.lo-0.3:Infinity),pbHi=pbB?cr.hi:Math.max(on+pbPad,cr?cr.hi+0.3:-Infinity),
   pbX=function(t){return"calc(7px + (100% - 14px) * "+((Math.max(pbLo,Math.min(pbHi,t))-pbLo)/(pbHi-pbLo)).toFixed(3)+")"};
   /* dot clamped inside the track (never hangs past the end); value label shows the true probe and is anchored so it stays on the card */
   var pbF=(Math.max(pbLo,Math.min(pbHi,pk))-pbLo)/(pbHi-pbLo),pbD=pbX(pk);
   var pbLab=fan?'Probe — fan on above <b style="color:#fb7185">'+d1(on)+'</b>, <b style="color:#34d399">off at '+d1(off)+'</b>':'Probe — fan off, <b style="color:#fbbf24">on above '+d1(on)+'</b>';
-  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'"><div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div><span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl"><span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span></div></div>'}
+  /* cells min–peak (BMS t_int/t_brd of the current reading, both packs). A: subtle bracket on the same scale under the
+     track; B (PROBE_BAR="B"): the track itself runs cell min → peak, with stop/start as ticks. */
+  var crH="",crF=function(v){return(Math.round(v*10)/10).toFixed(1)};
+  if(cr&&!pbB){var cL=pbX(cr.lo),cW="calc("+pbX(cr.hi)+" - "+pbX(cr.lo)+")",cM=(((cr.lo+cr.hi)/2-pbLo)/(pbHi-pbLo));
+   crH='<div class="pcr" style="--cc:'+col+'"><div class="br" style="left:'+cL+';width:'+cW+'"></div><span style="left:'+pbX((cr.lo+cr.hi)/2)+';transform:translateX(-'+(Math.max(0.15,Math.min(0.85,cM))*100).toFixed(0)+'%)">cells '+crF(cr.lo)+'–'+crF(cr.hi)+'°</span></div>'}
+  var trkIn=pbB?'<div class="z cz" style="left:0;right:0;--cc:'+col+'"></div><i class="tk" style="left:'+pbX(off)+';background:#34d399"></i><i class="tk" style="left:'+pbX(on)+';background:#fb7185"></i>':
+   '<div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div>';
+  var trl=pbB?'<span style="left:7px;transform:none;color:'+col+'">cell min '+crF(cr.lo)+'</span><span style="right:7px;left:auto;transform:none;color:'+col+'">peak '+crF(cr.hi)+'</span>':
+   '<span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span>';
+  h+='<div class="pbar'+(pbB?" pbB":"")+'"><div class="pl">'+pbLab+(pbB?' <span style="color:#8b93a7">· bar = cells</span>':'')+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div>'+crH+'<div class="ptrl">'+trl+'</div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,probeCol(pk,off,on),on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
@@ -1244,7 +1259,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
     h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Range: 80% of past predictions this far ahead landed inside it">Predicted</span><div class="bign" style="color:'+bc+'"><span style="opacity:.55;font-weight:500">~</span>'+tp2[0]+'<span class="u">'+(tp2[1]||"")+'</span>'+pmHtml(pr)+'</div></div><div class="bigs">Probe reaches <b style="color:#34d399">'+d1(pr.off)+'</b><br>~'+hm(pr.hit)+ro+capNote(pr)+'</div></div>'+(seg?'<div class="trk"><i style="width:'+(Math.max(0,Math.min(1,seg.f))*100).toFixed(0)+'%"></i></div><div class="trl"><span>'+seg.l+'</span><span>'+seg.r+'</span></div>':"")+'</section>';
     h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
    else if(pr.state==="est"){var tp3=hm(pr.t).split(" "),tyL=pr.type==="cycle"?"latch-band cycle runs":"first runs after key-off";
-    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Not a live slope fit yet: median length of past '+tyL+' ('+(pr.src==="history"?pr.n+" runs in the Pack log":"built-in norm")+'); ± = 80% of those runs. Switches to the live prediction after '+PREDICT.minDataMin+' min of falling readings.">Estimate</span><div class="bign" style="color:'+bc+';opacity:.85"><span style="opacity:.55;font-weight:500">~</span>'+tp3[0]+'<span class="u">'+(tp3[1]||"")+'</span>'+pmHtml(pr)+'</div></div><div class="bigs">Estimate from typical runs<br>'+tyL+' · ~'+pr.medMin+' min'+(pr.src==="norm"?" (norm)":"")+'<br>Stop point <b style="color:#6ee7b7">'+d1(pr.off)+'</b>'+capNote(pr)+'</div></div></section>';
+    h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="sp c">'+(cell!==null?"Cells "+d1(cell)+" now":"Probe "+d1(pk)+" now")+'</span></div><div class="bigm"><div><span class="ptag" title="Not a live slope fit yet: median length of past '+tyL+' ('+(pr.src==="history"?pr.n+" runs in the Pack log":"built-in norm")+'); ± = 80% of those runs. Switches to the live prediction after '+PREDICT.minDataMin+' min of falling readings.">Estimate</span><div class="bign" style="color:'+bc+';opacity:.85"><span style="opacity:.55;font-weight:500">~</span>'+tp3[0]+'<span class="u">'+(tp3[1]||"")+'</span>'+pmHtml(pr)+'</div></div><div class="bigs">'+(pr.why==="far"?"Slow fall (over "+Math.round(PREDICT.maxHorizonMin/60)+" h by slope)<br>":"")+'Estimate from typical runs<br>'+tyL+' · ~'+pr.medMin+' min'+(pr.src==="norm"?" (norm)":"")+'<br>Stop point <b style="color:#6ee7b7">'+d1(pr.off)+'</b>'+capNote(pr)+'</div></div></section>';
     h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}}
   else
