@@ -558,7 +558,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 .pcr{position:relative;height:20px;margin-top:5px;font-size:11.5px;color:var(--cc,#cfd5e6);font-variant-numeric:tabular-nums}.pcr .br{position:absolute;top:0;height:5px;min-width:2px;border:1.5px solid var(--cc,#cfd5e6);border-top:0;border-radius:0 0 3px 3px;opacity:.75;box-sizing:border-box;margin-left:-.75px}.pcr span{position:absolute;top:9px;white-space:nowrap;opacity:.9;line-height:1}.pcr+.ptrl{margin-top:2px}
 .ptrk .cz{background:linear-gradient(90deg,var(--cc),var(--cc));opacity:.35;border-radius:5px}.ptrk .tk{position:absolute;z-index:1;top:-4px;bottom:-4px;width:2.5px;margin-left:-1.25px;border-radius:2px}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-.ptrk .ea{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:500;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}.ptrk .ea.hi{left:calc(100% + 7px);color:#fb7185}.ptrk .ea.lo{right:calc(100% + 7px);color:#34d399}.ptrk .ea i{font-style:normal;font-size:10px;opacity:.9}
+.ptrk .ea{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:3px;font-size:14.5px;font-weight:600;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}.ptrk .ea.hi{left:calc(100% + 7px);color:#fb7185}.ptrk .ea.lo{right:calc(100% + 7px);color:#34d399}.ptrk .ea i{font-style:normal;font-size:12px;opacity:.9}
 </style>
 </head>
 <body>
@@ -1235,7 +1235,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   /* end arrows: park peak (▸, right) / low since peak (◂, left), just past the bar ends, value only */
   if(capR)trkIn+='<span class="ea hi" title="probe peak since key-off"><i>&#9656;</i>'+crF(ppk.v)+'°</span>';
   if(capL)trkIn+='<span class="ea lo" title="probe low since the peak">'+crF(plo.v)+'°<i>&#9666;</i></span>';
-  var arW=function(v){return Math.ceil(19+crF(v).length*6.6)+"px"},arSt=(capL?"margin-left:"+arW(plo.v)+";":"")+(capR?"margin-right:"+arW(ppk.v)+";":"");
+  var arW=function(v){return Math.ceil(24+crF(v).length*8.6)+"px"},arSt=(capL?"margin-left:"+arW(plo.v)+";":"")+(capR?"margin-right:"+arW(ppk.v)+";":"");
   h+='<div class="pbar'+(capL||capR?' ar':'')+'"><div class="pl">'+pbLab+'</div><div class="ptrk" style="'+arSt+'--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl" style="'+arSt+'">'+trl+'</div></div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,probeCol(pk,off,on),on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
