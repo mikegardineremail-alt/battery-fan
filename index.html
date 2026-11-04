@@ -558,8 +558,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 .pcr{position:relative;height:20px;margin-top:5px;font-size:11.5px;color:var(--cc,#cfd5e6);font-variant-numeric:tabular-nums}.pcr .br{position:absolute;top:0;height:5px;min-width:2px;border:1.5px solid var(--cc,#cfd5e6);border-top:0;border-radius:0 0 3px 3px;opacity:.75;box-sizing:border-box;margin-left:-.75px}.pcr span{position:absolute;top:9px;white-space:nowrap;opacity:.9;line-height:1}.pcr+.ptrl{margin-top:2px}
 .ptrk .cz{background:linear-gradient(90deg,var(--cc),var(--cc));opacity:.35;border-radius:5px}.ptrk .tk{position:absolute;z-index:1;top:-4px;bottom:-4px;width:2.5px;margin-left:-1.25px;border-radius:2px}
 .ptrl{position:relative;height:18px;font-size:13px;color:#8b93a7;margin-top:6px;font-variant-numeric:tabular-nums}.ptrl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-.pbP .ptrk .tk{z-index:1;top:-4px;bottom:-4px}.ptrk .pkm{position:absolute;z-index:1;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;background:#fff;opacity:.55}
-.pcr.pk{height:18px;margin-top:8px}.pcr.pk span{top:2px;font-size:12px;font-weight:600}.pcr.pk i{font-style:normal}.pcr.pk em{font-style:normal;font-weight:400;color:#8b93a7}
+.pcap{display:flex;justify-content:space-between;gap:8px;margin-top:4px;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}.pcap span{white-space:nowrap;padding:3px 7px;border-radius:999px}.pcap .lo{color:#34d399;background:rgba(52,211,153,.12)}.pcap .hi{color:#fb7185;background:rgba(251,113,133,.12);margin-left:auto}.pcap em{font-style:normal;font-weight:400;opacity:.75}
 </style>
 </head>
 <body>
@@ -670,8 +669,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 </div></nav>
 </div>
 <script>
-/* probe bar under the cells dial is PROBE ONLY (pack_C): "peak" (default) = hot end at the probe peak since key-off (or start), cold end = min(probe, stop) − margin;
-   falls back to the stop→start scale with no key-off/peak. ?pb=old forces the old scale. */
+/* probe bar (pack_C): stop→start scale; park peak / low-since-peak shown as end-cap pills (?pb=old hides them) */
 var PROBE_BAR=/[?&]pb=old/i.test(location.search)?"old":"peak";
 /*PREDICT-BEGIN — shared with tools/predict-backtest.js; keep this block self-contained (no app globals) */
 /* ===== Fan-off prediction: ALL tunables live here (tune weekly; bump version when changed) ===== */
@@ -1220,23 +1218,19 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   ko=keyOffInfo(rows,now),ppk=null;
   if(ko&&!ko.driving&&!ko.none&&ko.t!=null)rows.forEach(function(x){if(x.t>=ko.t-60e3&&x.t<=now&&x.pack!=null&&isFinite(x.pack)&&(ppk===null||x.pack>ppk.v))ppk={v:x.pack,t:x.t}});
   if(ppk&&ppk.v<pk)ppk={v:pk,t:now};
-  var pkMode=!!ppk&&PROBE_BAR!=="old",pbPad=Math.max(0.5,(on-off)*0.4),pbLo,pbHi;
-  /* probe-only scale: hot end = max(probe peak, start) + margin; cold end = min(probe, stop) − margin (extends left as the probe cools) */
-  if(pkMode){pbHi=Math.max(ppk.v,on);pbLo=Math.min(pk,off);var pbM=Math.max(0.4,(pbHi-pbLo)*0.06);pbLo-=pbM;pbHi+=pbM}
-  else{pbLo=off-pbPad;pbHi=on+pbPad}
+  /* main bar = stop→start scale (overshoot zones = max(0.5°, 40% of gap)); the park extremes are end-cap labels and never change the scale */
+  var pbPad=Math.max(0.5,(on-off)*0.4),pbLo=off-pbPad,pbHi=on+pbPad,plo=null;
+  if(ppk)rows.forEach(function(x){if(x.t>=ppk.t&&x.t<=now&&x.pack!=null&&isFinite(x.pack)&&(plo===null||x.pack<plo.v))plo={v:x.pack,t:x.t}});
+  if(plo&&pk<plo.v)plo={v:pk,t:now};
   var pbFr=function(t){return(Math.max(pbLo,Math.min(pbHi,t))-pbLo)/(pbHi-pbLo)},pbX=function(t){return"calc(7px + (100% - 14px) * "+pbFr(t).toFixed(3)+")"};
   var pbF=pbFr(pk),pbD=pbX(pk);
   var pbLab=fan?'Probe — fan on above <b style="color:#fb7185">'+d1(on)+'</b>, <b style="color:#34d399">off at '+d1(off)+'</b>':'Probe — fan off, <b style="color:#fbbf24">on above '+d1(on)+'</b>';
-  var crH="",crF=function(v){return(Math.round(v*10)/10).toFixed(1)},trkIn,trl;
-  trkIn='<div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div>';
-  if(pkMode){trkIn+='<i class="tk" style="left:'+pbX(off)+';background:#34d399"></i><i class="tk" style="left:'+pbX(on)+';background:#fb7185"></i><i class="pkm" style="left:'+pbX(ppk.v)+'"></i>';
-   crH='<div class="pcr pk"><span style="right:0;left:auto;color:'+probeCol(ppk.v,off,on)+'" title="probe peak since key-off, '+hm(ppk.t)+'">peak '+crF(ppk.v)+'° <em>'+hm(ppk.t)+'</em></span></div>'}
-  /* stop/start labels close together on a wide scale: push them apart (stop right-aligned, start left-aligned) */
-  var pbNr=pbFr(on)-pbFr(off)<0.22;
-  /* stop tick near the left edge: both left-aligned, start pushed past the stop label */
-  var pbEd=pbNr&&pbFr(off)<0.2,pbSX=pbEd?'max('+pbX(on)+', '+pbX(off)+' + 74px)':pbX(on);
-  trl='<span style="left:'+pbX(off)+';color:#34d399'+(pbNr?';transform:translateX('+(pbEd?'-3px':'calc(-100% + 3px)')+')':'')+'">stop '+d1(off)+'</span><span style="left:'+pbSX+';color:#fb7185'+(pbNr?';transform:translateX(-3px)':'')+'">start '+d1(on)+'</span>';
-  h+='<div class="pbar'+(pkMode?" pbP":"")+'"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div>'+crH+'<div class="ptrl">'+trl+'</div></div>'}
+  var crF=function(v){return(Math.round(v*10)/10).toFixed(1)},capL=PROBE_BAR!=="old"&&plo&&plo.v<off,capR=PROBE_BAR!=="old"&&ppk&&ppk.v>on,crH="";
+  var trkIn='<div class="ov lo" style="left:0;width:'+pbX(off)+'"></div><div class="ov hi" style="left:'+pbX(on)+';right:0"></div><div class="z" style="left:'+pbX(off)+';width:calc('+pbX(on)+' - '+pbX(off)+')"></div>';
+  var trl='<span style="left:'+pbX(off)+';color:#34d399">stop '+d1(off)+'</span><span style="left:'+pbX(on)+';color:#fb7185">start '+d1(on)+'</span>';
+  /* end-caps: own row under the stop/start labels, pinned to the bar ends (no overlap) */
+  if(capL||capR)crH='<div class="pcap">'+(capL?'<span class="lo" title="probe low since the peak">low '+crF(plo.v)+'° <em>· '+hm(plo.t)+'</em></span>':'<span></span>')+(capR?'<span class="hi" title="probe peak since key-off">peak '+crF(ppk.v)+'° <em>· '+hm(ppk.t)+'</em></span>':'')+'</div>';
+  h+='<div class="pbar"><div class="pl">'+pbLab+'</div><div class="ptrk" style="--pc:'+probeCol(pk,off,on)+'">'+trkIn+'<span class="dv" style="left:'+pbD+';transform:translateX(-'+(pbF*100).toFixed(0)+'%)">'+d1(pk)+'</span><span class="d" style="left:'+pbD+'"></span></div><div class="ptrl">'+trl+'</div>'+crH+'</div>'}
  function R(k,v,c,sub){return'<div class="ro"><span class="k">'+k+'</span><span class="v" style="color:'+c+'">'+(v===null?"--":f1(v)+'<span class="u">°C</span>')+'</span><span class="s">'+sub+'</span></div>'}
  h+='<div class="duo">'+R("Probe",pk,probeCol(pk,off,on),on!==null&&pk!==null?(pk>on?"above":"below")+" start "+d1(on):"case probe")+'<div class="sep"></div>'+R("Ambient",amb,"#e5e7eb",r.latch!=null?"latched "+d1(r.latch):"Ambient sensor")+'</div></section>';
  /* FAN DETAILS stop/start tiles: latch on/off only (same as NEXT) */
