@@ -2037,7 +2037,7 @@ function renderHealth(){var el=$("hlbody");if(!el)return;[].forEach.call($("hlr"
  lineChart($("hlch"),[{pts:pts,c:"#22d3ee",w:2.2}],start,now,{unit:" mV",step:5,pad:1,min:0,ticks:tk,gap:span<2*864e5?20*60e3:bms*2.5,hlines:[{v:50,c:"#fbbf24"}]})}
 
 /* ---------- design system v2 helpers ---------- */
-function socCol(s){return s===null||s===undefined?["#8b93a7","#596075"]:s>=60?["#34d399","#22d3ee"]:s>=30?["#fbbf24","#f59e0b"]:["#fb7185","#e11d48"]}
+function socCol(s){return s===null||s===undefined?["#8b93a7","#596075"]:s>=50?["#34d399","#22d3ee"]:s>=25?["#fbbf24","#f59e0b"]:["#fb7185","#e11d48"]}
 var DRAWN={};
 /* 270° glowing dial. o:{id,f(0..1),c:[c1,c2],cls,size,inner} */
 function dial(o){var f=o.f===null||o.f===undefined?0:Math.max(0,Math.min(1,o.f)),first=!DRAWN[o.id],g="dg"+o.id,c=o.c,ticks="";DRAWN[o.id]=1;
