@@ -1387,7 +1387,7 @@ function smooth(p){if(p.length===1)return"M"+p[0][0].toFixed(1)+" "+p[0][1].toFi
  for(var k=1;k<p.length;k++){var p0=p[Math.max(k-2,0)],p1=p[k-1],p2=p[k],p3=p[Math.min(k+1,p.length-1)],c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6,mn=Math.min(p1[1],p2[1]),mx=Math.max(p1[1],p2[1]);
   c1y=Math.min(Math.max(c1y,mn),mx);c2y=Math.min(Math.max(c2y,mn),mx);d+=" C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+p2[0].toFixed(1)+" "+p2[1].toFixed(1)}return d}
 function segs(list,get,X,Y){var out=[],cur=[],lt=null;list.forEach(function(o){var v=get(o);if(v===null||v===undefined)return;if(cur.length&&o.t-lt>15*60e3){out.push(cur);cur=[]}cur.push([X(o.t),Y(v),o.t,v]);lt=o.t});if(cur.length)out.push(cur);return out}
-function spans(rows,t0,test){var out=[],sp=null;rows.forEach(function(r){if(r.t<t0-300e3)return;var a=Math.max(t0,r.t-150e3),b=r.t+150e3;if(test(r)){if(sp&&a<=sp[1]+1)sp[1]=b;else{if(sp)out.push(sp);sp=[a,b]}}else if(sp){out.push(sp);sp=null}});if(sp)out.push(sp);return out}
+function spans(rows,t0,test){var out=[],sp=null;rows.forEach(function(r){if(r.t<t0-300e3)return;var a=Math.max(t0,r.t-150e3),b=r.t+150e3;if(test(r)){if(sp&&a<=sp[1]+60e3)sp[1]=b;else{if(sp)out.push(sp);sp=[a,b]}}else if(sp){out.push(sp);sp=null}});if(sp)out.push(sp);return out}
 function tempChart(el,hrs,opt,rows,mt,now,offN,onN,ko){
  var mini=!!opt.mini,W=340,H=opt.H||196,L=26,R=6,T=mini?6:8,B=20,t1=now,t0=now-hrs*3600e3,id=el.id;el.setAttribute("viewBox","0 0 "+W+" "+H);
  RD[id]=function(){tempChart(el,hrs,opt,rows,mt,now,offN,onN,ko)};FULL[id]=hrs*3600e3;var z=Z[id];if(z){var T0=t0,sp=t1-t0;t0=T0+sp*z.a;t1=T0+sp*z.b}zoomUI(id);
