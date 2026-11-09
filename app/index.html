@@ -204,7 +204,7 @@ svg .xh.pop circle{animation:dotpop .22s ease-out}
 .kv{display:flex;justify-content:space-between;gap:6px;font-size:14px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .kv:last-child{border:0}.kv span{color:var(--mut)}.kv b{font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
 .kv b.hl{color:var(--hot)}.kv b.g{color:var(--ok)}.kv b.w{color:#fde68a}
-.pkn{font-size:13.5px;line-height:1.4;margin-top:8px;color:#cfd5e6}.pkn.x{color:#fecdd3}
+.pkn{font-size:13.5px;line-height:1.4;margin-top:8px;color:#cfd5e6}.pkn.x{color:#fecdd3}.pkn .xb{color:#fb7185;font-weight:600}
 .wbox{text-align:center;padding:26px 14px}
 .big2{font-size:84px;font-weight:200;line-height:.9;letter-spacing:-.04em;color:var(--ok);font-variant-numeric:tabular-nums}
 .big2 sup{font-size:30px;font-weight:300;vertical-align:top;position:relative;top:10px;margin-left:2px}
@@ -912,6 +912,7 @@ var CD_SLOW_X=1.3;   /* slow if took > 1.3x the average */
 var CD_HOT_CELLS=40; /* hot drive if cells peaked above this (°C) */
 var CD_SAME_MIN=3, CD_SAME_DEG=1; /* differences under these read as "about usual" */
 var REFRESH_MS=60000, STALE_MIN=15, BMS_STALE_MIN=20, MATCH_S=150, KEEP_H=36;
+var LAST_BAL_MAX_MONTHS=3; /* last-balanced tick → red cross when this many calendar months or older */
 var MODES={watching:"Watching. Fan starts if the case probe warms past the latch start point (Ambient +5°).",cooling:"Cooling down toward the latch stop point.","fan-on":"Case probe is above the latch start point; fan is cooling toward the stop point.",cooldown:"After-drive cool-down: fan runs until the case probe reaches the stop point.","cooldown-done":"Cool-down finished. Short run-on, then back to watching.","cooldown-skip":"Cool-down skipped — probe already at the stop point. Back to watching.","early-stop":"(Historical) Temperature stopped falling, so the cool-down ended early.","run-on":"Run-on: clearing soaked heat for a few more minutes.","plateau-band":"(Historical) Holding near where the temperature levelled off. Restarts only if it climbs.",cap:"Parked over 8 h: auto cooling done until the next drive.",driving:"Driving: fan held off. Cool-down runs at key-off.","low-volt":"Battery low: fan off to protect it.","volt-recover":"Battery recovering: fan resumes at 13.1 V.","no-volt":"No battery voltage reading. Check the voltmeter.",panic:"Parked and probe over 45°: fan forced on until it drops below 45°. Does not apply while driving.",cold:"Cold pack — normal fan rules still apply (no 5° lockout).","sensor-fault":"Temperature sensor fault. Check the sensors."};
 var SHORT={watching:"Watching",cooling:"Cooling","fan-on":"Too warm",cooldown:"Cool-down","cooldown-done":"Cool-down done","cooldown-skip":"Cool-down skipped","early-stop":"Early stop","run-on":"Run-on","plateau-band":"Plateau hold",cap:"Cooling done",driving:"Driving","low-volt":"Low voltage","volt-recover":"Voltage recovering","no-volt":"No voltage",panic:"Panic cooling",cold:"Cold","sensor-fault":"Sensor fault"};
 var BAD={"low-volt":1,"no-volt":1,panic:1,"sensor-fault":1,crisis:1};
@@ -1002,12 +1003,12 @@ function packOf(r){var A=r.A,B=r.B,bs=[A,B].filter(function(b){return b.any});
    Cached localStorage rows are shown as last-known values in that window,
    not as Offline / stale alarms — otherwise every cold open (and return after
    15+ min backgrounded) flashes red Offline tabs + the pink Shelly banner. */
-var S={rows:[],bms:null,okAt:0,fetchOk:true,bmsMode:"filtered",live:false};
+var S={rows:[],bms:null,lastBal:null,okAt:0,fetchOk:true,bmsMode:"filtered",live:false};
 var hours=Number(localStorage.getItem("bf2-hours"));if([6,12,24].indexOf(hours)<0)hours=6;
-try{var c=JSON.parse(localStorage.getItem("bf2-cache")||"null");if(c&&c.rows){S.rows=c.rows;S.bms=c.bms;S.okAt=c.at||0}}catch(e){}
+try{var c=JSON.parse(localStorage.getItem("bf2-cache")||"null");if(c&&c.rows){S.rows=c.rows;S.bms=c.bms;S.lastBal=c.lastBal||null;S.okAt=c.at||0}}catch(e){}
 function save(){try{var from=Date.now()-KEEP_H*3600e3,ko=keyOffInfo(S.rows,Date.now());
  if(ko&&ko.idx!==undefined)from=Math.min(from,S.rows[Math.max(0,ko.idx-1)].t);
- localStorage.setItem("bf2-cache",JSON.stringify({rows:S.rows.filter(function(r){return r.t>=from}),bms:S.bms?S.bms.filter(function(r){return r.t>=Date.now()-KEEP_H*3600e3}):null,at:S.okAt}))}catch(e){}}
+ localStorage.setItem("bf2-cache",JSON.stringify({rows:S.rows.filter(function(r){return r.t>=from}),bms:S.bms?S.bms.filter(function(r){return r.t>=Date.now()-KEEP_H*3600e3}):null,lastBal:S.lastBal||null,at:S.okAt}))}catch(e){}}
 
 /* key-off: the Shelly logs mode "driving" while the ignition is on, then switches
    (normally to "cooldown") at key-off. Key-off = the first logged row after the
@@ -1037,9 +1038,27 @@ function loadBMS(){return get(bmsUrl()).then(function(t){var b=bmsRows(t);
   if(!b.length&&S.bmsMode==="filtered"){ // tab exists but filter returned nothing: try the plain read once
    return get(BMS_URL+"&headers=1").then(function(t2){var b2=bmsRows(t2);if(b2&&b2.length)S.bmsMode="plain";return b2})}
   return b}).catch(function(){return S.bms})}
+/* Last pack balance: full BMS history (not the KEEP_H window). Column AH = bal_mask_a.
+   ?lastBal=never | DD-MM-YYYY | YYYY-MM-DD mocks the line for draft screenshots. */
+function dmy(t){var d=new Date(t);return String(d.getDate()).padStart(2,"0")+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+d.getFullYear()}
+function monthsAgoMs(now,months){var d=new Date(now);d.setMonth(d.getMonth()-months);return d.getTime()}
+function parseLastBalMock(){var m=(location.search.match(/[?&]lastBal=([^&]*)/)||[])[1];if(!m)return null;
+ m=decodeURIComponent(m).trim();var low=m.toLowerCase();if(low==="never"||low==="none")return{never:true};
+ var a=m.match(/^(\d{4})-(\d{2})-(\d{2})$/),b=m.match(/^(\d{2})-(\d{2})-(\d{4})$/),y,mo,da;
+ if(a){y=+a[1];mo=+a[2];da=+a[3]}else if(b){da=+b[1];mo=+b[2];y=+b[3]}else return null;
+ if(!y||!mo||!da)return null;return{t:new Date(y,mo-1,da,12,0,0).getTime(),mask:1}}
+function lastBalNote(now){var lb=S.lastBal,xb='<span class="xb">✗</span>';
+ if(!lb||lb.never||lb.t==null)return xb+" Last balanced never";
+ var date=dmy(lb.t);if(lb.t<=monthsAgoMs(now||Date.now(),LAST_BAL_MAX_MONTHS))return xb+" Last balanced "+date;
+ return "✓ Last balanced "+date}
+function loadLastBal(){var mock=parseLastBalMock();if(mock){S.lastBal=mock;return Promise.resolve(mock)}
+ var q="select A, B, AH where AH > 0 order by A desc limit 1";
+ return get(BMS_URL+"&headers=1&tq="+encodeURIComponent(q)).then(function(t){var tb=table(t),best=null;
+  tb.rows.forEach(function(o){var u=n(o.unix),m=mask(o.bal_mask_a);if(u===null||u<1e9||m===null||m===0)return;if(u>1e12)u=u/1000;if(!best||u>best.u)best={u:u,t:u*1000,mask:m}});
+  S.lastBal=best?{t:best.t,mask:best.mask}:{never:true};return S.lastBal}).catch(function(e){console.warn("lastBal",e);return S.lastBal})}
 var loading=false;
 function load(){if(loading)return;loading=true;$("app").classList.add("busy");
- Promise.all([get(MAIN_URL).then(shellyRows),loadBMS()]).then(function(res){
+ Promise.all([get(MAIN_URL).then(shellyRows),loadBMS(),loadLastBal()]).then(function(res){
   S.rows=res[0];S.bms=res[1]&&res[1].length?res[1]:null;S.okAt=Date.now();S.fetchOk=true;save()
  }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;S.live=true;$("app").classList.remove("busy");render();renderPacks()})}
 
@@ -1593,6 +1612,7 @@ function renderPacks(){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null,bod
   if(b.prot){var pn=[];for(var i=0;i<13;i++)if(b.prot&(1<<i))pn.push(PROT_PLAIN[i]);notes.push("⚠ Protection on: "+(pn.join(", ")||"code "+b.prot));bad=true}else if(b.prot===0)notes.push("✓ No protection active");
   if(b.fc!==null||b.fd!==null){if(b.fc!==false&&b.fd!==false)notes.push("✓ Charging and discharging allowed");else{bad=true;notes.push("⚠ "+(b.fc===false&&b.fd===false?"Charging and discharging switched off":b.fc===false?"Charging switched off":"Discharging switched off"))}}
   if(b.bal){var bc=[];for(i=0;i<16;i++)if(b.bal&(1<<i))bc.push(i+1);notes.push("Balancing cell"+(bc.length>1?"s ":" ")+bc.join(", "))}else if(b.bal===0)notes.push("Not balancing");
+  notes.push(lastBalNote());
   if(del!==null&&del>0.05){bad=true;notes.push("⚠ Cells are more than 50 mV apart")}
   return h+'<div class="pkn'+(bad?" x":"")+'">'+notes.join("<br>")+"</div></div>"}).join("")+"</div>"}
 
