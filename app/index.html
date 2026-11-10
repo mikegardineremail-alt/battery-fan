@@ -1052,7 +1052,7 @@ function loadBMS(){return get(bmsUrl()).then(function(t){var b=bmsRows(t);
   if(b===null)return null; // tab missing: gviz falls back to the first tab, which has no BMS columns
   if(!b.length&&S.bmsMode==="filtered"){ // tab exists but filter returned nothing: try the plain read once
    return get(BMS_URL+"&headers=1").then(function(t2){var b2=bmsRows(t2);if(b2&&b2.length)S.bmsMode="plain";return b2})}
-  return b}).catch(function(){return S.bms})}
+  return b}).catch(function(){return get(BMS_URL+"&headers=1").then(function(t3){var b3=bmsRows(t3);if(!b3||!b3.length)throw 0;var c=Date.now()-KEEP_H*3600e3;return b3.filter(function(x){return x.t>=c})}).catch(function(){return S.bms})})}
 /* Last pack balance: full BMS history (not the KEEP_H window). Column AH = bal_mask_a.
    ?lastBal=never | DD-MM-YYYY | YYYY-MM-DD mocks the line for draft screenshots. */
 function dmy(t){var d=new Date(t);return String(d.getDate()).padStart(2,"0")+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+d.getFullYear()}
@@ -1630,10 +1630,13 @@ function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
   if(mn!==null)parts.push("Case probe ranged <b>"+f1(mn)+"–"+f1(mx)+"°</b>"+(fr?", fan ran <b>"+fr*5+" min</b>":", fan stayed off")+" in the last "+hours+" h.")}
  /* cells = cellOf (BMS cell sensor t_int only), same as the "Cells X now" readouts, so a peak can't sit below "now".
     cells: since key-off when parked after a drive (heat soak keeps climbing after key-off), else the chart window */
- var cpts=[],ks=ko&&!ko.driving&&!ko.none&&ko.t>=t0?ko.idx:null;
- (ks!==null?rows.map(function(r,i){return i}).slice(ks):pts).forEach(function(k){var b=mt[k];if(b){var t=cellOf(b);if(t!==null)cpts.push({t:rows[k].t,v:t})}});
- var ct=cellTrend(cpts);
- if(ct){if(ct.state==="rising")parts.push("Cells at <b>"+f1(ct.last.v)+"°</b> and still rising.");
+ /* every BMS row since key-off (not only the ones that pair with a Pack-log row, so a Pack-log gap can't hide the peak) */
+ var cpts=[],c0t=ko&&!ko.driving&&!ko.none&&ko.t>=t0?ko.t-60e3:t0;
+ (S.bms||[]).forEach(function(x){if(x.t<c0t||x.t>now+60e3)return;var t=cellOf(x);if(t!==null)cpts.push({t:x.t,v:t})});cpts.sort(function(a,b){return a.t-b.t});
+ var ct=cellTrend(cpts),cStale=ct&&now-ct.last.t>BMS_STALE_MIN*60e3;
+ /* BMS data stale (fetch failed / bridge behind): say how far the cell data goes instead of claiming a peak */
+ if(ct&&cStale)parts.push("Cells up to "+f1(ct.max.v)+"° by "+hm(ct.last.t)+' <span class="dim">(no newer BMS data)</span>.');
+ else if(ct){if(ct.state==="rising")parts.push("Cells at <b>"+f1(ct.last.v)+"°</b> and still rising.");
   else if(ct.state==="flat")parts.push("Cells holding at "+f1(ct.max.v)+"°.");
   else parts.push("Cells peaked at "+(ct.max.v>CD_HOT_CELLS?"":"just ")+f1(ct.max.v)+"°.")}
  el.innerHTML=parts.join(" ")}
@@ -2030,10 +2033,10 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   /* cells peak = true max of BMS cell temp (cellOf) from key-off to the end of this cooldown; while it is the current park, run to now so a late BMS row isn't dropped */
   var ong=end===R.length-1&&Date.now()-R[end].t<20*60e3,cEnd=ong?Math.max(Date.now(),R[end].t+60e3):R[end].t+60e3,cpts=[];
   (S.bms||[]).forEach(function(x){if(x.t<t-60e3||x.t>cEnd)return;var v=cellOf(x);if(v!==null)cpts.push({t:x.t,v:v})});
-  cpts.sort(function(a,b){return a.t-b.t});var ctr=cellTrend(cpts),cp=ctr?ctr.max:null;
+  cpts.sort(function(a,b){return a.t-b.t});var ctr=cellTrend(cpts),cp=ctr?ctr.max:null,cst2=ctr&&ong&&Date.now()-ctr.last.t>BMS_STALE_MIN*60e3?ctr.last.t:null;
   var lf=-1;win.forEach(function(r,m){if(r.fan===1)lf=m});var ec=null,ecl=null,live=false,et=null;
   if(lf>=0){if(lf===win.length-1&&end===R.length-1&&Date.now()-R[end].t<20*60e3)live=true;else{var er=lf+1<win.length?win[lf+1]:win[lf];et=er.t;ec=er.pack;var bb=null;(S.bms||[]).forEach(function(x){var d=Math.abs(x.t-et);var cv=cellOf(x);if(d<=6*60e3&&cv!==null&&(!bb||d<bb.d))bb={d:d,v:cv}});ecl=bb?bb.v:null}}
-  out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,cst:ctr&&ong?ctr.state:"peaked",tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
+  out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,cst:ctr&&ong?(cst2?"stale":ctr.state):"peaked",cstT:cst2,tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
  return out.slice(-6).reverse()}
 /* ---------- ambient-adjusted cooldown score ----------
    k = cooling rate of probe excess over ambient: −slope of ln(pack − ambient) per hour over the first 90 min after key-off
@@ -2118,7 +2121,7 @@ function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  el.innerHTML=L.map(function(c){var key=String(c.t),op=openCd===key,V=verdict(c);
   var stats=[["Drive",hmin2(c.drive/60e3)],["To target",c.tgt===null?(c.ongoing?"cooling…":c.off===null?"—":"not reached"):hmin2(c.tgt/60e3)],["Fan",hmin2(c.fan)],["Ambient",c.amb===null?"--":f1(c.amb)+"°C"]];
   return '<div role="button" tabindex="0" class="kc '+V.k+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdv">'+V.v+'</div>'+(V.c?'<div class="cdcmp">'+V.c+'</div>':'')+adjHtml(c)+'<div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
-   '<div class="cdp"><span style="color:'+(c.pk?probeCol(c.pk.v,c.off!=null?c.off:lastv(S.rows,"off"),lastv(S.rows,"on")):"#8b93a7")+'">'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case peak</small>'+E(c,c.ec)+'</span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>'+(c.cst==="rising"?"cells so far":"cells peak")+'</small>'+(c.cst==="rising"?'<em class="lv">still rising</em>':E(c,c.ecl))+'</span>':"")+'</div></div>'+
+   '<div class="cdp"><span style="color:'+(c.pk?probeCol(c.pk.v,c.off!=null?c.off:lastv(S.rows,"off"),lastv(S.rows,"on")):"#8b93a7")+'">'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case peak</small>'+E(c,c.ec)+'</span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>'+(c.cst==="rising"?"cells so far":c.cst==="stale"?"cells to "+hm(c.cstT):"cells peak")+'</small>'+(c.cst==="rising"?'<em class="lv">still rising</em>':c.cst==="stale"?'<em>no newer BMS</em>':E(c,c.ecl))+'</span>':"")+'</div></div>'+
    '<div class="cdg">'+stats.map(function(x){return'<div><b>'+x[1]+'</b><span>'+x[0]+"</span></div>"}).join("")+'</div>'+
    (op?'<svg class="ch cdc" id="cdc" viewBox="0 0 340 120"></svg><div class="lg" style="margin:8px 0 0"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span><span style="--c:#34d399">Stop point</span></div>':"")+"</div>"}).join("");
  if(openCd){var c=L.filter(function(x){return String(x.t)===openCd})[0];if(c){var w=S.rows.slice(Math.max(0,c.s-3),c.e+1),t0=w[0].t,t1=w[w.length-1].t,fb=[],sp=null;
