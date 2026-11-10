@@ -2100,14 +2100,53 @@ function adjHtml(c){var a=adjScore(c.s);if(!a)return"";
   t=same?"Cooling about as expected for "+amb:"Cooling <b>"+Math.abs(p)+"% "+(p>0?"faster":"slower")+"</b> than expected for "+amb,
   tip="k "+a.k.toFixed(2)+"/h vs expected "+a.exp.toFixed(2)+"/h from "+a.n+" parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min";
  return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
+/* ---------- ambient-adjusted case peak ----------
+   Expected case peak = OLS peak ~ key-off ambient, leave-one-out on the other qualifying parks
+   (full Pack-log history, not just the 6 cards on screen). Drive length was tried and did not
+   clearly help (p≈0.14–0.41, LOO R² flat or worse), so ambient only.
+   Baseline: not a skip-note / logger-bug / manual fan-off park, ≥20 min logged (so the heat-soak
+   peak has been seen), fan on ≥50% of the first 90 min. “About as expected” if within 2.5°
+   (about 0.7× residual SD of ~3.5°). Falls back to omitting the line with too few parks. */
+var PEAK={minDur:20,minBase:8,minFanFrac:0.5,sameDeg:2.5};
+function peakParks(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
+ for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving"||R[i].t-R[i-1].t>20*60e3)continue;
+  var k=i,t=R[k].t,end=k,lim=t+8*3600e3;if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);
+  while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
+  var win=R.slice(k,end+1);if(win.concat([R[k-1]]).some(function(r){return noteSkipsCooldown(r.note)}))continue;
+  if(t>=BUG[0]&&t<=BUG[1])continue;
+  if(ADJ.manualOff.some(function(m){return Math.abs(t-m)<=10*60e3}))continue;
+  var pk=null,n90=0,f90=0,dur=(R[end].t-t)/60e3;
+  win.forEach(function(r){if(r.pack!==null&&(pk===null||r.pack>pk))pk=r.pack;if(r.t-t<=90*60e3+30e3){n90++;if(r.fan===1)f90++}});
+  if(pk===null||R[k].amb===null||dur<PEAK.minDur||(n90&&f90/n90<PEAK.minFanFrac))continue;
+  out.push({t:t,s:k,pk:pk,amb:R[k].amb,dur:dur})}
+ return out}
+function solve2(A,b){var M=A.map(function(r,i){return r.concat([b[i]])}),n=2,i,j,k;
+ for(i=0;i<n;i++){var p=i;for(j=i+1;j<n;j++)if(Math.abs(M[j][i])>Math.abs(M[p][i]))p=j;var tmp=M[i];M[i]=M[p];M[p]=tmp;if(Math.abs(M[i][i])<1e-9)return null;
+  for(j=0;j<n;j++)if(j!==i){var f=M[j][i]/M[i][i];for(k=i;k<=n;k++)M[j][k]-=f*M[i][k]}}
+ return[M[0][2]/M[0][0],M[1][2]/M[1][1]]}
+function peakScore(c){if(!c||!c.pk||c.amb===null)return null;
+ var dur=c.e!=null&&S.rows&&S.rows[c.e]?(S.rows[c.e].t-c.t)/60e3:null;
+ if(dur===null||dur<PEAK.minDur)return{state:"early"};
+ var B=peakParks().filter(function(p){return p.t!==c.t});
+ if(B.length<PEAK.minBase)return{state:"few",n:B.length};
+ var XtX=[[0,0],[0,0]],Xty=[0,0];
+ B.forEach(function(p){var x=[1,p.amb];for(var a=0;a<2;a++){Xty[a]+=x[a]*p.pk;for(var k=0;k<2;k++)XtX[a][k]+=x[a]*x[k]}});
+ var be=solve2(XtX,Xty);if(!be)return{state:"few",n:B.length};
+ var exp=be[0]+be[1]*c.amb,d=c.pk.v-exp;
+ return{state:"ok",d:d,pk:c.pk.v,exp:exp,amb:c.amb,n:B.length,slope:be[1]}}
+function peakPhrase(c){var a=peakScore(c);if(!a||a.state!=="ok")return"";
+ var amb=Math.round(a.amb)+"° ambient",t;
+ if(Math.abs(a.d)<PEAK.sameDeg)t="case peak about as expected for "+amb;
+ else t="case peak <i>"+f1(Math.abs(a.d))+"°</i> "+(a.d<0?"cooler":"hotter")+" than expected for "+amb;
+ return'<span title="'+esc(f1(a.pk)+"° vs expected "+f1(a.exp)+"° from "+a.n+" parks")+'">'+t+"</span>"}
 function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  function E(c,v){return c.live?'<em class="lv">still cooling</em>':'<em>'+(c.et===null?"—":v===null||v===undefined?"ended —":"ended "+f1(v)+"°")+'</em>'}
  if(!S.rows.length){el.innerHTML='<div class="skel"><i style="width:60%"></i><i style="width:85%"></i><i style="width:70%"></i></div>';return}
  if(!L.length){el.innerHTML='<div class="es">No drives logged yet. Each key-off will appear here with its cooldown.</div>';return}
  function avgO(c,f){var v=L.filter(function(o){return o!==c}).map(f).filter(function(x){return x!==null&&x!==undefined});return v.length?v.reduce(function(a,b){return a+b},0)/v.length:null}
- function verdict(c){var tm=c.tgt===null?null:c.tgt/60e3,at=avgO(c,function(o){return o.tgt===null?null:o.tgt/60e3}),ap=avgO(c,function(o){return o.pk?o.pk.v:null}),cmp=[];
+ function verdict(c){var tm=c.tgt===null?null:c.tgt/60e3,at=avgO(c,function(o){return o.tgt===null?null:o.tgt/60e3}),cmp=[];
   if(tm!==null&&at!==null){var d=Math.round(tm-at);cmp.push(Math.abs(d)<CD_SAME_MIN?"about usual time":'<i>'+hmin2(Math.abs(d))+"</i> "+(d<0?"faster":"slower")+" than usual")}
-  if(c.pk&&ap!==null){var dp=c.pk.v-ap;cmp.push(Math.abs(dp)<CD_SAME_DEG?"usual case peak":'case peak <i>'+f1(Math.abs(dp))+"°</i> "+(dp<0?"cooler":"hotter")+" than usual")}
+  var pp=peakPhrase(c);if(pp)cmp.push(pp)
   var v,k;
   if((c.ongoing||c.live)&&c.tgt===null){var cellPtsCd=[],uCd=null;(S.bms||[]).forEach(function(x){var vv=cellOf(x);if(vv!==null)cellPtsCd.push({t:x.t,v:vv})});
    try{uCd=predictUltimate(S.rows,PREDICT_ULTIMATE,{now:Date.now(),cellPts:cellPtsCd})}catch(e){}
