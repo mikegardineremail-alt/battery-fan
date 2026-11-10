@@ -530,6 +530,17 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 #cdlist .kc:last-child{margin-bottom:0;padding-bottom:12px}#cdlist .kc:first-child{padding-top:14px}
 #cdlist .kc.vg{--ac:#34d399}#cdlist .kc.va{--ac:#fbbf24}#cdlist .kc.vr{--ac:#fb7185}#cdlist .kc.vc{--ac:#22d3ee}
 .cdv{font-size:18px;font-weight:800;line-height:1.25;color:#fff;margin:0 0 3px}.cdv b{color:var(--ac);font-weight:800}
+.adj{display:block;font-size:13.5px;font-weight:600;color:#c7cde0;margin:-4px 0 10px;line-height:1.3}
+.adj i{display:inline-block;vertical-align:1px;margin-right:7px;width:7px;height:7px;border-radius:50%;background:#8b93a7}.adj b{font-weight:700}
+.adj.f i{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.6)}.adj.f b{color:#6ee7b7}
+.adj.w i{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.55)}.adj.w b{color:#fcd34d}
+.adj.s i{background:#a5f3fc}.adj.n{color:#8b93a7;font-weight:500}
+.adj .pv{display:inline-block;margin-left:6px;vertical-align:1px;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:#8b93a7;background:rgba(139,147,167,.14);padding:2px 8px;border-radius:99px}
+.bgap{margin-top:8px;text-align:left!important}.bgap .gh{display:flex;justify-content:space-between;align-items:baseline}.bgap .lbl{margin:0}
+.bgap .gv{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:#e5e7eb}.bgap .gv.w{color:#fcd34d}
+.bgap .gst{font-size:13.5px;color:#a3abbf;margin:3px 0 8px;line-height:1.35}.bgap .gst.w{color:#fcd34d}
+.bgap .gsp{display:block;width:100%;height:46px}
+.bgap .gft{display:flex;justify-content:space-between;gap:8px;white-space:nowrap;font-size:12px;color:#6b7387;margin-top:6px;font-variant-numeric:tabular-nums}
 .cdcmp{font-size:14.5px;font-weight:600;color:#c7cde0;margin:0 0 10px}.cdcmp i{font-style:normal;color:var(--ac)}
 .chd{flex-wrap:wrap;row-gap:8px;column-gap:8px}.range{flex-wrap:wrap;gap:4px}.range button{padding:4px 10px;white-space:nowrap}
 .todo{max-width:520px;margin:0 auto}.todo:empty{display:none}
@@ -638,6 +649,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
   <div class="tile"><div class="lbl">Cycles</div><div class="tv" id="cyc">--</div><div class="ts" id="cycs">since install</div></div>
   <div class="tile"><div class="lbl">BMS board</div><div class="tv" id="tb">--</div><div class="ts" id="tbs">sensor A / B</div></div>
  </div>
+ <div class="tile bgap" id="bgap"></div>
 </div>
 <div class="card" id="hlcard"><div class="chd"><div class="lbl">Cell health</div><div class="range" id="hlr"><button data-d="7">7 days</button><button data-d="30">30 days</button></div></div><div id="hlbody"></div></div>
 <!-- PACKS A / B -->
@@ -1408,7 +1420,32 @@ function battery(bl,p,bAge,r){
  var ta=bl.A.t_brd,tb=bl.B.t_brd,tt=$("tb");tt.className="tv";
  if(ta!==null&&tb!==null){tt.innerHTML=f1(ta)+'<span class="sl2">/</span>'+f1(tb)+"<small>°C</small>";$("tbs").textContent="sensor A / B"}
  else{var t1=ta!==null?ta:tb;tt.innerHTML=t1===null?"--":f1(t1)+"<small>°C</small>";$("tbs").textContent=t1===null?"no reading":"sensor "+(ta!==null?"A":"B")}
+ renderGap()
 }
+/* ---------- board vs cell gap (t_brd − t_int, pack A) ----------
+   History from the BMS tab 21 Oct–10 Nov 2026 (5-min rows, n≈5.9k): at rest median −0.5° (p10–p90 −0.9…−0.2),
+   fan running parked −1.1 (−1.6…−0.1), charging parked −1.2 (−1.9…+0.6), driving +0.1 (−0.6…+0.9);
+   after key-off the board runs warmer for an hour or two, peaking 0…+3.2° (median ≈+0.7). Rest median flat by week (−0.7, −0.5, −0.5, −0.7): not widening. */
+var GAP={restLo:-0.9,restHi:-0.2,restMed:-0.5,seenLo:-2.5,seenHi:3.2};
+function renderGap(){var el=$("bgap");if(!el)return;var B=(S.bms||[]).filter(function(x){return x.A&&x.A.any&&x.A.t_int!==null&&x.A.t_brd!==null});
+ if(!B.length){el.innerHTML='<div class="lbl">Board vs cells</div><div class="ts">waiting for BMS</div>';return}
+ var L=B[B.length-1],g=L.A.t_brd-L.A.t_int,now=L.t,t0=now-24*3600e3,P=B.filter(function(x){return x.t>=t0}).map(function(x){return{t:x.t,v:x.A.t_brd-x.A.t_int}});
+ var st,cl="";
+ if(g>GAP.seenHi+0.3||g<GAP.seenLo-0.3){st="Outside anything logged so far (−2.5…+3.2°)";cl="w"}
+ else if(g>=GAP.restLo-0.1&&g<=GAP.restHi+0.1)st="Usual resting gap";
+ else if(g>GAP.restHi)st="Board warmer · normal after a drive, settles in 1–2 h";
+ else st="Cells warmer · usual while the fan runs or on charge";
+ var W=300,H=46,lo=Math.min(-1.5,Math.min.apply(null,P.map(function(p){return p.v}))-0.2),hi=Math.max(1.5,Math.max.apply(null,P.map(function(p){return p.v}))+0.2),
+  X=function(t){return 2+(W-4)*(t-t0)/(now-t0)},Y=function(v){return 3+(H-6)*(1-(v-lo)/(hi-lo))},d="",lt=null;
+ P.forEach(function(p){d+=(lt===null||p.t-lt>20*60e3?"M":"L")+X(p.t).toFixed(1)+" "+Y(p.v).toFixed(1);lt=p.t});
+ var sv='<svg class="gsp" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><rect x="0" y="'+Y(GAP.restHi).toFixed(1)+'" width="'+W+'" height="'+(Y(GAP.restLo)-Y(GAP.restHi)).toFixed(1)+'" rx="3" fill="rgba(139,147,167,.13)"/>'+
+  '<line x1="0" x2="'+W+'" y1="'+Y(0).toFixed(1)+'" y2="'+Y(0).toFixed(1)+'" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/>'+
+  '<path d="'+d+'" fill="none" stroke="#cbd2e1" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'+
+  '<circle cx="'+X(now).toFixed(1)+'" cy="'+Y(g).toFixed(1)+'" r="2.6" fill="#fff"/></svg>';
+ var mx=null;P.forEach(function(p){if(mx===null||p.v>mx.v)mx=p});
+ el.innerHTML='<div class="gh"><div class="lbl">Board vs cells</div><div class="gv'+(cl?" "+cl:"")+'">'+(g>0?"+":g<0?"−":"")+f1(Math.abs(g))+'°</div></div>'+
+  '<div class="gst'+(cl?" "+cl:"")+'">'+st+'</div>'+sv+
+  '<div class="gft"><span>24 h'+(mx?' · max '+(mx.v>0?"+":"")+f1(mx.v)+'° '+hm(mx.t):"")+'</span><span>rest −0.9…−0.2°</span></div>'}
 /* ---------- chart (mockup build.py style) ---------- */
 function smooth(p){if(p.length===1)return"M"+p[0][0].toFixed(1)+" "+p[0][1].toFixed(1)+"h.1";var d="M"+p[0][0].toFixed(1)+" "+p[0][1].toFixed(1);
  for(var k=1;k<p.length;k++){var p0=p[Math.max(k-2,0)],p1=p[k-1],p2=p[k],p3=p[Math.min(k+1,p.length-1)],c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6,mn=Math.min(p1[1],p2[1]),mx=Math.max(p1[1],p2[1]);
@@ -1998,6 +2035,67 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   if(lf>=0){if(lf===win.length-1&&end===R.length-1&&Date.now()-R[end].t<20*60e3)live=true;else{var er=lf+1<win.length?win[lf+1]:win[lf];et=er.t;ec=er.pack;var bb=null;(S.bms||[]).forEach(function(x){var d=Math.abs(x.t-et);var cv=cellOf(x);if(d<=6*60e3&&cv!==null&&(!bb||d<bb.d))bb={d:d,v:cv}});ecl=bb?bb.v:null}}
   out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,cst:ctr&&ong?ctr.state:"peaked",tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
  return out.slice(-6).reverse()}
+/* ---------- ambient-adjusted cooldown score ----------
+   k = cooling rate of probe excess over ambient: −slope of ln(pack − ambient) per hour over the first 90 min after key-off
+   (same as shelly-out/fan-current-vs-cooling-2026-11-10). Expected k = OLS k ~ start excess + ambient, fitted on the
+   other qualifying parks (leave-one-out) at the same window length, so a 50-min live park is compared with everyone's first 50 min.
+   Baseline: fan on ≥80% of rows, start excess ≥8°, ≥60 min logged (or the window), no skip notes, not a manual fan-off / 0 A park. */
+var ADJ={winMin:90,minWinMin:30,minFanFrac:0.8,minXp0:8,minBase:10,minSimilar:5,simAmb:2.5,simXp0:5,samePct:15,
+ /* parks Mike flagged as fan manually switched off (Boom logged fan_on=1, battery showed 0 A) */
+ manualOff:[Date.parse("2026-10-26T16:27:00+08:00"),Date.parse("2026-11-09T16:54:00+08:00")]};
+function parkAt(R,s,maxMin){var t0=R[s].t,lim=t0+maxMin*60e3+30e3,e=s;
+ while(e+1<R.length&&R[e+1].mode!=="driving"&&R[e+1].t<=lim&&R[e+1].t-R[e].t<=7*60e3)e++;
+ var w=R.slice(s,e+1).filter(function(r){return r.pack!==null&&r.amb!==null});if(w.length<4)return null;
+ var am=w.map(function(r){return r.amb}).sort(function(a,b){return a-b}),amb=am.length%2?am[(am.length-1)/2]:(am[am.length/2-1]+am[am.length/2])/2;
+ var xs=[],ys=[],ok=true;w.forEach(function(r){var x=r.pack-r.amb;if(x<=1.5)ok=false;xs.push((r.t-t0)/36e5);ys.push(Math.log(Math.max(x,1e-3)))});
+ var mx=xs.reduce(function(a,b){return a+b},0)/xs.length,my=ys.reduce(function(a,b){return a+b},0)/ys.length,sxy=0,sxx=0;
+ xs.forEach(function(x,i){sxy+=(x-mx)*(ys[i]-my);sxx+=(x-mx)*(x-mx)});
+ var fr=0;w.forEach(function(r){if(r.fan===1)fr++});
+ return{s:s,t:t0,dur:(w[w.length-1].t-t0)/60e3,amb:amb,xp0:w[0].pack-amb,k:ok&&sxx>0?-sxy/sxx:null,ff:fr/w.length,rows:R.slice(s,e+1)}}
+function parkStarts(R){var a=[];for(var i=1;i<R.length;i++)if(R[i-1].mode==="driving"&&R[i].mode!=="driving"&&R[i].t-R[i-1].t<=20*60e3)a.push(i);return a}
+/* fan current for a park from BMS (only for parks inside the BMS window the app keeps); null = unknown */
+function parkFanA(p){var fr=p.rows.filter(function(r){return r.fan===1});if(!fr.length||!S.bms)return null;var v=[];
+ fr.forEach(function(r){var b=null,d=1e15;S.bms.forEach(function(x){var dd=Math.abs(x.t-r.t);if(dd<d){d=dd;b=x}});if(b&&d<=150e3&&b.A&&b.A.any&&b.A.a!==null)v.push(-b.A.a)});
+ if(v.length<3)return null;v.sort(function(a,b){return a-b});return v[Math.floor(v.length/2)]}
+/* why a park can't be scored / used as baseline (null = fine) */
+function parkWhyNot(p,needMin){if(!p)return"no data";
+ if(ADJ.manualOff.some(function(m){return Math.abs(p.t-m)<=10*60e3}))return"fan manually off";
+ if(p.rows.some(function(r){return noteSkipsCooldown(r.note)}))return"flagged test park";
+ if(p.t>=BUG[0]&&p.t<=BUG[1])return"logger bug window";
+ if(p.ff<ADJ.minFanFrac)return"fan off most of the park";
+ var fa=parkFanA(p);if(fa!==null&&fa<0.5)return"fan drew no current";
+ if(p.xp0<ADJ.minXp0)return"too little heat to shed";
+ if(p.dur<needMin-0.1||p.k===null)return"park too short";
+ return null}
+function solve3(A,b){var M=A.map(function(r,i){return r.concat([b[i]])}),n=3,i,j,k;
+ for(i=0;i<n;i++){var p=i;for(j=i+1;j<n;j++)if(Math.abs(M[j][i])>Math.abs(M[p][i]))p=j;var tmp=M[i];M[i]=M[p];M[p]=tmp;if(Math.abs(M[i][i])<1e-9)return null;
+  for(j=0;j<n;j++)if(j!==i){var f=M[j][i]/M[i][i];for(k=i;k<=n;k++)M[j][k]-=f*M[i][k]}}
+ return[M[0][3]/M[0][0],M[1][3]/M[1][1],M[2][3]/M[2][2]]}
+var adjCache={key:null,v:{}};
+function adjScore(s){var R=S.rows;if(!R||!R.length)return null;var ck=R.length+":"+R[R.length-1].t+":"+(S.bms?S.bms.length:0);if(adjCache.key!==ck)adjCache={key:ck,v:{}};
+ if(adjCache.v[s])return adjCache.v[s];
+ var full=parkAt(R,s,ADJ.winMin),live=s===parkStarts(R).slice(-1)[0]&&R[R.length-1].mode!=="driving"&&Date.now()-R[R.length-1].t<20*60e3,out;
+ if(!full){out={state:"na",why:"park too short"};return adjCache.v[s]=out}
+ var W=Math.min(ADJ.winMin,Math.floor((full.dur+0.1)/5)*5);
+ if(live&&W<ADJ.minWinMin){out={state:"wait",min:Math.round(full.dur)};return adjCache.v[s]=out}
+ var P=W<ADJ.winMin?parkAt(R,s,W):full,why=parkWhyNot(P,live?W:60);
+ if(why){out={state:"na",why:why};return adjCache.v[s]=out}
+ var need=W<ADJ.winMin?W:60,B=[];parkStarts(R).forEach(function(j){if(j===s)return;var q=parkAt(R,j,W);if(q&&!parkWhyNot(q,need)&&q.k!==null)B.push(q)});
+ var sim=B.filter(function(q){return Math.abs(q.amb-P.amb)<=ADJ.simAmb&&Math.abs(q.xp0-P.xp0)<=ADJ.simXp0}).length;
+ if(B.length<ADJ.minBase||sim<ADJ.minSimilar){out={state:"few",n:B.length,sim:sim,amb:P.amb,prov:W<ADJ.winMin,W:W};return adjCache.v[s]=out}
+ var XtX=[[0,0,0],[0,0,0],[0,0,0]],Xty=[0,0,0];B.forEach(function(q){var x=[1,q.xp0,q.amb];for(var a=0;a<3;a++){Xty[a]+=x[a]*q.k;for(var c=0;c<3;c++)XtX[a][c]+=x[a]*x[c]}});
+ var be=solve3(XtX,Xty);if(!be){out={state:"few",n:B.length,sim:sim,amb:P.amb};return adjCache.v[s]=out}
+ var e=Math.max(0.05,be[0]+be[1]*P.xp0+be[2]*P.amb),pct=(P.k/e-1)*100;
+ out={state:"ok",pct:pct,k:P.k,exp:e,amb:P.amb,xp0:P.xp0,n:B.length,sim:sim,W:W,prov:W<ADJ.winMin};return adjCache.v[s]=out}
+function adjHtml(c){var a=adjScore(c.s);if(!a)return"";
+ if(a.state==="wait")return'<div class="adj n"><i></i>Ambient score after 30 min · '+a.min+' min so far</div>';
+ if(a.state==="na")return'<div class="adj n"><i></i>Not scored · '+esc(a.why)+'</div>';
+ var amb=Math.round(a.amb)+"° ambient",pv=a.prov?' <span class="pv">provisional · '+a.W+' min</span>':"";
+ if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough similar parks yet for '+amb+'</span>'+pv+'</div>';
+ var p=Math.round(a.pct),same=Math.abs(p)<ADJ.samePct,cls=same?"s":p>0?"f":"w",
+  t=same?"Cooling about as expected for "+amb:"Cooling <b>"+Math.abs(p)+"% "+(p>0?"faster":"slower")+"</b> than expected for "+amb,
+  tip="k "+a.k.toFixed(2)+"/h vs expected "+a.exp.toFixed(2)+"/h from "+a.n+" parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min";
+ return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
 function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  function E(c,v){return c.live?'<em class="lv">still cooling</em>':'<em>'+(c.et===null?"—":v===null||v===undefined?"ended —":"ended "+f1(v)+"°")+'</em>'}
  if(!S.rows.length){el.innerHTML='<div class="skel"><i style="width:60%"></i><i style="width:85%"></i><i style="width:70%"></i></div>';return}
@@ -2019,7 +2117,7 @@ function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  function CD_HOT_C(){return CD_HOT_CELLS}
  el.innerHTML=L.map(function(c){var key=String(c.t),op=openCd===key,V=verdict(c);
   var stats=[["Drive",hmin2(c.drive/60e3)],["To target",c.tgt===null?(c.ongoing?"cooling…":c.off===null?"—":"not reached"):hmin2(c.tgt/60e3)],["Fan",hmin2(c.fan)],["Ambient",c.amb===null?"--":f1(c.amb)+"°C"]];
-  return '<div role="button" tabindex="0" class="kc '+V.k+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdv">'+V.v+'</div>'+(V.c?'<div class="cdcmp">'+V.c+'</div>':'')+'<div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
+  return '<div role="button" tabindex="0" class="kc '+V.k+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdv">'+V.v+'</div>'+(V.c?'<div class="cdcmp">'+V.c+'</div>':'')+adjHtml(c)+'<div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
    '<div class="cdp"><span style="color:'+(c.pk?probeCol(c.pk.v,c.off!=null?c.off:lastv(S.rows,"off"),lastv(S.rows,"on")):"#8b93a7")+'">'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case peak</small>'+E(c,c.ec)+'</span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>'+(c.cst==="rising"?"cells so far":"cells peak")+'</small>'+(c.cst==="rising"?'<em class="lv">still rising</em>':E(c,c.ecl))+'</span>':"")+'</div></div>'+
    '<div class="cdg">'+stats.map(function(x){return'<div><b>'+x[1]+'</b><span>'+x[0]+"</span></div>"}).join("")+'</div>'+
    (op?'<svg class="ch cdc" id="cdc" viewBox="0 0 340 120"></svg><div class="lg" style="margin:8px 0 0"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span><span style="--c:#34d399">Stop point</span></div>':"")+"</div>"}).join("");
