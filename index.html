@@ -117,7 +117,7 @@ h1{font-size:16.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercas
 .lg span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
 svg.ch{width:100%;height:auto;display:block;overflow:visible}
 svg.ch text{font-family:inherit}
-.note{font-size:13.5px;color:var(--mut);line-height:1.45;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.note{font-size:15.5px;color:var(--mut);line-height:1.45;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .note b{color:#cfd5e6;font-weight:600}
 /* footer */
 .foot{display:flex;justify-content:center;gap:8px;margin-top:4px;flex-wrap:wrap}
@@ -718,6 +718,7 @@ var PREDICT={
 /* rows: [{t(ms),pack,amb,fan(0/1),off,mode}] oldest→newest. Returns
    {state:"ok"|"wait"|"flat"|"plateau"|"far"|"reached"|"na", t:off-time ms, hit:stop-time ms, conf, model, r2, note} */
 /* opt (optional): {off:target °C} overrides the logged stop point and allows any fan-on mode */
+function durHM(m){var h=Math.floor(m/60),r=m%60,hs=h?h+(h===1?" hour":" hours"):"",ms=r?r+(r===1?" minute":" minutes"):"";return hs&&ms?hs+" and "+ms:(hs||ms||"0 minutes")}
 function predictOff(rows,P,opt){P=P||PREDICT;var L=rows.length-1;return nowClamp(capClamp(predictOff0(rows,P,opt),parkKeyOff(rows),P.capMin),L>=0?rows[L].t:null)}
 function predictOff0(rows,P,opt){var L=rows.length-1;if(L<0)return{state:"na"};var ov=opt&&opt.off!==null&&opt.off!==undefined;
  var r=rows[L];if(r.fan!==1)return{state:"na"};
@@ -1624,7 +1625,7 @@ function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
  else if(ko&&!ko.none&&ko.t>=t0){var pk=null,fanAt=null;for(i=ko.idx;i<rows.length;i++){var v=rows[i].pack;if(v!==null&&(!pk||v>pk.v))pk={v:v,t:rows[i].t};if(fanAt===null&&rows[i].fan===1)fanAt=rows[i].t}
   var st=rows[ko.idx].pack,cur=rows[rows.length-1].pack;parts.push("Engine off at <b>"+(ko.approx?"≈":"")+hm(ko.t)+"</b>"+(ko.approx?" (data gap, from "+ko.src+")":"")+".");
   if(pk&&st!==null&&pk.v-st>=0.5&&pk.t>ko.t)parts.push("Then a <b>"+Math.round((pk.t-ko.t)/60000)+"-min heat-soak climb</b> to "+f1(pk.v)+"°.");
-  if(fanAt!==null){var drop=pk&&cur!==null?pk.v-cur:0;parts.push("Fan kicked in at "+hm(fanAt)+(drop>=0.5?" and pulled the case down <b>"+f1(drop)+"° in "+Math.round((now-Math.max(fanAt,pk.t))/60000)+" min</b>.":"."))}
+  if(fanAt!==null){var drop=pk&&cur!==null?pk.v-cur:0;parts.push("Fan kicked in at "+hm(fanAt)+(drop>=0.5?" and pulled the case down <b>"+f1(drop)+"° in "+durHM(Math.round((now-Math.max(fanAt,pk.t))/60000))+"</b>.":"."))}
   else parts.push("Fan hasn't needed to run.")}
  else{var mn=null,mx=null,fr=0;pts.forEach(function(k){var v=rows[k].pack;if(v!==null){mn=mn===null?v:Math.min(mn,v);mx=mx===null?v:Math.max(mx,v)}if(rows[k].fan===1)fr++});
   if(mn!==null)parts.push("Case probe ranged <b>"+f1(mn)+"–"+f1(mx)+"°</b>"+(fr?", fan ran <b>"+fr*5+" min</b>":", fan stayed off")+" in the last "+hours+" h.")}
