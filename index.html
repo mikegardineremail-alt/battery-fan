@@ -531,6 +531,7 @@ body{background:radial-gradient(120% 560px at 50% -80px,rgba(34,211,238,.16),tra
 #cdlist .kc.vg{--ac:#34d399}#cdlist .kc.va{--ac:#fbbf24}#cdlist .kc.vr{--ac:#fb7185}#cdlist .kc.vc{--ac:#22d3ee}
 .cdv{font-size:18px;font-weight:800;line-height:1.25;color:#fff;margin:0 0 3px}.cdv b{color:var(--ac);font-weight:800}
 .adj{display:block;font-size:13.5px;font-weight:600;color:#c7cde0;margin:-4px 0 10px;line-height:1.3}
+.adjs{margin:-4px 0 10px}.adjs .adj{margin:0 0 5px}.adjs .adj:last-child{margin:0}
 .adj i{display:inline-block;vertical-align:1px;margin-right:7px;width:7px;height:7px;border-radius:50%;background:#8b93a7}.adj b{font-weight:700}
 .adj.f i{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.6)}.adj.f b{color:#6ee7b7}
 .adj.w i{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.55)}.adj.w b{color:#fcd34d}
@@ -1019,7 +1020,7 @@ function packOf(r){var A=r.A,B=r.B,bs=[A,B].filter(function(b){return b.any});
    Cached localStorage rows are shown as last-known values in that window,
    not as Offline / stale alarms — otherwise every cold open (and return after
    15+ min backgrounded) flashes red Offline tabs + the pink Shelly banner. */
-var S={rows:[],bms:null,lastBal:null,okAt:0,fetchOk:true,bmsMode:"filtered",live:false};
+var S={rows:[],bms:null,cellHist:null,lastBal:null,okAt:0,fetchOk:true,bmsMode:"filtered",live:false};
 var hours=Number(localStorage.getItem("bf2-hours"));if([6,12,24].indexOf(hours)<0)hours=6;
 try{var c=JSON.parse(localStorage.getItem("bf2-cache")||"null");if(c&&c.rows){S.rows=c.rows;S.bms=c.bms;S.lastBal=c.lastBal||null;S.okAt=c.at||0}}catch(e){}
 function save(){try{var from=Date.now()-KEEP_H*3600e3,ko=keyOffInfo(S.rows,Date.now());
@@ -1072,9 +1073,17 @@ function loadLastBal(){var mock=parseLastBalMock();if(mock){S.lastBal=mock;retur
  return get(BMS_URL+"&headers=1&tq="+encodeURIComponent(q)).then(function(t){var tb=table(t),best=null;
   tb.rows.forEach(function(o){var u=n(o.unix),m=mask(o.bal_mask_a);if(u===null||u<1e9||m===null||m===0)return;if(u>1e12)u=u/1000;if(!best||u>best.u)best={u:u,t:u*1000,mask:m}});
   S.lastBal=best?{t:best.t,mask:best.mask}:{never:true};return S.lastBal}).catch(function(e){console.warn("lastBal",e);return S.lastBal})}
+/* 40-day t_int_a (column P) for cells-vs-ambient cooldown scores. The live BMS window is only 36 h. */
+function loadCellHist(){var since=Math.floor(Date.now()/1000-40*86400);
+ var q="select A, P where A > "+since;
+ return get(BMS_URL+"&headers=1&tq="+encodeURIComponent(q)).then(function(t){var tb=table(t),out=[],seen={};
+  tb.rows.forEach(function(o){var u=n(o.unix),v=n(o.t_int_a);if(u===null||u<1e9||v===null)return;if(u>1e12)u=u/1000;
+   if(seen[u])return;seen[u]=1;out.push({t:u*1000,v:v})});
+  out.sort(function(a,b){return a.t-b.t});S.cellHist=out.length?out:null;return S.cellHist
+ }).catch(function(e){console.warn("cellHist",e);return S.cellHist})}
 var loading=false;
 function load(){if(loading)return;loading=true;$("app").classList.add("busy");
- Promise.all([get(MAIN_URL).then(shellyRows),loadBMS(),loadLastBal()]).then(function(res){
+ Promise.all([get(MAIN_URL).then(shellyRows),loadBMS(),loadLastBal(),loadCellHist()]).then(function(res){
   S.rows=res[0];S.bms=res[1]&&res[1].length?res[1]:null;S.okAt=Date.now();S.fetchOk=true;save()
  }).catch(function(e){S.fetchOk=false;console.warn(e)}).then(function(){loading=false;S.live=true;$("app").classList.remove("busy");render();renderPacks()})}
 
@@ -2039,12 +2048,25 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   if(lf>=0){if(lf===win.length-1&&end===R.length-1&&Date.now()-R[end].t<20*60e3)live=true;else{var er=lf+1<win.length?win[lf+1]:win[lf];et=er.t;ec=er.pack;var bb=null;(S.bms||[]).forEach(function(x){var d=Math.abs(x.t-et);var cv=cellOf(x);if(d<=6*60e3&&cv!==null&&(!bb||d<bb.d))bb={d:d,v:cv}});ecl=bb?bb.v:null}}
   out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,cst:ctr&&ong?(cst2?"stale":ctr.state):"peaked",cstT:cst2,tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
  return out.slice(-6).reverse()}
+/* ---------- fan-speed groups (Perth) ----------
+   original ~2.5 A until 29 Oct 09:00; bumped ~2.87 A from then until the 9 Nov morning
+   drive; lowered ~2.26 A from that drive onward. Case cooling is best at bumped speed
+   (median k 0.39 /h vs 0.24 original and 0.23 low). Cells are statistically as good
+   on original as on bumped (90-min cell excess p=0.62, n=4 vs 15), so the cells
+   baseline is original+bumped. Low-speed and manual-off / flagged parks are scored
+   against those baselines but never included in the fit. */
+var FAN={bumpFrom:Date.parse("2026-10-29T09:00:00+08:00"),lowFrom:Date.parse("2026-11-09T07:00:00+08:00")};
+function fanGroup(t){return t>=FAN.lowFrom?"low":t>=FAN.bumpFrom?"bump":"orig"}
+function inCoolBase(t){return fanGroup(t)==="bump"}
+function inCellBase(t){return fanGroup(t)!=="low"}
 /* ---------- ambient-adjusted cooldown score ----------
    k = cooling rate of probe excess over ambient: −slope of ln(pack − ambient) per hour over the first 90 min after key-off
    (same as shelly-out/fan-current-vs-cooling-2026-11-10). Expected k = OLS k ~ start excess + ambient, fitted on the
-   other qualifying parks (leave-one-out) at the same window length, so a 50-min live park is compared with everyone's first 50 min.
-   Baseline: fan on ≥80% of rows, start excess ≥8°, ≥60 min logged (or the window), no skip notes, not a manual fan-off / 0 A park. */
-var ADJ={winMin:90,minWinMin:30,minFanFrac:0.8,minXp0:8,minBase:10,minSimilar:5,simAmb:2.5,simXp0:5,samePct:15,
+   other bumped-speed parks (leave-one-out) at the same window length, so a 50-min live park is compared with the
+   best-fan first 50 min. Low-speed / original parks are scored against that baseline, not used to train it.
+   Baseline: bumped-speed group, fan on ≥80% of rows, start excess ≥8°, ≥60 min logged (or the window), no skip notes,
+   not a manual fan-off / 0 A park. minSimilar is 3 (was 5) because the bumped set is smaller; 10 Nov evening has 4 peers. */
+var ADJ={winMin:90,minWinMin:30,minFanFrac:0.8,minXp0:8,minBase:8,minSimilar:3,simAmb:2.5,simXp0:5,samePct:15,
  /* parks Mike flagged as fan manually switched off (Boom logged fan_on=1, battery showed 0 A) */
  manualOff:[Date.parse("2026-10-26T16:27:00+08:00"),Date.parse("2026-11-09T16:54:00+08:00")]};
 function parkAt(R,s,maxMin){var t0=R[s].t,lim=t0+maxMin*60e3+30e3,e=s;
@@ -2084,7 +2106,7 @@ function adjScore(s){var R=S.rows;if(!R||!R.length)return null;var ck=R.length+"
  if(live&&W<ADJ.minWinMin){out={state:"wait",min:Math.round(full.dur)};return adjCache.v[s]=out}
  var P=W<ADJ.winMin?parkAt(R,s,W):full,why=parkWhyNot(P,live?W:60);
  if(why){out={state:"na",why:why};return adjCache.v[s]=out}
- var need=W<ADJ.winMin?W:60,B=[];parkStarts(R).forEach(function(j){if(j===s)return;var q=parkAt(R,j,W);if(q&&!parkWhyNot(q,need)&&q.k!==null)B.push(q)});
+ var need=W<ADJ.winMin?W:60,B=[];parkStarts(R).forEach(function(j){if(j===s)return;var q=parkAt(R,j,W);if(q&&!parkWhyNot(q,need)&&q.k!==null&&inCoolBase(q.t))B.push(q)});
  var sim=B.filter(function(q){return Math.abs(q.amb-P.amb)<=ADJ.simAmb&&Math.abs(q.xp0-P.xp0)<=ADJ.simXp0}).length;
  if(B.length<ADJ.minBase||sim<ADJ.minSimilar){out={state:"few",n:B.length,sim:sim,amb:P.amb,prov:W<ADJ.winMin,W:W};return adjCache.v[s]=out}
  var XtX=[[0,0,0],[0,0,0],[0,0,0]],Xty=[0,0,0];B.forEach(function(q){var x=[1,q.xp0,q.amb];for(var a=0;a<3;a++){Xty[a]+=x[a]*q.k;for(var c=0;c<3;c++)XtX[a][c]+=x[a]*x[c]}});
@@ -2094,16 +2116,19 @@ function adjScore(s){var R=S.rows;if(!R||!R.length)return null;var ck=R.length+"
 function adjHtml(c){var a=adjScore(c.s);if(!a)return"";
  if(a.state==="wait")return'<div class="adj n"><i></i>Ambient score after 30 min · '+a.min+' min so far</div>';
  if(a.state==="na")return'<div class="adj n"><i></i>Not scored · '+esc(a.why)+'</div>';
- var amb=Math.round(a.amb)+"° ambient",pv=a.prov?' <span class="pv">provisional · '+a.W+' min</span>':"";
- if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough similar parks yet for '+amb+'</span>'+pv+'</div>';
+ var amb=Math.round(a.amb)+"°",pv=a.prov?' <span class="pv">provisional · '+a.W+' min</span>':"";
+ if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough best-fan parks yet at '+amb+'</span>'+pv+'</div>';
  var p=Math.round(a.pct),same=Math.abs(p)<ADJ.samePct,cls=same?"s":p>0?"f":"w",
-  t=same?"Cooling about as expected for "+amb:"Cooling <b>"+Math.abs(p)+"% "+(p>0?"faster":"slower")+"</b> than expected for "+amb,
-  tip="k "+a.k.toFixed(2)+"/h vs expected "+a.exp.toFixed(2)+"/h from "+a.n+" parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min";
+  t=same?"Cooling in line with best-fan runs at "+amb:"Cooling <b>"+Math.abs(p)+"% "+(p>0?"faster":"slower")+"</b> than best-fan runs at "+amb,
+  tip="k "+a.k.toFixed(2)+"/h vs best-fan "+a.exp.toFixed(2)+"/h from "+a.n+" bumped-speed parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min";
  return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
 /* ---------- ambient-adjusted case peak ----------
    Expected case peak = OLS peak ~ key-off ambient, leave-one-out on the other qualifying parks
    (full Pack-log history, not just the 6 cards on screen). Drive length was tried and did not
    clearly help (p≈0.14–0.41, LOO R² flat or worse), so ambient only.
+   Best-fan restriction was considered and not applied: case peak is drive heat-soak, not a fan-speed
+   effect (bumped vs low p=0.97; bumped vs original p=0.18). Restricting to bumped parks cuts n to 16
+   and collapses the fit (LOO R² 0.02, SD 4.3°) versus all fan-on parks (n=34, R² 0.38, SD 3.5°).
    Baseline: not a skip-note / logger-bug / manual fan-off park, ≥20 min logged (so the heat-soak
    peak has been seen), fan on ≥50% of the first 90 min. “About as expected” if within 2.5°
    (about 0.7× residual SD of ~3.5°). Falls back to omitting the line with too few parks. */
@@ -2139,6 +2164,73 @@ function peakPhrase(c){var a=peakScore(c);if(!a||a.state!=="ok")return"";
  if(Math.abs(a.d)<PEAK.sameDeg)t="case peak about as expected for "+amb;
  else t="case peak <i>"+f1(Math.abs(a.d))+"°</i> "+(a.d<0?"cooler":"hotter")+" than expected for "+amb;
  return'<span title="'+esc(f1(a.pk)+"° vs expected "+f1(a.exp)+"° from "+a.n+" parks")+'">'+t+"</span>"}
+/* ---------- ambient-adjusted cells ----------
+   Expected cells at 90 min (or at the same elapsed time if the park is shorter / still
+   running) = OLS of cell temp at that time ~ key-off ambient, leave-one-out on the
+   other original+bumped parks. Cells = t_int_a. Low-speed parks are scored against
+   that baseline, never used to train it. Original is included because cells were as
+   good as bumped (90-min cell excess Mann–Whitney p=0.62); bump-only is a weaker fit
+   (n=15, LOO R² ≈ 0, slope p=0.07) than original+bumped (n=19, R² 0.26, p=0.005).
+   Key-off ambient is the physically right anchor — cells don’t track falling air over
+   90 min — and matches the case-peak line.
+   Baseline: original or bumped speed, not a skip-note / logger-bug / manual fan-off
+   park, ≥20 min logged, fan on ≥50% of the first 90 min, a BMS cell reading near the
+   window end. Neutral band ±1.0° = 0.7× residual SD of ~1.43°, with a 0.1° sensor floor.
+   Live parks under 90 min are marked provisional. History is the 40-day t_int_a
+   fetch, falling back to the 36 h BMS window. */
+var CELLADJ={winMin:90,minDur:20,minBase:8,minFanFrac:0.5,sameDeg:1.0,matchMs:6*60e3};
+function cellPts(){if(S.cellHist&&S.cellHist.length)return S.cellHist;
+ var o=[];(S.bms||[]).forEach(function(x){var v=cellOf(x);if(v!==null)o.push({t:x.t,v:v})});
+ o.sort(function(a,b){return a.t-b.t});return o}
+function cellNear(pts,t,t0,t1){var best=null,bd=1e15,lo=t0-60e3,hi=t1+60e3,i;
+ for(i=0;i<pts.length;i++){var p=pts[i];if(p.t<lo)continue;if(p.t>hi)break;var d=Math.abs(p.t-t);if(d<bd){bd=d;best=p.v}}
+ return best!==null&&bd<=CELLADJ.matchMs?best:null}
+function cellAdjParks(){var R=S.rows,out=[],i,pts=cellPts();if(!R||R.length<3||!pts.length)return out;
+ for(i=1;i<R.length;i++){if(R[i-1].mode!=="driving"||R[i].mode==="driving"||R[i].t-R[i-1].t>20*60e3)continue;
+  var k=i,t=R[k].t,end=k,lim=t+8*3600e3;if(t<BUG[0])lim=Math.min(lim,BUG[0]-1);
+  while(end+1<R.length&&R[end+1].mode!=="driving"&&R[end+1].t<=lim&&R[end+1].t-R[end].t<=20*60e3)end++;
+  var win=R.slice(k,end+1);if(win.concat([R[k-1]]).some(function(r){return noteSkipsCooldown(r.note)}))continue;
+  if(t>=BUG[0]&&t<=BUG[1])continue;
+  if(ADJ.manualOff.some(function(m){return Math.abs(t-m)<=10*60e3}))continue;
+  if(!inCellBase(t))continue;
+  if(R[k].amb===null)continue;
+  var n90=0,f90=0,dur=(R[end].t-t)/60e3;
+  win.forEach(function(r){if(r.t-t<=90*60e3+30e3){n90++;if(r.fan===1)f90++}});
+  if(dur<CELLADJ.minDur||(n90&&f90/n90<CELLADJ.minFanFrac))continue;
+  out.push({t:t,s:k,amb:R[k].amb,endT:R[end].t,dur:dur})}
+ return out}
+var cellAdjCache={key:null,v:{}};
+function cellScore(c){if(!c||c.amb===null)return null;
+ var R=S.rows,pts=cellPts();if(!R||!pts.length)return{state:"na",why:"no cell history"};
+ var ck=R.length+":"+(R.length?R[R.length-1].t:0)+":"+pts.length;if(cellAdjCache.key!==ck)cellAdjCache={key:ck,v:{}};
+ var id=c.t;if(cellAdjCache.v[id])return cellAdjCache.v[id];
+ var dur=c.e!=null&&R[c.e]?(R[c.e].t-c.t)/60e3:null,live=!!(c.ongoing||c.live);
+ if(dur===null)return cellAdjCache.v[id]={state:"na",why:"no data"};
+ var W=Math.min(CELLADJ.winMin,Math.floor((dur+0.1)/5)*5);
+ if(live&&W<CELLADJ.minDur)return cellAdjCache.v[id]={state:"wait",min:Math.round(dur)};
+ if(!live&&dur<CELLADJ.minDur)return cellAdjCache.v[id]={state:"na",why:"park too short"};
+ if(!live&&dur>=CELLADJ.winMin)W=CELLADJ.winMin;
+ if(live&&dur>=CELLADJ.winMin)W=CELLADJ.winMin;
+ var y=cellNear(pts,c.t+W*60e3,c.t,c.t+W*60e3);
+ if(y===null)return cellAdjCache.v[id]={state:"na",why:"no cell reading"};
+ var B=[],need=W;cellAdjParks().forEach(function(p){if(p.t===c.t)return;if(p.dur<need-0.1)return;
+  var v=cellNear(pts,p.t+W*60e3,p.t,p.t+W*60e3);if(v!==null)B.push({amb:p.amb,y:v})});
+ if(B.length<CELLADJ.minBase)return cellAdjCache.v[id]={state:"few",n:B.length,amb:c.amb,W:W,prov:live&&W<CELLADJ.winMin};
+ var XtX=[[0,0],[0,0]],Xty=[0,0];
+ B.forEach(function(p){var x=[1,p.amb];for(var a=0;a<2;a++){Xty[a]+=x[a]*p.y;for(var k=0;k<2;k++)XtX[a][k]+=x[a]*x[k]}});
+ var be=solve2(XtX,Xty);if(!be)return cellAdjCache.v[id]={state:"few",n:B.length,amb:c.amb,W:W,prov:live&&W<CELLADJ.winMin};
+ var exp=be[0]+be[1]*c.amb,d=y-exp;
+ return cellAdjCache.v[id]={state:"ok",d:d,y:y,exp:exp,amb:c.amb,n:B.length,slope:be[1],W:W,prov:live&&W<CELLADJ.winMin}}
+function cellAdjHtml(c){var a=cellScore(c);if(!a)return"";
+ if(a.state==="wait")return'<div class="adj n"><i></i>Cells score after 20 min · '+a.min+' min so far</div>';
+ if(a.state==="na")return"";
+ var at=Math.round(a.amb)+"°",pv=a.prov?' <span class="pv">provisional · '+a.W+' min</span>':"";
+ if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough best-fan parks yet at '+at+'</span>'+pv+'</div>';
+ var same=Math.abs(a.d)<CELLADJ.sameDeg,cls=same?"s":a.d<0?"f":"w",
+  t=same?"Cells in line with best-fan runs at "+at:"Cells <b>"+f1(Math.abs(a.d))+"° "+(a.d<0?"cooler":"warmer")+"</b> than best-fan runs at "+at,
+  tip=f1(a.y)+"° vs best-fan "+f1(a.exp)+"° from "+a.n+" original+bumped parks at "+a.W+" min, key-off ambient "+f1(a.amb)+"°";
+ return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
+function adjBlock(c){var a=cellAdjHtml(c),b=adjHtml(c);if(!a&&!b)return"";return a&&b?'<div class="adjs">'+a+b+"</div>":(a||b)}
 function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  function E(c,v){return c.live?'<em class="lv">still cooling</em>':'<em>'+(c.et===null?"—":v===null||v===undefined?"ended —":"ended "+f1(v)+"°")+'</em>'}
  if(!S.rows.length){el.innerHTML='<div class="skel"><i style="width:60%"></i><i style="width:85%"></i><i style="width:70%"></i></div>';return}
@@ -2160,7 +2252,7 @@ function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
  function CD_HOT_C(){return CD_HOT_CELLS}
  el.innerHTML=L.map(function(c){var key=String(c.t),op=openCd===key,V=verdict(c);
   var stats=[["Drive",hmin2(c.drive/60e3)],["To target",c.tgt===null?(c.ongoing?"cooling…":c.off===null?"—":"not reached"):hmin2(c.tgt/60e3)],["Fan",hmin2(c.fan)],["Ambient",c.amb===null?"--":f1(c.amb)+"°C"]];
-  return '<div role="button" tabindex="0" class="kc '+V.k+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdv">'+V.v+'</div>'+(V.c?'<div class="cdcmp">'+V.c+'</div>':'')+adjHtml(c)+'<div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
+  return '<div role="button" tabindex="0" class="kc '+V.k+(op?" open":"")+'" data-k="'+key+'" aria-expanded="'+op+'"><div class="cdv">'+V.v+'</div>'+(V.c?'<div class="cdcmp">'+V.c+'</div>':'')+adjBlock(c)+'<div class="cdh"><div><div class="cdt">'+dayLbl(c.t)+'</div><div class="cds">Key-off '+hm(c.t)+'</div></div>'+
    '<div class="cdp"><span style="color:'+(c.pk?probeCol(c.pk.v,c.off!=null?c.off:lastv(S.rows,"off"),lastv(S.rows,"on")):"#8b93a7")+'">'+(c.pk?f1(c.pk.v)+"°":"--")+'<small>case peak</small>'+E(c,c.ec)+'</span>'+(c.cp?'<span class="cc">'+f1(c.cp.v)+'°<small>'+(c.cst==="rising"?"cells so far":c.cst==="stale"?"cells to "+hm(c.cstT):"cells peak")+'</small>'+(c.cst==="rising"?'<em class="lv">still rising</em>':c.cst==="stale"?'<em>no newer BMS</em>':E(c,c.ecl))+'</span>':"")+'</div></div>'+
    '<div class="cdg">'+stats.map(function(x){return'<div><b>'+x[1]+'</b><span>'+x[0]+"</span></div>"}).join("")+'</div>'+
    (op?'<svg class="ch cdc" id="cdc" viewBox="0 0 340 120"></svg><div class="lg" style="margin:8px 0 0"><span style="--c:var(--hot)">Case probe</span><span style="--c:var(--cool)">Cells</span><span style="--c:#8b93a7">Ambient</span><span style="--c:rgba(34,211,238,.35)">Fan on</span><span style="--c:#34d399">Stop point</span></div>':"")+"</div>"}).join("");
