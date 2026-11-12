@@ -1631,10 +1631,13 @@ function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
  for(i=0;i<rows.length;i++)if(rows[i].t>=t0)pts.push(i);if(!pts.length){el.textContent="No readings in this window yet.";return}
  var parts=[];
  if(ko&&ko.driving)parts.push("Driving since <b>"+hm(ko.since)+"</b>. The fan is held off until key-off, then the cool-down starts.");
- else if(ko&&!ko.none&&ko.t>=t0){var pk=null,fanAt=null;for(i=ko.idx;i<rows.length;i++){var v=rows[i].pack;if(v!==null&&(!pk||v>pk.v))pk={v:v,t:rows[i].t};if(fanAt===null&&rows[i].fan===1)fanAt=rows[i].t}
+ else if(ko&&!ko.none&&ko.t>=t0){var pk=null,fanAt=null,offI=null;for(i=ko.idx;i<rows.length;i++){var v=rows[i].pack;if(v!==null&&(!pk||v>pk.v))pk={v:v,t:rows[i].t};if(rows[i].fan===1){if(fanAt===null)fanAt=rows[i].t;offI=null}else if(rows[i].fan===0&&fanAt!==null&&offI===null)offI=i}
   var st=rows[ko.idx].pack,cur=rows[rows.length-1].pack;parts.push("Engine off at <b>"+(ko.approx?"≈":"")+hm(ko.t)+"</b>"+(ko.approx?" (data gap, from "+ko.src+")":"")+".");
   if(pk&&st!==null&&pk.v-st>=0.5&&pk.t>ko.t)parts.push("Then a <b>"+Math.round((pk.t-ko.t)/60000)+"-min heat-soak climb</b> to "+f1(pk.v)+"°.");
-  if(fanAt!==null){var drop=pk&&cur!==null?pk.v-cur:0;parts.push("Fan kicked in at "+hm(fanAt)+(drop>=0.5?" and pulled the case down <b>"+f1(drop)+"° in "+durHM(Math.round((now-Math.max(fanAt,pk.t))/60000))+"</b>.":"."))}
+  if(fanAt!==null){var endI=offI!==null?offI:rows.length-1,endT=offI!==null?rows[offI].t:now,endV=cur,pkF=null;
+   for(i=ko.idx;i<=endI;i++){var v=rows[i].pack;if(v!==null){endV=v;if(!pkF||v>pkF.v)pkF={v:v,t:rows[i].t}}}
+   var drop=pkF&&endV!==null?pkF.v-endV:0,startT=Math.max(fanAt,pkF?pkF.t:fanAt);
+   parts.push("Fan kicked in at "+hm(fanAt)+(drop>=0.5?" and pulled the case down <b>"+f1(drop)+"° in "+durHM(Math.round((endT-startT)/60000))+"</b>"+(offI!==null?" before switching off at "+hm(endT)+".":"."):(offI!==null?" and switched off at "+hm(endT)+".":".")))}
   else parts.push("Fan hasn't needed to run.")}
  else{var mn=null,mx=null,fr=0;pts.forEach(function(k){var v=rows[k].pack;if(v!==null){mn=mn===null?v:Math.min(mn,v);mx=mx===null?v:Math.max(mx,v)}if(rows[k].fan===1)fr++});
   if(mn!==null)parts.push("Case probe ranged <b>"+f1(mn)+"–"+f1(mx)+"°</b>"+(fr?", fan ran <b>"+fr*5+" min</b>":", fan stayed off")+" in the last "+hours+" h.")}
