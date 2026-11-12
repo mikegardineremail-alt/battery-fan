@@ -2053,16 +2053,31 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
   out.push({ec:ec,ecl:ecl,live:live,et:et,t:t,drive:t-R[j].t,pk:pk,cp:cp,cst:ctr&&ong?(cst2?"stale":ctr.state):"peaked",cstT:cst2,tgt:tgt===null?null:tgt-t,fan:Math.round(fan/60e3),amb:R[k].amb,off:off,s:k,e:end,ongoing:end===R.length-1&&Date.now()-R[end].t<20*60e3})}
  return out.slice(-6).reverse()}
 /* ---------- fan-speed groups (Perth) ----------
-   original ~2.5 A until 29 Oct 09:00; bumped ~2.87 A from then until the 9 Nov morning
-   drive; lowered ~2.26 A from that drive onward. Case cooling is best at bumped speed
-   (median k 0.39 /h vs 0.24 original and 0.23 low). Cells are statistically as good
-   on original as on bumped (90-min cell excess p=0.62, n=4 vs 15), so the cells
-   baseline is original+bumped. Low-speed and manual-off / flagged parks are scored
-   against those baselines but never included in the fit. */
-var FAN={bumpFrom:Date.parse("2026-10-29T09:00:00+08:00"),lowFrom:Date.parse("2026-11-09T07:00:00+08:00")};
-function fanGroup(t){return t>=FAN.lowFrom?"low":t>=FAN.bumpFrom?"bump":"orig"}
-function inCoolBase(t){return fanGroup(t)==="bump"}
-function inCellBase(t){return fanGroup(t)!=="low"}
+   Case cooling is best at bumped speed (median k 0.39 /h vs 0.24 original and 0.23 low).
+   Cells are statistically as good on original as on bumped (90-min cell excess p=0.62,
+   n=4 vs 15), so the cells baseline is original+bumped. Low-speed, mixed-speed, and
+   manual-off / flagged parks are scored against those baselines but never included
+   in the fit. Case peak is not a fan-speed effect and is not filtered here.
+   FAN_PERIODS is checked newest-first; each row is [from, until) by key-off (until
+   null = open). Add a new row at the top when Mike changes fan current.
+   FAN_SKIP_TRAIN lists key-offs that must not train (10-min match window). */
+var FAN_PERIODS=[
+  /* bumped ~2.87 A — fan turned back up */
+  {g:"bump",from:Date.parse("2026-11-12T19:12:00+08:00"),until:null},
+  /* lowered ~2.26 A — 9 Nov morning drive until the 12 Nov bump */
+  {g:"low",from:Date.parse("2026-11-09T07:00:00+08:00"),until:Date.parse("2026-11-12T19:12:00+08:00")},
+  /* bumped ~2.87 A — 29 Oct 09:00 until the 9 Nov morning drive */
+  {g:"bump",from:Date.parse("2026-10-29T09:00:00+08:00"),until:Date.parse("2026-11-09T07:00:00+08:00")},
+  /* original ~2.5 A */
+  {g:"orig",from:Date.parse("2026-01-01T00:00:00+08:00"),until:Date.parse("2026-10-29T09:00:00+08:00")}
+];
+var FAN_SKIP_TRAIN=[
+  Date.parse("2026-11-12T18:14:00+08:00") /* 6:14 pm park: low then bumped mid-park */
+];
+function fanGroup(t){for(var i=0;i<FAN_PERIODS.length;i++){var p=FAN_PERIODS[i];if(t>=p.from&&(p.until==null||t<p.until))return p.g}return"orig"}
+function skipTrain(t){return FAN_SKIP_TRAIN.some(function(m){return Math.abs(t-m)<=10*60e3})}
+function inCoolBase(t){return fanGroup(t)==="bump"&&!skipTrain(t)}
+function inCellBase(t){var g=fanGroup(t);return(g==="orig"||g==="bump")&&!skipTrain(t)}
 /* ---------- ambient-adjusted cooldown score ----------
    k = cooling rate of probe excess over ambient: −slope of ln(pack − ambient) per hour over the first 90 min after key-off
    (same as shelly-out/fan-current-vs-cooling-2026-11-10). Expected k = OLS k ~ start excess + ambient, fitted on the
