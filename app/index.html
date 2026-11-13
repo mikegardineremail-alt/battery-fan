@@ -1234,6 +1234,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
   else if(m==="panic"){nx="Fan off when probe drops below <b>"+PANIC+"°</b>";nx2="Rule: parked panic on at "+PANIC+"° · off under "+PANIC+"°"}
   else if(roE){var left=Math.max(0,Math.round((roE-now)/60e3));nx="Stop point reached, run-on until <b>"+hm(roE)+"</b>";nx2="Rule: "+RUN_ON_MIN+" min run-on after cool-down · "+(left>0?left+" min to go":"stopping now");seg={f:1-(roE-now)/(RUN_ON_MIN*60e3),l:"run-on "+hm(roE-RUN_ON_MIN*60e3),r:"fan off "+hm(roE),c:"#22d3ee"}}
   else if(m==="run-on"){nx="Run-on ends in a few minutes";nx2="Rule: "+RUN_ON_MIN+" min run-on"+(off!==null?" · then fan off if probe ≤ "+d1(off):"")}
+  else if(m==="cell-fallback"&&off!==null){nx="Fan off when cells are ≤ <b>"+d1(off)+"</b>";nx2="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when cells ≤ "+d1(off)+(cell!==null?" · "+f1(Math.max(0,cell-off))+"° to go":"")}
   else if(off!==null){nx="Fan off at probe stop <b>"+d1(off)+"</b>";var Lh2=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh2)){var sN=seasonOf(Lh2);nx2=sN.name+"-season floor "+sN.floor+"° holding (rule wanted "+f1(rawOff(Lh2))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}else nx2="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when probe ≤ "+d1(off)+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"")}
   if(off!==null&&on!==null&&pk!==null&&/^(cooldown|cooling|fan-on)$/.test(m)){var top=Math.max(on,pk);seg={f:top>off?(top-pk)/(top-off):1,l:"probe "+d1(pk),r:"stops "+d1(off),c:"#22d3ee"}}
  }else{
@@ -1321,7 +1322,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
     h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}
    else if(ptxt){h+='<section class="card bigc"><div class="hHead"><div class="cap">Fan stops at</div><span class="ptag">Prediction</span></div><div class="nxt" style="margin-top:10px;font-size:22px">'+ptxt+'</div><div class="nx2">'+psub+'</div></section>';h+=ultCardHtml(rows,r,now,pr);el.innerHTML=h;return}}
   else
-  if(fan&&off!==null&&/Fan off at probe stop|^Stops at/.test(nx)){big=off;bl2="Fan stops at";bc="#34d399"}
+  if(fan&&off!==null&&(m==="cell-fallback"||/Fan off at probe stop|^Stops at/.test(nx))){big=off;bl2="Fan stops at";bc="#34d399"}
   else if(m==="crisis"){big=CRISIS_OFF;bl2="Fan stops below";bc="#34d399"}
   else if(!fan&&on!==null&&/probe passes|Fan on if probe/.test(nx)){big=on;bl2="Fan starts at"}
   h+='<section class="card bigc"><div class="hHead"><div class="cap">'+bl2+'</div>'+(cell!==null?cellsNow(cs):"")+'</div>';
@@ -1332,6 +1333,7 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
     else sub=nx2||sub;}
    else if(bl2==="Fan stops at"||bl2==="Fan stops below"){
     if(m==="crisis"){sub="Rule: crisis off under <b style=\"color:#34d399\">"+CRISIS_OFF+"°</b> · cells now "+d1(cell);}
+    else if(m==="cell-fallback"&&off!==null){sub="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when cells ≤ <b style=\"color:#34d399\">"+d1(off)+"</b>"+(cell!==null?" · "+f1(Math.max(0,cell-off))+"° to go":"");}
     else if(off!==null){var Lh3=r.latch!=null?r.latch:r.amb;if(floorHolding(off,Lh3)){var sB=seasonOf(Lh3);sub=sB.name+"-season floor "+sB.floor+"° holding (rule wanted "+f1(rawOff(Lh3))+"°)"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}else sub="Rule: latch stop (Ambient +"+DELTA_OFF+"°) · fan off when probe ≤ <b style=\"color:#34d399\">"+d1(off)+"</b>"+(pk!==null?" · "+f1(Math.max(0,pk-off))+"° to go":"");}
     else sub=nx2||sub;
    }
@@ -1792,6 +1794,7 @@ function pageStates(){var now=Date.now(),O={h:"Offline",t:"Offline",k:"off"};
  var IS=[].concat(P2.k==="off"?[]:P2.iss||[],P3.k==="off"?[]:P3.iss||[],P4.k==="off"?[]:P4.iss||[]);
  var P0;if(P1.k==="hot")P0={h:"Hot",t:"Overview",k:"hot"};
  else if(offs.length)P0={h:offs.length===1?offs[0]+" offline":"Offline",t:"Overview",k:"off"};
+ else if(S.rows.length&&curRow(S.rows).mode==="cell-fallback")P0={h:"Probe fault",t:"Overview",k:"hot"};
  else if(IS.length){var top=Math.max.apply(null,IS.map(function(x){return x.l})),nm=IS.filter(function(x){return x.l===top}).map(function(x){return x.o});
   P0={h:nm.length<=2?nm.join(" \u00b7 "):"Needs attention",t:"Overview",k:top===2?"hot":"warn"}}
  else if(!S.rows.length&&!p&&!sr&&!bp)P0={h:"Overview",t:"Overview",k:""};
@@ -1851,7 +1854,10 @@ function hdr(){setTimeout(fadeVals,0);var i=cur<0?0:cur,app=$("app"),now=Date.no
    if(X2.live&&bp0&&now-bp0.t>STALE_MIN*60e3)stale0=true;
    if(srcT.length){var nt=Math.max.apply(null,srcT);a="Updated "+hm(nt)+" · "+ago(now-nt)}
    if(refreshing&&srcT.length){c="pill";t="Updating\u2026"}
-   else{c="pill"+(al.length?" bad":stale0?" drv":"");t=al.length?al.join(" · "):stale0?"Some data delayed":"All systems normal"}}
+   else if(al.length){c="pill bad";t=al.join(" · ")}
+   else if(stale0){c="pill drv";t="Some data delayed"}
+   else if(S.rows.length&&curRow(S.rows).mode==="cell-fallback"){c="pill bad";t="Fan running on cell temp"}
+   else{c="pill";t="All systems normal"}}
  else if(i===1){if(HC){c=HC.c;t=HC.t;a=HC.a}}
  else if(i===2){var bl=S.bms&&S.bms.length?S.bms[S.bms.length-1]:null;if(bl){var p=packOf(bl);upd(bl.t);
    var st=p.i===null?"":p.i>0.2?"Charging":p.i<-0.2?"Discharging":"Idle";c="pill"+(st==="Discharging"?" drv":st==="Charging"?"":" off");
