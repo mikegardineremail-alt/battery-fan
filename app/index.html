@@ -376,6 +376,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.02em;text-transform:none;colo
 .cnw{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .bdv{font-size:11.5px;font-weight:500;color:#8b93a7;padding-right:11px;letter-spacing:.01em;font-variant-numeric:tabular-nums}
 .bdg{font-size:12.5px;font-weight:500;color:#8b93a7;margin-top:4px;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.gIn .gmeta{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;margin:0 0 8px}
+.gIn .gmeta .bdg{margin-top:0;padding-right:0}
+.gIn .gpk{font-size:13px;font-weight:650;letter-spacing:.015em;color:#cfd5e6;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
+.gIn .gpk small{margin-left:5px;font-size:11.5px;font-weight:550;color:#8b93a7;letter-spacing:.01em}
+.gIn .gpk.stale{color:#8b93a7}
+.gIn .gstale{flex-basis:100%;text-align:center;margin:1px 0 0;font-size:11px;font-weight:550;color:#8b93a7}
+.gauge .pk-mk{filter:drop-shadow(0 0 3px rgba(0,0,0,.5))}
 .tMain{font-size:84px;font-weight:700;letter-spacing:-.05em;line-height:.95;margin-top:4px;font-variant-numeric:tabular-nums}
 .tMain .u{font-size:28px;font-weight:500;letter-spacing:0;color:#8b93a7;margin-left:3px;vertical-align:1.2em}
 .duo{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;margin-top:14px;padding:12px 4px 2px;border-top:1px solid rgba(255,255,255,.07)}
@@ -1260,8 +1267,9 @@ function coolHero(rows,r,now,off,on){var el=$("chero");if(!el)return;var mRaw=r.
  if(fan&&on!==null)mk.push({v:on,c:"#fb7185",t:pfx+"start"});
  var h='<section class="card thero" style="--glowc:'+rgba(col,.17)+'"><div class="hHead"><div class="cap"><span class="hfan sm '+(fan?"on":"off")+'" role="img" aria-label="Fan '+(fan?"on":"off")+'">'+fanSvg+'</span>Fan '+(fan?"on":"off")+' · '+dur0+'</div><span class="sp '+pc+'">'+esc(pill)+'</span></div>';
  if(cell!==null)mk=[];
- var gr=gaugeRange(gv,pdot?mk.concat([pdot]):mk);h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col,pdot)+'';
- h=h.replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div>'+bdLine(cs,"bdg")+'</div>');
+ var cpk=cellsKeyOffPeak(rows,now),pkm=cellsPeakMark(cpk);
+ var gr=gaugeRange(gv,(pdot?mk.concat([pdot]):mk).concat(pkm?[pkm]:[]));h+=gaugeSVG(gv,gr.lo,gr.hi,mk,col,pdot,pkm)+'';
+ h=h.replace('<!--GIN-->','<div class="gIn">'+gInPeak(cpk)+'<div class="cap">'+(cell!==null?"Cells":"Probe · no cell data")+'</div><div class="tMain" style="color:'+col+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div>'+gInMeta(cpk,cs)+'</div>');
  h+='<div class="whyc">'+esc(why)+'</div>';
  if(cell!==null&&pk!==null&&on!==null&&off!==null&&on>off){var
   /* park peak: hottest Boom case probe (pack_C) since key-off; none while driving / no key-off */
@@ -1357,7 +1365,7 @@ function gaugeRange(v,marks){var vs=[];
  if(hi-lo<8){var mid=(lo+hi)/2;lo=Math.floor(mid-4);hi=Math.ceil(mid+4)}
  if(hi-lo>28){var mid2=(mn+mx)/2;lo=Math.floor(mid2-14);hi=Math.ceil(mid2+14)}
  return{lo:lo,hi:hi}}
-function gaugeSVG(v,lo,hi,marks,col,pdot){var CX=150,CY=150,R=120;
+function gaugeSVG(v,lo,hi,marks,col,pdot,peak){var CX=150,CY=150,R=120;
  function P(t,r){var a=Math.PI*Math.max(0,Math.min(1,(t-lo)/(hi-lo)));return[(CX-r*Math.cos(a)),(CY-r*Math.sin(a))]}
  var seg="",st=(hi-lo)/60;for(var t=lo;t<hi;t+=st){var p0=P(t,R),p1=P(Math.min(hi,t+st*1.15),R);seg+='<path d="M'+p0[0].toFixed(2)+" "+p0[1].toFixed(2)+" A"+R+" "+R+" 0 0 1 "+p1[0].toFixed(2)+" "+p1[1].toFixed(2)+'" stroke="'+tempColor(t+st/2)+'" stroke-width="12" fill="none"/>'}
  var pct=v===null?0:Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)),id="g"+Math.random().toString(36).slice(2,7);
@@ -1367,6 +1375,10 @@ function gaugeSVG(v,lo,hi,marks,col,pdot){var CX=150,CY=150,R=120;
  s+='<text x="30" y="174" text-anchor="middle">'+lo+'°</text><text x="270" y="174" text-anchor="middle">'+hi+'°</text>';
  /* threshold markers: coloured radial ticks just outside the arc; names go in the legend below */
  marks.forEach(function(m){var a=P(m.v,R+9),b=P(m.v,R+20);s+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+m.c+'" stroke-width="3" stroke-linecap="round"/>'});
+ /* peak-since-key-off marker on the arc (the Peak X° label sits on the dial face in .gIn) */
+ if(peak&&peak.v!==null&&isFinite(+peak.v)){var pv=+peak.v,pc=peak.c||tempColor(pv),span=Math.max(hi-lo,0.01);
+  var frac=Math.max(0,Math.min(1,(pv-lo)/span)),ang=Math.PI*frac,tip=P(pv,R+10),base=P(pv,R+22),vx=Math.sin(ang)*3.1,vy=-Math.cos(ang)*3.1;
+  s+='<polygon class="pk-mk" points="'+tip[0].toFixed(1)+','+tip[1].toFixed(1)+' '+(base[0]+vx).toFixed(1)+','+(base[1]+vy).toFixed(1)+' '+(base[0]-vx).toFixed(1)+','+(base[1]-vy).toFixed(1)+'" fill="'+pc+'"><title>Peak '+f1(pv)+'°</title></polygon>'}
  /* secondary probe dot (start/stop ticks are probe thresholds) */
  if(pdot&&pdot.v!==null&&isFinite(pdot.v)){var q=P(pdot.v,R);s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="5" fill="#0b0e16" stroke="'+pdot.c+'" stroke-width="2.6"><title>Probe '+f1(pdot.v)+'°</title></circle>'}
  if(v!==null){var k=P(v,R);s+='<circle class="mkh" cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="13" fill="'+col+'" filter="url(#'+id+'f)"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="8.5" fill="#0b0e16" stroke="'+col+'" stroke-width="3.2"/><circle cx="'+k[0].toFixed(1)+'" cy="'+k[1].toFixed(1)+'" r="2.6" fill="#eef2ff"/>'}
@@ -1629,6 +1641,23 @@ function cellTrend(p){p=(p||[]).filter(function(x){return x&&x.v!==null&&x.v!==u
  var mx=null;p.forEach(function(x){if(!mx||x.v>mx.v)mx={v:x.v,t:x.t}});var last=p[p.length-1],first=p[0],st;
  if(last.v<=mx.v-0.2||last.t-mx.t>=15*60e3)st="peaked";else if(mx.v-first.v>=0.3)st="rising";else st="flat";
  return{max:mx,last:last,first:first,state:st}}
+/* Peak cell temp since key-off: every BMS row (cellOf / t_int), same window as cooldown cards (834d77e). Hidden while driving or when no key-off yet. */
+function cellsKeyOffPeak(rows,now){
+ var ko=keyOffInfo(rows||[],now);
+ if(!ko||ko.driving||ko.none||ko.t==null)return{show:false,driving:!!(ko&&ko.driving),none:!!(ko&&ko.none),ko:ko};
+ var cpts=[];(S.bms||[]).forEach(function(x){if(x.t<ko.t-60e3||x.t>now+60e3)return;var v=cellOf(x);if(v!==null)cpts.push({t:x.t,v:v})});
+ cpts.sort(function(a,b){return a.t-b.t});var ct=cellTrend(cpts);if(!ct)return{show:false,ko:ko};
+ return{show:true,ko:ko,v:ct.max.v,t:ct.max.t,last:ct.last,state:ct.state,stale:now-ct.last.t>BMS_STALE_MIN*60e3}}
+function cellsPeakMark(pk){return pk&&pk.show?{v:pk.v,c:tempColor(pk.v)}:null}
+function cellsPeakLabel(pk){
+ if(!pk||!pk.show)return"";
+ var main,sub="",tip,cls="gpk";
+ if(pk.stale){main="Up to "+f1(pk.v)+"°";cls+=" stale";tip="Cells up to "+f1(pk.v)+"° by "+hm(pk.last.t)+" (no newer BMS data)"}
+ else{main="Peak "+f1(pk.v)+"°";sub=pk.ko&&pk.ko.t?"since "+(pk.ko.approx?"≈":"")+hm(pk.ko.t):"";
+  tip="Peak cell temp "+f1(pk.v)+"° since key-off at "+(pk.ko&&pk.ko.t?((pk.ko.approx?"≈":"")+hm(pk.ko.t)):"")}
+ return'<div class="'+cls+'" title="'+esc(tip)+'">'+esc(main)+(sub?'<small>'+esc(sub)+'</small>':"")+"</div>"+(pk.stale?'<div class="gstale">(no newer BMS data)</div>':"")}
+function gInMeta(pk,cs){return bdLine(cs,"bdg")}
+function gInPeak(pk){var p=cellsPeakLabel(pk);return p?'<div class="gmeta">'+p+"</div>":""}
 function note(rows,mt,now,ko){var el=$("note"),t0=now-hours*3600e3,pts=[],i;
  for(i=0;i<rows.length;i++)if(rows[i].t>=t0)pts.push(i);if(!pts.length){el.textContent="No readings in this window yet.";return}
  var parts=[];
@@ -2382,7 +2411,7 @@ function renderOverview(){var el=$("ovbody");if(!el)return;var now=Date.now(),h=
  var ovFan=r?("Fan "+(fon?"on":"off")+" · "+(roO?"Run-on until "+hm(roO):prO.state==="ok"||prO.state==="est"?"off ~"+hm(prO.t).replace(/ ?[ap]m$/,"")+pmTxt(prO):SHORT[r.mode]||r.mode||"")):"";
  h+='<div class="card ovc gl" data-go="cooling" style="--glowc:'+rgba(col,.15)+'"><div class="ovt"><div class="cap">Invicta cooling</div>'+(r?'<span class="sp '+(fon?"c":"")+'">'+esc(ovFan)+"</span>":"")+"</div>";
  if(!r)h+=(!S.okAt?SKO:'<div class="es">Waiting for the first Shelly reading.</div>');
- else{var grO=gaugeRange(gv,[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col).replace('<!--GIN-->','<div class="gIn"><div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div>'+bdLine(cs,"bdg")+'</div>');
+ else{var cpkO=cellsKeyOffPeak(S.rows,now),pkmO=cellsPeakMark(cpkO),grO=gaugeRange(gv,pkmO?[pkmO]:[]);h+=gaugeSVG(gv,grO.lo,grO.hi,[],col,null,pkmO).replace('<!--GIN-->','<div class="gIn">'+gInPeak(cpkO)+'<div class="cap">'+(cell!==null?"Cells":"Probe")+'</div><div class="tMain" style="color:'+col+';text-shadow:0 0 36px '+rgba(col,.4)+'">'+(gv===null?"--":f1(gv))+'<span class="u">°C</span></div>'+gInMeta(cpkO,cs)+'</div>');
   h+=strip([["Probe",r.pack===null?"--":f1(r.pack)+"<small>°C</small>",probeCol(r.pack,lastv(S.rows,"off"),lastv(S.rows,"on"))],["Ambient",r.amb===null?"--":f1(r.amb)+"<small>°C</small>","#e5e7eb"],["Updated",'<span style="font-size:16.5px;font-weight:600">'+ago(now-r.t)+"</span>"]])}
  h+="</div>";
  /* --- Aux battery · Victron --- */
@@ -2450,7 +2479,7 @@ setInterval(function(){if(S.rows.length)render();renderExtra()},30000);
  document.addEventListener("touchmove",function(e){if(y0===null)return;if(scrubbing){y0=null;p.style.opacity=0;return}if(Math.abs(e.touches[0].clientX-x0)>Math.abs(e.touches[0].clientY-y0)){y0=null;p.style.opacity=0;return}dy=Math.max(0,e.touches[0].clientY-y0);var k=Math.min(dy,90);p.style.opacity=Math.min(1,k/70);p.style.transform="translateY("+(k*.7-50)+"px) rotate("+(k*3)+"deg)"},{passive:true});
  document.addEventListener("touchend",function(){if(y0!==null&&dy>70)loadAll();y0=null;p.style.transition="opacity .3s,transform .3s";p.style.opacity=0;p.style.transform="translateY(-50px)";setTimeout(function(){p.style.transition="opacity .2s"},300)})})();
 var render0=render;render=function(){render0();capHC();renderCooldowns();renderOverview();hdr()};
-window.__bf={RT:RT,Z:Z,S:S,X2:X2,renderExtra:renderExtra,keyOffInfo:keyOffInfo,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
+window.__bf={RT:RT,Z:Z,S:S,X2:X2,renderExtra:renderExtra,keyOffInfo:keyOffInfo,cellsKeyOffPeak:cellsKeyOffPeak,packOf:packOf,render:render,load:load,go:function(i,s){go(i,s)}};
 if(S.rows.length)render();
 renderExtra();
 loadAll();
