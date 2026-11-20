@@ -715,7 +715,12 @@ var PREDICT={
  bands:[{maxLeadMin:30,pm:6},{maxLeadMin:60,pm:15},{maxLeadMin:120,pm:54},{maxLeadMin:9999,pm:54}],
  /* norm-based fallback (typicalOff) while the slope fit is not ready */
  est:{cycleGapC:2.5,firstMinMin:60,lookbackDays:7,nearN:8,minRuns:3,minAheadMin:3,
-  norm:{cycle:{min:18,pm:5},first:{min:245,pm:30}}}, /* Pack log 25–30 Oct 2026 medians / p80 |dev| */
+  norm:{cycle:{min:18,pm:5},first:{min:245,pm:30}}, /* Pack log 25–30 Oct 2026 medians / p80 |dev| */
+  /* typical runs = ~2.87 A fan speed only. Runs starting inside these [from, until) spans are not used, and the
+     lookback counts only time outside them (7 days of 2.87 A running). Keep in step with FAN_PERIODS (non-"bump" rows). */
+  skipSpans:[["2026-01-01T00:00:00+08:00","2026-10-29T09:00:00+08:00"],  /* original ~2.4 A */
+             ["2026-11-09T07:00:00+08:00","2026-11-12T19:12:00+08:00"],  /* low ~2.26 A */
+             ["2026-11-12T19:12:00+08:00","2026-11-20T17:56:00+08:00"]]},/* high ~3.46 A */
  capMin:480,              /* Boom 8 h parked cap from key-off: no prediction (incl. + side) may pass it */
  conf:{highR2:0.9,highMin:20,highHorizonMin:60,medR2:0.7,medHorizonMin:120} /* internal fit-quality grade (not shown) */
 };
@@ -764,8 +769,11 @@ function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)i
 function typicalOff(rows,s,L,off,runOn,P,why,extra){var E=P.est,r=rows[L],st=rows[s],o={state:why};if(extra)for(var k in extra)o[k]=extra[k];
  if(!E||st.pack===null||st.pack===undefined)return o;
  var g0=st.pack-off,type=g0<=E.cycleGapC?"cycle":"first",el=(r.t-st.t)/60e3,H=[],i=0,a,z,n,j,lo=r.t-E.lookbackDays*864e5;
+ var SK=(E.skipSpans||[]).map(function(x){return[Date.parse(x[0]),Date.parse(x[1])]}).sort(function(x,y){return y[0]-x[0]});
+ function skipT(t){for(var q=0;q<SK.length;q++)if(t>=SK[q][0]&&t<SK[q][1])return true;return false}
+ var rem=E.lookbackDays*864e5,cur=r.t;for(var q=0;q<SK.length;q++){var x=SK[q];if(x[0]>=cur)continue;var e2=Math.min(x[1],cur);if(cur-e2>=rem)break;rem-=cur-e2;cur=x[0]}lo=cur-rem;
  while(i<s){if(rows[i].fan!==1){i++;continue}a=i;while(i+1<s&&rows[i+1].fan===1&&rows[i+1].t-rows[i].t<=20*60e3)i++;z=i;n=rows[z+1];i++;
-  if(!n||n.fan!==0||n.t-rows[z].t>20*60e3||rows[a].t<lo||rows[a].pack===null)continue;
+  if(!n||n.fan!==0||n.t-rows[z].t>20*60e3||rows[a].t<lo||rows[a].pack===null||skipT(rows[a].t))continue;
   var of=null,md="";for(j=a;j<=z;j++){if(rows[j].off!==null&&rows[j].off!==undefined)of=rows[j].off;if(rows[j].mode)md=rows[j].mode}
   if(of===null||P.modes.concat(["run-on"]).indexOf(md)<0)continue;
   var g=rows[a].pack-of,d=((rows[z].t+n.t)/2-rows[a].t)/60e3;if((g<=E.cycleGapC?"cycle":"first")===type&&d>el&&(type==="cycle"||d>=E.firstMinMin))H.push({d:d,g:g,t:rows[a].t})}
@@ -2093,15 +2101,18 @@ function cooldowns(){var R=S.rows,out=[],i;if(!R||R.length<3)return out;
 /* ---------- fan-speed groups (Perth) ----------
    Case cooling is best at bumped speed (median k 0.39 /h vs 0.24 original and 0.23 low).
    Cells are statistically as good on original as on bumped (90-min cell excess p=0.62,
-   n=4 vs 15), so the cells baseline is original+bumped. Low-speed, mixed-speed, and
+   n=4 vs 15), so the cells baseline is original+bumped. Low-speed, high-speed (~3.46 A, 12–20 Nov), mixed-speed, and
    manual-off / flagged parks are scored against those baselines but never included
    in the fit. Case peak is not a fan-speed effect and is not filtered here.
    FAN_PERIODS is checked newest-first; each row is [from, until) by key-off (until
    null = open). Add a new row at the top when Mike changes fan current.
    FAN_SKIP_TRAIN lists key-offs that must not train (10-min match window). */
 var FAN_PERIODS=[
-  /* bumped ~2.87 A — fan turned back up */
-  {g:"bump",from:Date.parse("2026-11-12T19:12:00+08:00"),until:null},
+  /* bumped ~2.87 A again — Mike set the fan back to 2.86 A on 20 Nov ~17:56 (a brief ~2.5 A from ~17:41 had no parks) */
+  {g:"bump",from:Date.parse("2026-11-20T17:56:00+08:00"),until:null},
+  /* high ~3.46 A — the 12 Nov "turn it back up" went past the old bumped position (fan-speed check 19 Nov):
+     scored against the 2.87 A baseline, never used to train it (case or cells) */
+  {g:"high",from:Date.parse("2026-11-12T19:12:00+08:00"),until:Date.parse("2026-11-20T17:56:00+08:00")},
   /* lowered ~2.26 A — 9 Nov morning drive until the 12 Nov bump */
   {g:"low",from:Date.parse("2026-11-09T07:00:00+08:00"),until:Date.parse("2026-11-12T19:12:00+08:00")},
   /* bumped ~2.87 A — 29 Oct 09:00 until the 9 Nov morning drive */
@@ -2110,8 +2121,9 @@ var FAN_PERIODS=[
   {g:"orig",from:Date.parse("2026-01-01T00:00:00+08:00"),until:Date.parse("2026-10-29T09:00:00+08:00")}
 ];
 var FAN_SKIP_TRAIN=[
-  Date.parse("2026-11-12T18:14:00+08:00") /* 6:14 pm park: low then bumped mid-park */
+  Date.parse("2026-11-12T18:14:00+08:00") /* 6:14 pm park: low then high mid-park */
 ];
+var FAN_LBL={orig:"Original ~2.4 A",bump:"Bumped ~2.87 A",low:"Low ~2.26 A",high:"High ~3.5 A"};
 function fanGroup(t){for(var i=0;i<FAN_PERIODS.length;i++){var p=FAN_PERIODS[i];if(t>=p.from&&(p.until==null||t<p.until))return p.g}return"orig"}
 function skipTrain(t){return FAN_SKIP_TRAIN.some(function(m){return Math.abs(t-m)<=10*60e3})}
 function inCoolBase(t){return fanGroup(t)==="bump"&&!skipTrain(t)}
@@ -2177,7 +2189,7 @@ function adjHtml(c){var a=adjScore(c.s);if(!a)return"";
  if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough best-fan parks yet at '+amb+'</span>'+pv+'</div>';
  var p=Math.round(a.pct),same=Math.abs(p)<ADJ.samePct,cls=same?"s":p>0?"f":"w",
   t=same?"Cooling in line with best-fan runs at "+amb:"Cooling <b>"+Math.abs(p)+"% "+(p>0?"faster":"slower")+"</b> than best-fan runs at "+amb,
-  tip="k "+a.k.toFixed(2)+"/h vs best-fan "+a.exp.toFixed(2)+"/h from "+a.n+" bumped-speed parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min";
+  tip="k "+a.k.toFixed(2)+"/h vs best-fan "+a.exp.toFixed(2)+"/h from "+a.n+" bumped-speed parks ("+a.sim+" similar), start excess "+f1(a.xp0)+"°, first "+a.W+" min · this park: "+FAN_LBL[fanGroup(c.t)];
  return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
 /* ---------- ambient-adjusted case peak ----------
    Expected case peak = OLS peak ~ key-off ambient, leave-one-out on the other qualifying parks
@@ -2285,7 +2297,7 @@ function cellAdjHtml(c){var a=cellScore(c);if(!a)return"";
  if(a.state==="few")return'<div class="adj n"><i></i><span>Not enough best-fan parks yet at '+at+'</span>'+pv+'</div>';
  var same=Math.abs(a.d)<CELLADJ.sameDeg,cls=same?"s":a.d<0?"f":"w",
   t=same?"Cells in line with best-fan runs at "+at:"Cells <b>"+f1(Math.abs(a.d))+"° "+(a.d<0?"cooler":"warmer")+"</b> than best-fan runs at "+at,
-  tip=f1(a.y)+"° vs best-fan "+f1(a.exp)+"° from "+a.n+" original+bumped parks at "+a.W+" min, key-off ambient "+f1(a.amb)+"°";
+  tip=f1(a.y)+"° vs best-fan "+f1(a.exp)+"° from "+a.n+" original+bumped parks at "+a.W+" min, key-off ambient "+f1(a.amb)+"° · this park: "+FAN_LBL[fanGroup(c.t)];
  return'<div class="adj '+cls+'" title="'+esc(tip)+'"><i></i><span>'+t+'</span>'+pv+'</div>'}
 function adjBlock(c){var a=cellAdjHtml(c),b=adjHtml(c);if(!a&&!b)return"";return a&&b?'<div class="adjs">'+a+b+"</div>":(a||b)}
 function renderCooldowns(){var el=$("cdlist");if(!el)return;var L=cooldowns();
