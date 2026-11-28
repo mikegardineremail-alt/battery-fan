@@ -719,7 +719,7 @@ var PREDICT={
  minPmMin:3,              /* never show less than ± this (5-min logging) */
  bands:[{maxLeadMin:30,pm:6},{maxLeadMin:60,pm:15},{maxLeadMin:120,pm:54},{maxLeadMin:9999,pm:54}],
  /* norm-based fallback (typicalOff) while the slope fit is not ready */
- est:{cycleGapC:2.5,firstMinMin:60,lookbackDays:7,nearN:8,minRuns:3,minAheadMin:3,
+ est:{cycleGapC:2.5,firstMinMin:60,lookbackDays:7,nearN:8,minRuns:3,minAheadMin:3,cycleMinPm:15,firstMinPm:90,
   norm:{cycle:{min:18,pm:5},first:{min:245,pm:30}}, /* Pack log 25–30 Oct 2026 medians / p80 |dev| */
   /* typical runs = ~2.87 A fan speed only. Runs starting inside these [from, until) spans are not used, and the
      lookback counts only time outside them (7 days of 2.87 A running). Keep in step with FAN_PERIODS (non-"bump" rows). */
@@ -768,7 +768,7 @@ function predPm(leadMin,P){P=P||PREDICT;var b=P.bands,i;for(i=0;i<b.length;i++)i
 /* Fallback when the slope fit isn't ready (state wait/flat): estimate from TYPICAL past fan runs in the Pack log.
    Run type by probe gap above the stop point at fan start: <= P.est.cycleGapC = latch-band "cycle" run, else "first" (long
    cool-down after key-off). Uses completed past runs of the same type that lasted longer than this one has so far
-   (cycle runs: nearest start gap first); est. off = start + median duration, ± = p80 |duration − median|.
+   (cycle runs: nearest start gap first); est. off = start + median duration, ± = max(p80 |duration − median|, cycleMinPm 15 / firstMinPm 90).
    Too little history: hard-coded norms (P.est.norm, from the Pack log 25–30 Oct 2026). Returns state:"est" (or the
    original state if nothing usable). Slope prediction takes over automatically once ready. */
 function typicalOff(rows,s,L,off,runOn,P,why,extra){var E=P.est,r=rows[L],st=rows[s],o={state:why};if(extra)for(var k in extra)o[k]=extra[k];
@@ -788,6 +788,7 @@ function typicalOff(rows,s,L,off,runOn,P,why,extra){var E=P.est,r=rows[L],st=row
  else{var N=E.norm[type];med=Math.max(N.min,el+E.minAheadMin);pm=N.pm;src="norm"}
  var t=Math.max(r.t+E.minAheadMin*60e3,st.t+med*60e3);
  o.state="est";o.why=why;o.type=type;o.src=src;o.n=D.length;o.medMin=Math.round(med);o.hit=t;o.t=t; /* past durations already include any run-on */
+ if(type==="first")pm=Math.max(pm,E.firstMinPm);if(type==="cycle")pm=Math.max(pm,E.cycleMinPm);
  o.pm=Math.max(P.minPmMin,Math.round(pm));o.lead=(o.t-r.t)/60e3;return o}
 /* Data gap ≥15 min that hid a drive (Pack Logger restart etc.): best key-off evidence inside the gap.
    i = first row after the gap. Order: last BMS charge row (≥5 A) or SmartShunt starter_v ≥13.3 V inside the gap
@@ -822,10 +823,10 @@ function nowClamp(o,now){if(!o||o.t===undefined||o.t===null||o.pm===undefined||n
    Heat-aware: session-clock scales with pack−Ambient gap at key-off (hotter park → longer typical session).
    Tunables updated weekly from: node tools/predict-ultimate-backtest.js */
 var PREDICT_ULTIMATE={
- version:"u4",
+ version:"u5",
  model:"heat-blend",        /* session-clock (heat-adjusted) blended with cycle-countdown */
- typicalSessionMin:373,     /* median minutes session-start → ultimate-off at heatGapRef (weekly) */
- typicalCycles:7,           /* median completed fan-on stretches until ultimate-off */
+ typicalSessionMin:417,     /* median minutes session-start → ultimate-off at heatGapRef (weekly) */
+ typicalCycles:5,           /* median completed fan-on stretches until ultimate-off */
  cycleOnMin:18,             /* median fan-on stretch length (min) */
  cycleIdleMin:20,           /* median idle gap between stretches (min) */
  /* heat load at key-off: sessionEst = clamp(typicalSessionMin + heatMinPerC*(gap−heatGapRef), floor, capMin)
@@ -850,7 +851,7 @@ var PREDICT_ULTIMATE={
  /* ± = backtest p80 |error| by predicted lead (ultimate − now). Weekly paste from backtest. */
  bandQuantile:0.8,
  minPmMin:20,
- bands:[{maxLeadMin:60,pm:118},{maxLeadMin:180,pm:118},{maxLeadMin:360,pm:140},{maxLeadMin:9999,pm:193}],
+ bands:[{maxLeadMin:60,pm:60},{maxLeadMin:180,pm:80},{maxLeadMin:360,pm:90},{maxLeadMin:9999,pm:100}],
 };
 /* rows oldest→newest. opt: {now(ms), nextOff(predictOff result), cellPts:[{t,v},…]}. Returns
    {state:"ok"|"done"|"wait"|"far"|"na", t, lead, pm, sessionStart, cyclesDone, cyclesEst, settled, note} */
